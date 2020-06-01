@@ -1,11 +1,22 @@
 use std::ops::RangeInclusive;
-use std::time::Duration;
 
-use chrono::NaiveTime;
+use chrono::prelude::Datelike;
+use chrono::Duration;
+use chrono::{NaiveDate, NaiveTime};
+
+use crate::time_selector::DateFilter;
+
+pub type Weekday = chrono::Weekday;
 
 #[derive(Clone, Debug)]
 pub struct TimeDomain {
     pub rules: Vec<RuleSequence>,
+}
+
+impl TimeDomain {
+    pub fn feasible_date(&self, date: &NaiveDate) -> bool {
+        self.rules[0].feasible_date(date)
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -13,6 +24,12 @@ pub struct RuleSequence {
     pub selector: Selector,
     pub modifier: RulesModifier,
     pub comment: Option<String>,
+}
+
+impl RuleSequence {
+    pub fn feasible_date(&self, date: &NaiveDate) -> bool {
+        self.selector.feasible_date(date)
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -27,8 +44,22 @@ pub struct Selector {
     pub year: Vec<YearRange>,
     pub monthday: Vec<MonthdayRange>,
     pub week: Vec<WeekRange>,
-    pub weekday: Vec<WeekdayRange>,
+    pub weekday: Vec<WeekDayRange>,
     pub time: Vec<TimeSpan>,
+}
+
+fn check_date_selector_field<T: DateFilter>(selector_field: &[T], date: &NaiveDate) -> bool {
+    selector_field.is_empty() || selector_field.iter().any(|x| x.filter(date))
+}
+
+impl Selector {
+    // TODO: this should be private
+    pub fn feasible_date(&self, date: &NaiveDate) -> bool {
+        check_date_selector_field(&self.year, date)
+            && check_date_selector_field(&self.monthday, date)
+            && check_date_selector_field(&self.week, date)
+            && check_date_selector_field(&self.weekday, date)
+    }
 }
 
 // ---
@@ -48,19 +79,17 @@ pub struct YearRange {
 #[derive(Clone, Debug)]
 pub enum MonthdayRange {
     Month {
+        range: RangeInclusive<Month>,
         year: Option<u16>,
-        start: Month,
-        end: Month,
     },
     Date {
-        // TODO: merge DateFrom and DateTo types (and use a RangeInclusive?)
-        start: (DateFrom, DateOffset),
-        end: (DateTo, DateOffset),
+        start: (Date, DateOffset),
+        end: (Date, DateOffset),
     },
 }
 
 #[derive(Clone, Debug)]
-pub enum DateFrom {
+pub enum Date {
     Fixed {
         year: Option<u16>,
         month: Month,
@@ -71,7 +100,7 @@ pub enum DateFrom {
     },
 }
 
-impl DateFrom {
+impl Date {
     pub fn day(day: u8, month: Month, year: u16) -> Self {
         Self::Fixed {
             day,
@@ -82,21 +111,32 @@ impl DateFrom {
 }
 
 #[derive(Clone, Debug)]
-pub enum DateTo {
-    DateFrom(DateFrom),
-    DayNum(u8),
-}
-
-impl DateTo {
-    pub fn day(day: u8, month: Month, year: u16) -> Self {
-        Self::DateFrom(DateFrom::day(day, month, year))
-    }
-}
-
-#[derive(Clone, Debug)]
 pub struct DateOffset {
     pub wday_offset: WeekDayOffset,
     pub day_offset: i64,
+}
+
+impl DateOffset {
+    pub fn apply(&self, date: &NaiveDate) -> NaiveDate {
+        let mut date = date.clone();
+        date += Duration::days(self.day_offset);
+
+        match self.wday_offset {
+            WeekDayOffset::None => {}
+            WeekDayOffset::Prev(target) => {
+                while date.weekday() != target {
+                    date -= Duration::days(1);
+                }
+            }
+            WeekDayOffset::Next(target) => {
+                while date.weekday() != target {
+                    date += Duration::days(1);
+                }
+            }
+        }
+
+        date
+    }
 }
 
 impl Default for DateOffset {
@@ -115,23 +155,12 @@ pub enum WeekDayOffset {
     Prev(Weekday),
 }
 
-#[derive(Clone, Copy, Debug)]
-pub enum Weekday {
-    Sunday,
-    Monday,
-    Tuesday,
-    Wednesday,
-    Thursday,
-    Friday,
-    Saturday,
-}
-
 // ---
-// --- Weekday selector
+// --- WeekDay selector
 // ---
 
 #[derive(Clone, Debug)]
-pub enum WeekdayRange {
+pub enum WeekDayRange {
     Fixed {
         range: RangeInclusive<Weekday>,
         nth: Vec<u8>, // TODO: maybe a tiny bitset would make more sense
@@ -165,18 +194,43 @@ pub struct WeekRange {
 
 #[derive(Copy, Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub enum Month {
-    January,
-    February,
-    March,
-    April,
-    May,
-    June,
-    July,
-    August,
-    September,
-    October,
-    November,
-    December,
+    January = 1,
+    February = 2,
+    March = 3,
+    April = 4,
+    May = 5,
+    June = 6,
+    July = 7,
+    August = 8,
+    September = 9,
+    October = 10,
+    November = 11,
+    December = 12,
+}
+
+impl Month {
+    pub fn from_u8(x: u8) -> Result<Self, ()> {
+        Ok(match x {
+            1 => Self::January,
+            2 => Self::February,
+            3 => Self::March,
+            4 => Self::April,
+            5 => Self::May,
+            6 => Self::June,
+            7 => Self::July,
+            8 => Self::August,
+            9 => Self::September,
+            10 => Self::October,
+            11 => Self::November,
+            12 => Self::December,
+            _ => return Err(()),
+        })
+    }
+
+    pub fn next(&self) -> Self {
+        let num = *self as u8;
+        Self::from_u8((num % 12) + 1).unwrap()
+    }
 }
 
 // ---
