@@ -139,37 +139,21 @@ pub fn build_rules_modifier_enum(pair: Pair<Rule>) -> td::RulesModifier {
 pub fn build_selector_sequence(pair: Pair<Rule>) -> td::Selector {
     assert_eq!(pair.as_rule(), Rule::selector_sequence);
 
-    let mut selector = td::Selector::always_open();
+    let mut selector = td::Selector::default();
 
     for pair in pair.into_inner() {
         match pair.as_rule() {
             Rule::always_open => {}
             Rule::wide_range_selectors => {
-                let (year_selector, monthday_selector, week_selector) =
-                    build_wide_range_selectors(pair);
-
-                if let Some(year_selector) = year_selector {
-                    selector.year = year_selector;
-                }
-
-                if let Some(monthday_selector) = monthday_selector {
-                    selector.monthday = monthday_selector;
-                }
-
-                if let Some(week_selector) = week_selector {
-                    selector.week = week_selector;
-                }
+                let (year, monthday, week) = build_wide_range_selectors(pair);
+                selector.year = year;
+                selector.monthday = monthday;
+                selector.week = week;
             }
             Rule::small_range_selectors => {
-                let (weekday_selector, time_selector) = build_small_range_selectors(pair);
-
-                if let Some(time_selector) = time_selector {
-                    selector.time = time_selector;
-                }
-
-                if let Some(weekday_selector) = weekday_selector {
-                    selector.weekday = weekday_selector;
-                }
+                let (weekday, time) = build_small_range_selectors(pair);
+                selector.weekday = weekday;
+                selector.time = time;
             }
             other => unexpected_token(other, Rule::selector_sequence),
         }
@@ -181,21 +165,21 @@ pub fn build_selector_sequence(pair: Pair<Rule>) -> td::Selector {
 pub fn build_wide_range_selectors(
     pair: Pair<Rule>,
 ) -> (
-    Option<td::YearSelector>,
-    Option<td::MonthdaySelector>,
-    Option<td::WeekSelector>,
+    Vec<td::YearRange>,
+    Vec<td::MonthdayRange>,
+    Vec<td::WeekRange>,
 ) {
     assert_eq!(pair.as_rule(), Rule::wide_range_selectors);
 
-    let mut year_selector = None;
-    let mut monthday_selector = None;
-    let mut week_selector = None;
+    let mut year_selector = Vec::new();
+    let mut monthday_selector = Vec::new();
+    let mut week_selector = Vec::new();
 
     for pair in pair.into_inner() {
         match pair.as_rule() {
-            Rule::year_selector => year_selector = Some(build_year_selector(pair)),
-            Rule::monthday_selector => monthday_selector = Some(build_monthday_selector(pair)),
-            Rule::week_selector => week_selector = Some(build_week_selector(pair)),
+            Rule::year_selector => year_selector = build_year_selector(pair),
+            Rule::monthday_selector => monthday_selector = build_monthday_selector(pair),
+            Rule::week_selector => week_selector = build_week_selector(pair),
             other => unexpected_token(other, Rule::wide_range_selectors),
         }
     }
@@ -203,18 +187,16 @@ pub fn build_wide_range_selectors(
     (year_selector, monthday_selector, week_selector)
 }
 
-pub fn build_small_range_selectors(
-    pair: Pair<Rule>,
-) -> (Option<td::WeekdaySelector>, Option<td::TimeSelector>) {
+pub fn build_small_range_selectors(pair: Pair<Rule>) -> (Vec<td::WeekdayRange>, Vec<td::TimeSpan>) {
     assert_eq!(pair.as_rule(), Rule::small_range_selectors);
 
-    let mut weekday_selector = None;
-    let mut time_selector = None;
+    let mut weekday_selector = Vec::new();
+    let mut time_selector = Vec::new();
 
     for pair in pair.into_inner() {
         match pair.as_rule() {
-            Rule::weekday_selector => weekday_selector = Some(build_weekday_selector(pair)),
-            Rule::time_selector => time_selector = Some(build_time_selector(pair)),
+            Rule::weekday_selector => weekday_selector = build_weekday_selector(pair),
+            Rule::time_selector => time_selector = build_time_selector(pair),
             other => unexpected_token(other, Rule::wide_range_selectors),
         }
     }
@@ -226,9 +208,9 @@ pub fn build_small_range_selectors(
 // --- Time selector
 // ---
 
-pub fn build_time_selector(pair: Pair<Rule>) -> td::TimeSelector {
+pub fn build_time_selector(pair: Pair<Rule>) -> Vec<td::TimeSpan> {
     assert_eq!(pair.as_rule(), Rule::time_selector);
-    td::TimeSelector(pair.into_inner().map(build_timespan).collect())
+    pair.into_inner().map(build_timespan).collect()
 }
 
 pub fn build_timespan(pair: Pair<Rule>) -> td::TimeSpan {
@@ -329,26 +311,20 @@ pub fn build_event(pair: Pair<Rule>) -> td::TimeEvent {
 // --- Weekday selector
 // ---
 
-pub fn build_weekday_selector(pair: Pair<Rule>) -> td::WeekdaySelector {
+pub fn build_weekday_selector(pair: Pair<Rule>) -> Vec<td::WeekdayRange> {
     assert_eq!(pair.as_rule(), Rule::weekday_selector);
 
-    let mut weekday = Vec::new();
-    let mut holiday = Vec::new();
+    let mut result = Vec::new();
 
     for pair in pair.into_inner() {
         match pair.as_rule() {
-            Rule::weekday_sequence => {
-                weekday = pair.into_inner().map(build_weekday_range).collect()
-            }
-            Rule::holiday_sequence => holiday = pair.into_inner().map(build_holiday).collect(),
+            Rule::weekday_sequence => result.extend(pair.into_inner().map(build_weekday_range)),
+            Rule::holiday_sequence => result.extend(pair.into_inner().map(build_holiday)),
             other => unexpected_token(other, Rule::weekday_sequence),
         }
     }
 
-    td::WeekdaySelector {
-        weekdays: weekday,
-        holidays: holiday,
-    }
+    result
 }
 
 pub fn build_weekday_range(pair: Pair<Rule>) -> td::WeekdayRange {
@@ -384,14 +360,14 @@ pub fn build_weekday_range(pair: Pair<Rule>) -> td::WeekdayRange {
         }
     };
 
-    td::WeekdayRange {
+    td::WeekdayRange::Fixed {
         range: start..=end,
         nth,
         offset,
     }
 }
 
-pub fn build_holiday(pair: Pair<Rule>) -> td::Holiday {
+pub fn build_holiday(pair: Pair<Rule>) -> td::WeekdayRange {
     assert_eq!(pair.as_rule(), Rule::holiday);
     let mut pairs = pair.into_inner();
 
@@ -403,7 +379,7 @@ pub fn build_holiday(pair: Pair<Rule>) -> td::Holiday {
 
     let offset = pairs.next().map(build_day_offset).unwrap_or(0);
 
-    td::Holiday { kind, offset }
+    td::WeekdayRange::Holiday { kind, offset }
 }
 
 pub fn build_nth_entry(pair: Pair<Rule>) -> RangeInclusive<u8> {
@@ -440,9 +416,9 @@ pub fn build_day_offset(pair: Pair<Rule>) -> i64 {
 // --- Week selector
 // ---
 
-pub fn build_week_selector(pair: Pair<Rule>) -> td::WeekSelector {
+pub fn build_week_selector(pair: Pair<Rule>) -> Vec<td::WeekRange> {
     assert_eq!(pair.as_rule(), Rule::week_selector);
-    td::WeekSelector::new(pair.into_inner().map(build_week))
+    pair.into_inner().map(build_week).collect()
 }
 
 pub fn build_week(pair: Pair<Rule>) -> td::WeekRange {
@@ -463,9 +439,9 @@ pub fn build_week(pair: Pair<Rule>) -> td::WeekRange {
 // --- Month selector
 // ---
 
-pub fn build_monthday_selector(pair: Pair<Rule>) -> td::MonthdaySelector {
+pub fn build_monthday_selector(pair: Pair<Rule>) -> Vec<td::MonthdayRange> {
     assert_eq!(pair.as_rule(), Rule::monthday_selector);
-    td::MonthdaySelector(pair.into_inner().map(build_monthday_range).collect())
+    pair.into_inner().map(build_monthday_range).collect()
 }
 
 pub fn build_monthday_range(pair: Pair<Rule>) -> td::MonthdayRange {
@@ -579,9 +555,9 @@ pub fn build_date_to(pair: Pair<Rule>) -> td::DateTo {
 // --- Year selector
 // ---
 
-pub fn build_year_selector(pair: Pair<Rule>) -> td::YearSelector {
+pub fn build_year_selector(pair: Pair<Rule>) -> Vec<td::YearRange> {
     assert_eq!(pair.as_rule(), Rule::year_selector);
-    td::YearSelector(pair.into_inner().map(build_year_range).collect())
+    pair.into_inner().map(build_year_range).collect()
 }
 
 pub fn build_year_range(pair: Pair<Rule>) -> td::YearRange {
