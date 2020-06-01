@@ -52,6 +52,10 @@ pub fn parse(data: &str) -> Result<td::TimeDomain, Error> {
     Ok(build_time_domain(time_domain_pair))
 }
 
+// ---
+// --- Time domain
+// ---
+
 pub fn build_time_domain(pair: Pair<Rule>) -> td::TimeDomain {
     assert_eq!(pair.as_rule(), Rule::time_domain);
 
@@ -84,6 +88,10 @@ pub fn build_rule_sequence(pair: Pair<Rule>) -> td::RuleSequence {
         selector,
     }
 }
+
+// ---
+// --- Rule modifier
+// ---
 
 pub fn build_rules_modifier(pair: Pair<Rule>) -> (td::RulesModifier, Option<String>) {
     assert_eq!(pair.as_rule(), Rule::rules_modifier);
@@ -123,6 +131,10 @@ pub fn build_rules_modifier_enum(pair: Pair<Rule>) -> td::RulesModifier {
         other => unexpected_token(other, Rule::rules_modifier_enum),
     }
 }
+
+// ---
+// --- Selectors
+// ---
 
 pub fn build_selector_sequence(pair: Pair<Rule>) -> td::Selector {
     assert_eq!(pair.as_rule(), Rule::selector_sequence);
@@ -210,6 +222,113 @@ pub fn build_small_range_selectors(
     (weekday_selector, time_selector)
 }
 
+// ---
+// --- Time selector
+// ---
+
+pub fn build_time_selector(pair: Pair<Rule>) -> td::TimeSelector {
+    assert_eq!(pair.as_rule(), Rule::time_selector);
+    td::TimeSelector(pair.into_inner().map(build_timespan).collect())
+}
+
+pub fn build_timespan(pair: Pair<Rule>) -> td::TimeSpan {
+    assert_eq!(pair.as_rule(), Rule::timespan);
+    let mut pairs = pair.into_inner();
+
+    let start = build_time(pairs.next().expect("empty timespan"));
+
+    let end = match pairs.next() {
+        None => {
+            // TODO: this should probably be raised in a Result.
+            todo!("point in time is not supported yet");
+        }
+        Some(pair) if pair.as_rule() == Rule::timespan_plus => {
+            // TODO: this should probably be raised in a Result.
+            todo!("point in time is not supported yet");
+        }
+        Some(pair) => build_extended_time(pair),
+    };
+
+    let (open_end, repeats) = match pairs.peek().map(|x| x.as_rule()) {
+        None => (false, None),
+        Some(Rule::timespan_plus) => (true, None),
+        Some(Rule::minute) => todo!(),
+        Some(Rule::hour_minutes) => todo!(),
+        Some(other) => unexpected_token(other, Rule::timespan),
+    };
+
+    td::TimeSpan {
+        range: start..=end,
+        repeats,
+        open_end,
+    }
+}
+
+pub fn build_time(pair: Pair<Rule>) -> td::Time {
+    assert_eq!(pair.as_rule(), Rule::time);
+    let inner = pair.into_inner().next().expect("empty time");
+
+    match inner.as_rule() {
+        Rule::hour_minutes => td::Time::Fixed(build_hour_minutes(inner)),
+        Rule::variable_time => td::Time::Variable(build_variable_time(inner)),
+        other => unexpected_token(other, Rule::time),
+    }
+}
+
+pub fn build_extended_time(pair: Pair<Rule>) -> td::Time {
+    assert_eq!(pair.as_rule(), Rule::extended_time);
+    let inner = pair.into_inner().next().expect("empty extended time");
+
+    match inner.as_rule() {
+        Rule::extended_hour_minutes => td::Time::Fixed(build_extended_hour_minutes(inner)),
+        Rule::variable_time => td::Time::Variable(build_variable_time(inner)),
+        other => unexpected_token(other, Rule::extended_time),
+    }
+}
+
+pub fn build_variable_time(pair: Pair<Rule>) -> td::VariableTime {
+    assert_eq!(pair.as_rule(), Rule::variable_time);
+    let mut pairs = pair.into_inner();
+
+    let event = build_event(pairs.next().expect("empty variable time"));
+
+    let offset = {
+        if pairs.peek().is_some() {
+            let sign = build_plus_or_minus(pairs.next().unwrap());
+
+            let mins: i16 = build_hour_minutes(pairs.next().expect("missing hour minutes"))
+                .num_seconds_from_midnight()
+                .try_into()
+                .expect("offset overflow");
+
+            match sign {
+                PlusOrMinus::Plus => mins,
+                PlusOrMinus::Minus => -mins,
+            }
+        } else {
+            0
+        }
+    };
+
+    td::VariableTime { event, offset }
+}
+
+pub fn build_event(pair: Pair<Rule>) -> td::TimeEvent {
+    assert_eq!(pair.as_rule(), Rule::event);
+
+    match pair.into_inner().next().expect("empty event").as_rule() {
+        Rule::dawn => td::TimeEvent::Dawn,
+        Rule::sunrise => td::TimeEvent::Sunrise,
+        Rule::sunset => td::TimeEvent::Sunset,
+        Rule::dusk => td::TimeEvent::Dusk,
+        other => unexpected_token(other, Rule::event),
+    }
+}
+
+// ---
+// --- Weekday selector
+// ---
+
 pub fn build_weekday_selector(pair: Pair<Rule>) -> td::WeekdaySelector {
     assert_eq!(pair.as_rule(), Rule::weekday_selector);
 
@@ -272,21 +391,6 @@ pub fn build_weekday_range(pair: Pair<Rule>) -> td::WeekdayRange {
     }
 }
 
-pub fn build_nth_entry(pair: Pair<Rule>) -> RangeInclusive<u8> {
-    assert_eq!(pair.as_rule(), Rule::nth_entry);
-    let mut pairs = pair.into_inner();
-
-    let start = build_nth(pairs.next().expect("empty nth entry"));
-    let end = pairs.next().map(build_nth).unwrap_or(start);
-
-    start..=end
-}
-
-pub fn build_nth(pair: Pair<Rule>) -> u8 {
-    assert_eq!(pair.as_rule(), Rule::nth);
-    pair.as_str().parse().expect("invalid nth format")
-}
-
 pub fn build_holiday(pair: Pair<Rule>) -> td::Holiday {
     assert_eq!(pair.as_rule(), Rule::holiday);
     let mut pairs = pair.into_inner();
@@ -302,190 +406,62 @@ pub fn build_holiday(pair: Pair<Rule>) -> td::Holiday {
     td::Holiday { kind, offset }
 }
 
-// pub fn build_weekday_range(pair: Pair<Rule>) ->
-
-pub fn build_time_selector(pair: Pair<Rule>) -> td::TimeSelector {
-    assert_eq!(pair.as_rule(), Rule::time_selector);
-    td::TimeSelector(pair.into_inner().map(build_timespan).collect())
-}
-
-pub fn build_timespan(pair: Pair<Rule>) -> td::TimeSpan {
-    assert_eq!(pair.as_rule(), Rule::timespan);
+pub fn build_nth_entry(pair: Pair<Rule>) -> RangeInclusive<u8> {
+    assert_eq!(pair.as_rule(), Rule::nth_entry);
     let mut pairs = pair.into_inner();
 
-    let start = build_time(pairs.next().expect("empty timespan"));
+    let start = build_nth(pairs.next().expect("empty nth entry"));
+    let end = pairs.next().map(build_nth).unwrap_or(start);
 
-    let end = match pairs.next() {
-        None => {
-            // TODO: this should probably be raised in a Result.
-            todo!("point in time is not supported yet");
-        }
-        Some(pair) if pair.as_rule() == Rule::timespan_plus => {
-            // TODO: this should probably be raised in a Result.
-            todo!("point in time is not supported yet");
-        }
-        Some(pair) => build_extended_time(pair),
-    };
+    start..=end
+}
 
-    let (open_end, repeats) = match pairs.peek().map(|x| x.as_rule()) {
-        None => (false, None),
-        Some(Rule::timespan_plus) => (true, None),
-        Some(Rule::minute) => todo!(),
-        Some(Rule::hour_minutes) => todo!(),
-        Some(other) => unexpected_token(other, Rule::timespan),
-    };
+pub fn build_nth(pair: Pair<Rule>) -> u8 {
+    assert_eq!(pair.as_rule(), Rule::nth);
+    pair.as_str().parse().expect("invalid nth format")
+}
 
-    td::TimeSpan {
-        range: start..=end,
-        repeats,
-        open_end,
+pub fn build_day_offset(pair: Pair<Rule>) -> i64 {
+    assert_eq!(pair.as_rule(), Rule::day_offset);
+    let mut pairs = pair.into_inner();
+
+    let sign = build_plus_or_minus(pairs.next().expect("empty day offset"));
+    let val_abs: i64 = build_positive_number(pairs.next().expect("missing value"))
+        .try_into()
+        .expect("day offset value too large"); // TODO: this should probably be raised in a result
+
+    match sign {
+        PlusOrMinus::Plus => val_abs,
+        PlusOrMinus::Minus => -val_abs,
     }
 }
 
-pub fn build_time(pair: Pair<Rule>) -> td::Time {
-    assert_eq!(pair.as_rule(), Rule::time);
-    let inner = pair.into_inner().next().expect("empty time");
+// ---
+// --- Week selector
+// ---
 
-    match inner.as_rule() {
-        Rule::hour_minutes => td::Time::Fixed(build_hour_minutes(inner)),
-        Rule::variable_time => td::Time::Variable(build_variable_time(inner)),
-        other => unexpected_token(other, Rule::time),
-    }
+pub fn build_week_selector(pair: Pair<Rule>) -> td::WeekSelector {
+    assert_eq!(pair.as_rule(), Rule::week_selector);
+    td::WeekSelector::new(pair.into_inner().map(build_week))
 }
 
-pub fn build_extended_time(pair: Pair<Rule>) -> td::Time {
-    assert_eq!(pair.as_rule(), Rule::extended_time);
-    let inner = pair.into_inner().next().expect("empty extended time");
-
-    match inner.as_rule() {
-        Rule::extended_hour_minutes => td::Time::Fixed(build_extended_hour_minutes(inner)),
-        Rule::variable_time => td::Time::Variable(build_variable_time(inner)),
-        other => unexpected_token(other, Rule::extended_time),
-    }
-}
-
-pub fn build_hour_minutes(pair: Pair<Rule>) -> NaiveTime {
-    assert_eq!(pair.as_rule(), Rule::hour_minutes);
-    let mut pairs = pair.into_inner();
-
-    let hour = pairs
-        .next()
-        .expect("missing hour")
-        .as_str()
-        .parse()
-        .expect("invalid hour");
-
-    let minutes = pairs
-        .next()
-        .expect("missing minutes")
-        .as_str()
-        .parse()
-        .expect("invalid minutes");
-
-    NaiveTime::from_hms(hour, minutes, 0)
-}
-
-pub fn build_extended_hour_minutes(pair: Pair<Rule>) -> NaiveTime {
-    assert_eq!(pair.as_rule(), Rule::extended_hour_minutes);
-    let mut pairs = pair.into_inner();
-
-    let hour = pairs
-        .next()
-        .expect("missing hour")
-        .as_str()
-        .parse()
-        .expect("invalid hour");
-
-    let minutes = pairs
-        .next()
-        .expect("missing minutes")
-        .as_str()
-        .parse()
-        .expect("invalid minutes");
-
-    NaiveTime::from_hms(hour, minutes, 0)
-}
-
-pub fn build_minute(pair: Pair<Rule>) -> NaiveTime {
-    assert_eq!(pair.as_rule(), Rule::minute);
-
-    let minutes = pair
-        .into_inner()
-        .next()
-        .expect("empty minute")
-        .as_str()
-        .parse()
-        .expect("invalid minute");
-
-    NaiveTime::from_hms(0, minutes, 0)
-}
-
-pub fn build_variable_time(pair: Pair<Rule>) -> td::VariableTime {
-    assert_eq!(pair.as_rule(), Rule::variable_time);
-    let mut pairs = pair.into_inner();
-
-    let event = build_event(pairs.next().expect("empty variable time"));
-
-    let offset = {
-        if pairs.peek().is_some() {
-            let sign = build_plus_or_minus(pairs.next().unwrap());
-
-            let mins: i16 = build_hour_minutes(pairs.next().expect("missing hour minutes"))
-                .num_seconds_from_midnight()
-                .try_into()
-                .expect("offset overflow");
-
-            match sign {
-                PlusOrMinus::Plus => mins,
-                PlusOrMinus::Minus => -mins,
-            }
-        } else {
-            0
-        }
-    };
-
-    td::VariableTime { event, offset }
-}
-
-pub fn build_event(pair: Pair<Rule>) -> td::TimeEvent {
-    assert_eq!(pair.as_rule(), Rule::event);
-
-    match pair.into_inner().next().expect("empty event").as_rule() {
-        Rule::dawn => td::TimeEvent::Dawn,
-        Rule::sunrise => td::TimeEvent::Sunrise,
-        Rule::sunset => td::TimeEvent::Sunset,
-        Rule::dusk => td::TimeEvent::Dusk,
-        other => unexpected_token(other, Rule::event),
-    }
-}
-
-pub fn build_year_selector(pair: Pair<Rule>) -> td::YearSelector {
-    assert_eq!(pair.as_rule(), Rule::year_selector);
-    td::YearSelector(pair.into_inner().map(build_year_range).collect())
-}
-
-pub fn build_year_range(pair: Pair<Rule>) -> td::YearRange {
-    assert_eq!(pair.as_rule(), Rule::year_range);
+pub fn build_week(pair: Pair<Rule>) -> td::WeekRange {
+    assert_eq!(pair.as_rule(), Rule::week);
     let mut rules = pair.into_inner();
 
-    let start = build_year(rules.next().expect("empty year range"));
-    let end = rules.next().map(|pair| match pair.as_rule() {
-        Rule::year => build_year(pair),
-        Rule::year_range_plus => 9999,
-        other => unexpected_token(other, Rule::year_range),
-    });
-    let step = rules.next().map(build_year);
+    let start = build_weeknum(rules.next().expect("empty weeknum range"));
+    let end = rules.next().map(build_weeknum);
+    let step = rules.next().map(build_weeknum);
 
-    td::YearRange {
+    td::WeekRange {
         range: start..=end.unwrap_or(start),
         step: step.unwrap_or(1),
     }
 }
 
-pub fn build_year(pair: Pair<Rule>) -> u16 {
-    assert_eq!(pair.as_rule(), Rule::year);
-    pair.as_str().parse().expect("invalid year format")
-}
+// ---
+// --- Month selector
+// ---
 
 pub fn build_monthday_selector(pair: Pair<Rule>) -> td::MonthdaySelector {
     assert_eq!(pair.as_rule(), Rule::monthday_selector);
@@ -539,6 +515,32 @@ pub fn build_monthday_range(pair: Pair<Rule>) -> td::MonthdayRange {
     }
 }
 
+pub fn build_date_offset(pair: Pair<Rule>) -> td::DateOffset {
+    assert_eq!(pair.as_rule(), Rule::date_offset);
+    let mut pairs = pair.into_inner();
+
+    let wday_offset = {
+        if pairs.peek().map(|x| x.as_rule()) == Some(Rule::plus_or_minus) {
+            let sign = build_plus_or_minus(pairs.next().unwrap());
+            let wday = build_wday(pairs.next().expect("missing wday after sign"));
+
+            match sign {
+                PlusOrMinus::Plus => td::WeekDayOffset::Next(wday),
+                PlusOrMinus::Minus => td::WeekDayOffset::Prev(wday),
+            }
+        } else {
+            td::WeekDayOffset::None
+        }
+    };
+
+    let day_offset = pairs.next().map(build_day_offset).unwrap_or(0);
+
+    td::DateOffset {
+        wday_offset,
+        day_offset,
+    }
+}
+
 pub fn build_date_from(pair: Pair<Rule>) -> td::DateFrom {
     assert_eq!(pair.as_rule(), Rule::date_from);
     let mut pairs = pair.into_inner();
@@ -573,31 +575,36 @@ pub fn build_date_to(pair: Pair<Rule>) -> td::DateTo {
     }
 }
 
-pub fn build_date_offset(pair: Pair<Rule>) -> td::DateOffset {
-    assert_eq!(pair.as_rule(), Rule::date_offset);
-    let mut pairs = pair.into_inner();
+// ---
+// --- Year selector
+// ---
 
-    let wday_offset = {
-        if pairs.peek().map(|x| x.as_rule()) == Some(Rule::plus_or_minus) {
-            let sign = build_plus_or_minus(pairs.next().unwrap());
-            let wday = build_wday(pairs.next().expect("missing wday after sign"));
+pub fn build_year_selector(pair: Pair<Rule>) -> td::YearSelector {
+    assert_eq!(pair.as_rule(), Rule::year_selector);
+    td::YearSelector(pair.into_inner().map(build_year_range).collect())
+}
 
-            match sign {
-                PlusOrMinus::Plus => td::WeekDayOffset::Next(wday),
-                PlusOrMinus::Minus => td::WeekDayOffset::Prev(wday),
-            }
-        } else {
-            td::WeekDayOffset::None
-        }
-    };
+pub fn build_year_range(pair: Pair<Rule>) -> td::YearRange {
+    assert_eq!(pair.as_rule(), Rule::year_range);
+    let mut rules = pair.into_inner();
 
-    let day_offset = pairs.next().map(build_day_offset).unwrap_or(0);
+    let start = build_year(rules.next().expect("empty year range"));
+    let end = rules.next().map(|pair| match pair.as_rule() {
+        Rule::year => build_year(pair),
+        Rule::year_range_plus => 9999,
+        other => unexpected_token(other, Rule::year_range),
+    });
+    let step = rules.next().map(build_year);
 
-    td::DateOffset {
-        wday_offset,
-        day_offset,
+    td::YearRange {
+        range: start..=end.unwrap_or(start),
+        step: step.unwrap_or(1),
     }
 }
+
+// ---
+// --- Basic elements
+// ---
 
 pub fn build_plus_or_minus(pair: Pair<Rule>) -> PlusOrMinus {
     assert_eq!(pair.as_rule(), Rule::plus_or_minus);
@@ -610,24 +617,60 @@ pub fn build_plus_or_minus(pair: Pair<Rule>) -> PlusOrMinus {
     }
 }
 
-pub fn build_day_offset(pair: Pair<Rule>) -> i64 {
-    assert_eq!(pair.as_rule(), Rule::day_offset);
-    let mut pairs = pair.into_inner();
+pub fn build_minute(pair: Pair<Rule>) -> NaiveTime {
+    assert_eq!(pair.as_rule(), Rule::minute);
 
-    let sign = build_plus_or_minus(pairs.next().expect("empty day offset"));
-    let val_abs: i64 = build_positive_number(pairs.next().expect("missing value"))
-        .try_into()
-        .expect("day offset value too large"); // TODO: this should probably be raised in a result
+    let minutes = pair
+        .into_inner()
+        .next()
+        .expect("empty minute")
+        .as_str()
+        .parse()
+        .expect("invalid minute");
 
-    match sign {
-        PlusOrMinus::Plus => val_abs,
-        PlusOrMinus::Minus => -val_abs,
-    }
+    NaiveTime::from_hms(0, minutes, 0)
 }
 
-pub fn build_positive_number(pair: Pair<Rule>) -> u64 {
-    assert_eq!(pair.as_rule(), Rule::positive_number);
-    pair.as_str().parse().expect("invalid positive_number")
+pub fn build_hour_minutes(pair: Pair<Rule>) -> NaiveTime {
+    assert_eq!(pair.as_rule(), Rule::hour_minutes);
+    let mut pairs = pair.into_inner();
+
+    let hour = pairs
+        .next()
+        .expect("missing hour")
+        .as_str()
+        .parse()
+        .expect("invalid hour");
+
+    let minutes = pairs
+        .next()
+        .expect("missing minutes")
+        .as_str()
+        .parse()
+        .expect("invalid minutes");
+
+    NaiveTime::from_hms(hour, minutes, 0)
+}
+
+pub fn build_extended_hour_minutes(pair: Pair<Rule>) -> NaiveTime {
+    assert_eq!(pair.as_rule(), Rule::extended_hour_minutes);
+    let mut pairs = pair.into_inner();
+
+    let hour = pairs
+        .next()
+        .expect("missing hour")
+        .as_str()
+        .parse()
+        .expect("invalid hour");
+
+    let minutes = pairs
+        .next()
+        .expect("missing minutes")
+        .as_str()
+        .parse()
+        .expect("invalid minutes");
+
+    NaiveTime::from_hms(hour, minutes, 0)
 }
 
 pub fn build_wday(pair: Pair<Rule>) -> td::Weekday {
@@ -644,6 +687,16 @@ pub fn build_wday(pair: Pair<Rule>) -> td::Weekday {
         Rule::saturday => td::Weekday::Saturday,
         other => unexpected_token(other, Rule::wday),
     }
+}
+
+pub fn build_daynum(pair: Pair<Rule>) -> u8 {
+    assert_eq!(pair.as_rule(), Rule::daynum);
+    pair.as_str().parse().expect("invalid month format")
+}
+
+pub fn build_weeknum(pair: Pair<Rule>) -> u8 {
+    assert_eq!(pair.as_rule(), Rule::weeknum);
+    pair.as_str().parse().expect("invalid weeknum format")
 }
 
 pub fn build_month(pair: Pair<Rule>) -> td::Month {
@@ -667,31 +720,12 @@ pub fn build_month(pair: Pair<Rule>) -> td::Month {
     }
 }
 
-pub fn build_daynum(pair: Pair<Rule>) -> u8 {
-    assert_eq!(pair.as_rule(), Rule::daynum);
-    pair.as_str().parse().expect("invalid month format")
+pub fn build_year(pair: Pair<Rule>) -> u16 {
+    assert_eq!(pair.as_rule(), Rule::year);
+    pair.as_str().parse().expect("invalid year format")
 }
 
-pub fn build_week_selector(pair: Pair<Rule>) -> td::WeekSelector {
-    assert_eq!(pair.as_rule(), Rule::week_selector);
-    td::WeekSelector::new(pair.into_inner().map(build_week))
-}
-
-pub fn build_week(pair: Pair<Rule>) -> td::WeekRange {
-    assert_eq!(pair.as_rule(), Rule::week);
-    let mut rules = pair.into_inner();
-
-    let start = build_weeknum(rules.next().expect("empty weeknum range"));
-    let end = rules.next().map(build_weeknum);
-    let step = rules.next().map(build_weeknum);
-
-    td::WeekRange {
-        range: start..=end.unwrap_or(start),
-        step: step.unwrap_or(1),
-    }
-}
-
-pub fn build_weeknum(pair: Pair<Rule>) -> u8 {
-    assert_eq!(pair.as_rule(), Rule::weeknum);
-    pair.as_str().parse().expect("invalid weeknum format")
+pub fn build_positive_number(pair: Pair<Rule>) -> u64 {
+    assert_eq!(pair.as_rule(), Rule::positive_number);
+    pair.as_str().parse().expect("invalid positive_number")
 }
