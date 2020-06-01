@@ -3,7 +3,6 @@ extern crate pest;
 extern crate pest_derive;
 extern crate chrono;
 
-pub mod day_selector;
 pub mod parser;
 pub mod time_domain;
 pub mod time_selector;

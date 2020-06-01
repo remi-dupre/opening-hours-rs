@@ -75,6 +75,8 @@ timespan = {
     | time
 }
 
+timespan_plus = @{ "+" }
+
 time = {
       hour_minutes
     | variable_time
@@ -90,7 +92,12 @@ variable_time = {
     | event
 }
 
-event = { "dawn" | "sunrise" | "sunset" | "dusk" }
+event = { dawn | sunrise | sunset | dusk }
+
+dawn = @{ "dawn" }
+sunrise = @{ "sunrise" }
+sunset = @{ "sunset" }
+dusk = @{ "dusk" }
 
 // Weekday selector
 

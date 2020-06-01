@@ -1,3 +1,7 @@
+use std::time::Duration;
+
+use chrono::NaiveTime;
+
 #[derive(Clone, Debug)]
 pub struct TimeDomain {
     pub rules: Vec<RuleSequence>,
@@ -22,6 +26,7 @@ pub struct Selector {
     pub year: YearSelector,
     pub monthday: MonthdaySelector,
     pub week: WeekSelector,
+    pub time: TimeSelector,
 }
 
 impl Selector {
@@ -30,6 +35,10 @@ impl Selector {
             year: YearSelector::range(1900, 9999),
             monthday: MonthdaySelector::month_range(Month::January, Month::December),
             week: WeekSelector::range(1, 53),
+            time: TimeSelector::range(
+                NaiveTime::from_hms(0, 0, 0),
+                NaiveTime::from_hms(23, 59, 59),
+            ),
         }
     }
 }
@@ -39,13 +48,9 @@ impl Selector {
 // ---
 
 #[derive(Clone, Debug)]
-pub struct YearSelector(Vec<YearRange>);
+pub struct YearSelector(pub Vec<YearRange>);
 
 impl YearSelector {
-    pub fn new(ranges: impl IntoIterator<Item = YearRange>) -> Self {
-        Self(ranges.into_iter().collect())
-    }
-
     pub fn range(start: u16, end: u16) -> Self {
         assert!(1900 <= start && start <= end && end <= 9999);
 
@@ -69,13 +74,9 @@ pub struct YearRange {
 // ---
 
 #[derive(Clone, Debug)]
-pub struct MonthdaySelector(Vec<MonthdayRange>);
+pub struct MonthdaySelector(pub Vec<MonthdayRange>);
 
 impl MonthdaySelector {
-    pub fn new(ranges: impl IntoIterator<Item = MonthdayRange>) -> Self {
-        Self(ranges.into_iter().collect())
-    }
-
     pub fn month_range(start: Month, end: Month) -> Self {
         assert!(start <= end);
 
@@ -228,5 +229,48 @@ pub enum Month {
     December,
 }
 
+// ---
+// --- Time selector
+// ---
+
 #[derive(Clone, Debug)]
-pub struct DaySelector {}
+pub struct TimeSelector(pub Vec<TimeSpan>);
+
+impl TimeSelector {
+    pub fn range(start: NaiveTime, end: NaiveTime) -> Self {
+        Self(vec![TimeSpan {
+            start: Time::Fixed(start),
+            end: Time::Fixed(end),
+            repeats: None,
+            open_end: false,
+        }])
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct TimeSpan {
+    pub start: Time,
+    pub end: Time,
+    pub open_end: bool,
+    pub repeats: Option<Duration>,
+}
+
+#[derive(Clone, Debug)]
+pub enum Time {
+    Fixed(NaiveTime),
+    Variable(VariableTime),
+}
+
+#[derive(Clone, Debug)]
+pub struct VariableTime {
+    pub event: TimeEvent,
+    pub offset: i16,
+}
+
+#[derive(Clone, Debug)]
+pub enum TimeEvent {
+    Dawn,
+    Sunrise,
+    Sunset,
+    Dusk,
+}
