@@ -2,6 +2,7 @@ use std::cmp::Ord;
 use std::convert::TryInto;
 use std::fmt::Debug;
 use std::hash::Hash;
+use std::ops::RangeInclusive;
 
 use chrono::{NaiveTime, Timelike};
 
@@ -68,7 +69,6 @@ pub fn build_time_domain(pair: Pair<Rule>) -> td::TimeDomain {
 pub fn build_rule_sequence(pair: Pair<Rule>) -> td::RuleSequence {
     assert_eq!(pair.as_rule(), Rule::rule_sequence);
     let mut pairs = pair.into_inner();
-    println!("----------------------\n{:#?}", &pairs);
 
     let selector_sequence_pair = pairs.next().expect("grammar error: empty rule sequence");
     let rules_modifier_pair = pairs.next();
@@ -154,6 +154,10 @@ pub fn build_selector_sequence(pair: Pair<Rule>) -> td::Selector {
                 if let Some(time_selector) = time_selector {
                     selector.time = time_selector;
                 }
+
+                if let Some(weekday_selector) = weekday_selector {
+                    selector.weekday = weekday_selector;
+                }
             }
             other => unexpected_token(other, Rule::selector_sequence),
         }
@@ -175,11 +179,7 @@ pub fn build_wide_range_selectors(
     let mut monthday_selector = None;
     let mut week_selector = None;
 
-    let pairs = pair.into_inner();
-    println!("{:#?}", pairs);
-    println!("-----------");
-
-    for pair in pairs {
+    for pair in pair.into_inner() {
         match pair.as_rule() {
             Rule::year_selector => year_selector = Some(build_year_selector(pair)),
             Rule::monthday_selector => monthday_selector = Some(build_monthday_selector(pair)),
@@ -191,14 +191,15 @@ pub fn build_wide_range_selectors(
     (year_selector, monthday_selector, week_selector)
 }
 
-pub fn build_small_range_selectors(pair: Pair<Rule>) -> (Option<()>, Option<td::TimeSelector>) {
+pub fn build_small_range_selectors(
+    pair: Pair<Rule>,
+) -> (Option<td::WeekdaySelector>, Option<td::TimeSelector>) {
     assert_eq!(pair.as_rule(), Rule::small_range_selectors);
-    let mut pairs = pair.into_inner();
 
     let mut weekday_selector = None;
     let mut time_selector = None;
 
-    for pair in pairs {
+    for pair in pair.into_inner() {
         match pair.as_rule() {
             Rule::weekday_selector => weekday_selector = Some(build_weekday_selector(pair)),
             Rule::time_selector => time_selector = Some(build_time_selector(pair)),
@@ -209,10 +210,99 @@ pub fn build_small_range_selectors(pair: Pair<Rule>) -> (Option<()>, Option<td::
     (weekday_selector, time_selector)
 }
 
-pub fn build_weekday_selector(pair: Pair<Rule>) -> () {
+pub fn build_weekday_selector(pair: Pair<Rule>) -> td::WeekdaySelector {
     assert_eq!(pair.as_rule(), Rule::weekday_selector);
-    // TODO
+
+    let mut weekday = Vec::new();
+    let mut holiday = Vec::new();
+
+    for pair in pair.into_inner() {
+        match pair.as_rule() {
+            Rule::weekday_sequence => {
+                weekday = pair.into_inner().map(build_weekday_range).collect()
+            }
+            Rule::holiday_sequence => holiday = pair.into_inner().map(build_holiday).collect(),
+            other => unexpected_token(other, Rule::weekday_sequence),
+        }
+    }
+
+    td::WeekdaySelector {
+        weekdays: weekday,
+        holidays: holiday,
+    }
 }
+
+pub fn build_weekday_range(pair: Pair<Rule>) -> td::WeekdayRange {
+    assert_eq!(pair.as_rule(), Rule::weekday_range);
+    let mut pairs = pair.into_inner();
+
+    let start = build_wday(pairs.next().expect("empty weekday range"));
+
+    let end = {
+        if pairs.peek().map(|x| x.as_rule()) == Some(Rule::wday) {
+            build_wday(pairs.next().unwrap())
+        } else {
+            start
+        }
+    };
+
+    let mut nth = Vec::new();
+
+    while pairs.peek().map(|x| x.as_rule()) == Some(Rule::nth_entry) {
+        nth.extend(build_nth_entry(pairs.next().unwrap()).into_iter())
+    }
+
+    if nth.is_empty() {
+        // TODO: that's quite ugly :(
+        nth = vec![1, 2, 3, 4, 5]
+    }
+
+    let offset = {
+        if let Some(pair) = pairs.next() {
+            build_day_offset(pair)
+        } else {
+            0
+        }
+    };
+
+    td::WeekdayRange {
+        range: start..=end,
+        nth,
+        offset,
+    }
+}
+
+pub fn build_nth_entry(pair: Pair<Rule>) -> RangeInclusive<u8> {
+    assert_eq!(pair.as_rule(), Rule::nth_entry);
+    let mut pairs = pair.into_inner();
+
+    let start = build_nth(pairs.next().expect("empty nth entry"));
+    let end = pairs.next().map(build_nth).unwrap_or(start);
+
+    start..=end
+}
+
+pub fn build_nth(pair: Pair<Rule>) -> u8 {
+    assert_eq!(pair.as_rule(), Rule::nth);
+    pair.as_str().parse().expect("invalid nth format")
+}
+
+pub fn build_holiday(pair: Pair<Rule>) -> td::Holiday {
+    assert_eq!(pair.as_rule(), Rule::holiday);
+    let mut pairs = pair.into_inner();
+
+    let kind = match pairs.next().expect("empty holiday").as_rule() {
+        Rule::public_holiday => td::HolidayKind::Public,
+        Rule::school_holiday => td::HolidayKind::School,
+        other => unexpected_token(other, Rule::holiday),
+    };
+
+    let offset = pairs.next().map(build_day_offset).unwrap_or(0);
+
+    td::Holiday { kind, offset }
+}
+
+// pub fn build_weekday_range(pair: Pair<Rule>) ->
 
 pub fn build_time_selector(pair: Pair<Rule>) -> td::TimeSelector {
     assert_eq!(pair.as_rule(), Rule::time_selector);
@@ -246,8 +336,7 @@ pub fn build_timespan(pair: Pair<Rule>) -> td::TimeSpan {
     };
 
     td::TimeSpan {
-        start,
-        end,
+        range: start..=end,
         repeats,
         open_end,
     }
@@ -388,8 +477,7 @@ pub fn build_year_range(pair: Pair<Rule>) -> td::YearRange {
     let step = rules.next().map(build_year);
 
     td::YearRange {
-        start,
-        end: end.unwrap_or(start),
+        range: start..=end.unwrap_or(start),
         step: step.unwrap_or(1),
     }
 }
@@ -598,8 +686,7 @@ pub fn build_week(pair: Pair<Rule>) -> td::WeekRange {
     let step = rules.next().map(build_weeknum);
 
     td::WeekRange {
-        start,
-        end: end.unwrap_or(start),
+        range: start..=end.unwrap_or(start),
         step: step.unwrap_or(1),
     }
 }

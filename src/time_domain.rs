@@ -1,3 +1,4 @@
+use std::ops::RangeInclusive;
 use std::time::Duration;
 
 use chrono::NaiveTime;
@@ -26,6 +27,7 @@ pub struct Selector {
     pub year: YearSelector,
     pub monthday: MonthdaySelector,
     pub week: WeekSelector,
+    pub weekday: WeekdaySelector,
     pub time: TimeSelector,
 }
 
@@ -35,6 +37,7 @@ impl Selector {
             year: YearSelector::range(1900, 9999),
             monthday: MonthdaySelector::month_range(Month::January, Month::December),
             week: WeekSelector::range(1, 53),
+            weekday: WeekdaySelector::range(Weekday::Monday, Weekday::Sunday),
             time: TimeSelector::range(
                 NaiveTime::from_hms(0, 0, 0),
                 NaiveTime::from_hms(23, 59, 59),
@@ -55,8 +58,7 @@ impl YearSelector {
         assert!(1900 <= start && start <= end && end <= 9999);
 
         Self(vec![YearRange {
-            start,
-            end,
+            range: start..=end,
             step: 1,
         }])
     }
@@ -64,8 +66,7 @@ impl YearSelector {
 
 #[derive(Clone, Debug)]
 pub struct YearRange {
-    pub start: u16,
-    pub end: u16,
+    pub range: RangeInclusive<u16>,
     pub step: u16,
 }
 
@@ -96,6 +97,7 @@ pub enum MonthdayRange {
         end: Month,
     },
     Date {
+        // TODO: merge DateFrom and DateTo types (and use a RangeInclusive?)
         start: (DateFrom, DateOffset),
         end: (DateTo, DateOffset),
     },
@@ -157,7 +159,7 @@ pub enum WeekDayOffset {
     Prev(Weekday),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum Weekday {
     Sunday,
     Monday,
@@ -166,6 +168,48 @@ pub enum Weekday {
     Thursday,
     Friday,
     Saturday,
+}
+
+// ---
+// --- Weekday selector
+// ---
+
+#[derive(Clone, Debug)]
+pub struct WeekdaySelector {
+    pub weekdays: Vec<WeekdayRange>,
+    pub holidays: Vec<Holiday>,
+}
+
+impl WeekdaySelector {
+    pub fn range(start: Weekday, end: Weekday) -> Self {
+        Self {
+            weekdays: vec![WeekdayRange {
+                range: start..=end,
+                nth: vec![1, 2, 3, 4, 5],
+                offset: 0,
+            }],
+            holidays: Vec::new(),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct WeekdayRange {
+    pub range: RangeInclusive<Weekday>,
+    pub nth: Vec<u8>, // TODO: maybe a tiny bitset would make more sense
+    pub offset: i64,
+}
+
+#[derive(Clone, Debug)]
+pub struct Holiday {
+    pub kind: HolidayKind,
+    pub offset: i64,
+}
+
+#[derive(Clone, Debug)]
+pub enum HolidayKind {
+    Public,
+    School,
 }
 
 // ---
@@ -184,8 +228,7 @@ impl WeekSelector {
         assert!(1 <= start && start <= end && end <= 53);
 
         Self(vec![WeekRange {
-            start,
-            end,
+            range: start..=end,
             step: 1,
         }])
     }
@@ -193,25 +236,13 @@ impl WeekSelector {
 
 #[derive(Clone, Debug)]
 pub struct WeekRange {
-    pub start: u8,
-    pub end: u8,
+    pub range: RangeInclusive<u8>,
     pub step: u8,
 }
 
 // ---
 // --- Day selector
 // ---
-
-#[derive(Clone, Debug)]
-pub enum Day {
-    Monday = 0,
-    Tuesday = 1,
-    Wednesday = 2,
-    Thursday = 3,
-    Friday = 4,
-    Saturday = 5,
-    Sunday = 6,
-}
 
 #[derive(Copy, Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub enum Month {
@@ -239,8 +270,7 @@ pub struct TimeSelector(pub Vec<TimeSpan>);
 impl TimeSelector {
     pub fn range(start: NaiveTime, end: NaiveTime) -> Self {
         Self(vec![TimeSpan {
-            start: Time::Fixed(start),
-            end: Time::Fixed(end),
+            range: Time::Fixed(start)..=Time::Fixed(end),
             repeats: None,
             open_end: false,
         }])
@@ -249,8 +279,7 @@ impl TimeSelector {
 
 #[derive(Clone, Debug)]
 pub struct TimeSpan {
-    pub start: Time,
-    pub end: Time,
+    pub range: RangeInclusive<Time>,
     pub open_end: bool,
     pub repeats: Option<Duration>,
 }

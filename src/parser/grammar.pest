@@ -122,9 +122,9 @@ holiday = {
     | school_holiday
 }
 
-public_holiday = { "PH" }
+public_holiday = @{ "PH" }
 
-school_holiday = { "SH" }
+school_holiday = @{ "SH" }
 
 nth_entry = {
       nth ~ "-" ~ nth
@@ -209,7 +209,7 @@ hour_minutes = { hour ~ ":" ~ minute }
 
 extended_hour_minutes = { extended_hour ~ ":" ~ minute }
 
-wday = @{ sunday | monday | tuesday | wednesday | thursday | friday | saturday }
+wday = { sunday | monday | tuesday | wednesday | thursday | friday | saturday }
 
 sunday = @{ "Su" }
 monday = @{ "Mo" }
