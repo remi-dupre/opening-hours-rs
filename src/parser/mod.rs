@@ -351,7 +351,7 @@ pub fn build_weekday_range(pair: Pair<Rule>) -> td::WeekDayRange {
     let mut nth = Vec::new();
 
     while pairs.peek().map(|x| x.as_rule()) == Some(Rule::nth_entry) {
-        nth.extend(build_nth_entry(pairs.next().unwrap()).into_iter())
+        nth.extend(build_nth_entry(pairs.next().unwrap()))
     }
 
     if nth.is_empty() {
@@ -561,7 +561,12 @@ pub fn build_date_to(pair: Pair<Rule>, from: &td::Date) -> td::Date {
             let daynum = build_daynum(pair);
 
             match from {
-                td::Date::Easter { .. } => unreachable!("Easter can't be followed by a daynum"),
+                td::Date::Easter { .. } => {
+                    // TODO: this is actually not a specified constraint, but it is quite confusing
+                    //       that this is allowed
+                    // TODO: this should be raised in a Result
+                    todo!("Easter can't be followed by a daynum")
+                }
                 td::Date::Fixed {
                     mut year,
                     mut month,
@@ -571,7 +576,9 @@ pub fn build_date_to(pair: Pair<Rule>, from: &td::Date) -> td::Date {
                         month = month.next();
 
                         if month == td::Month::January {
-                            year.as_mut().map(|x| *x += 1);
+                            if let Some(x) = year.as_mut() {
+                                *x += 1
+                            }
                         }
                     }
 

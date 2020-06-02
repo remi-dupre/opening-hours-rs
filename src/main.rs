@@ -8,7 +8,6 @@ pub mod time_domain;
 pub mod time_selector;
 
 use chrono::{Duration, NaiveDate};
-use time_domain::Selector;
 
 fn main() {
     let res = parser::parse(
@@ -21,7 +20,7 @@ fn main() {
     let mut date = NaiveDate::from_ymd(2020, 6, 1);
 
     for _ in 0..31 {
-        println!("{:?}: {}", date, res.feasible_date(&date));
+        println!("{:?}: {}", date, res.feasible_date(date));
         date += Duration::days(1);
     }
 }

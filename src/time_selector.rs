@@ -8,18 +8,18 @@ use crate::time_domain as td;
 /// ---
 
 pub trait DateFilter {
-    fn filter(&self, date: &NaiveDate) -> bool;
+    fn filter(&self, date: NaiveDate) -> bool;
 }
 
 impl DateFilter for td::YearRange {
-    fn filter(&self, date: &NaiveDate) -> bool {
+    fn filter(&self, date: NaiveDate) -> bool {
         let year = date.year() as u16;
         self.range.contains(&year) && (year - self.range.start()) % self.step == 0
     }
 }
 
 impl DateFilter for td::MonthdayRange {
-    fn filter(&self, date: &NaiveDate) -> bool {
+    fn filter(&self, date: NaiveDate) -> bool {
         let in_year = date.year() as u16;
         let in_month = td::Month::from_u8(date.month() as u8).expect("inalid month value");
 
@@ -59,8 +59,8 @@ impl DateFilter for td::MonthdayRange {
                         end = end.with_year(end.year() + 1).expect("year overflow")
                     }
 
-                    let start = start_offset.apply(&start);
-                    let end = end_offset.apply(&end);
+                    let start = start_offset.apply(start);
+                    let end = end_offset.apply(end);
                     (start..=end).contains(&date)
                 }
                 _ => todo!("Easter not implemented yet"),
@@ -70,18 +70,18 @@ impl DateFilter for td::MonthdayRange {
 }
 
 impl DateFilter for td::WeekRange {
-    fn filter(&self, date: &NaiveDate) -> bool {
+    fn filter(&self, date: NaiveDate) -> bool {
         let week = date.iso_week().week() as u8;
         self.range.contains(&week) && (week - self.range.start()) % self.step == 0
     }
 }
 
 impl DateFilter for td::WeekDayRange {
-    fn filter(&self, date: &NaiveDate) -> bool {
+    fn filter(&self, date: NaiveDate) -> bool {
         match self {
             td::WeekDayRange::Fixed { range, nth, offset } => {
                 // Apply the reverse of the offset
-                let date = *date - Duration::days(*offset);
+                let date = date - Duration::days(*offset);
                 let range = (*range.start() as u8)..=(*range.end() as u8);
                 let date_nth = (date.day() as u8 + 6) / 7;
                 range.contains(&(date.weekday() as u8)) && nth.contains(&date_nth)

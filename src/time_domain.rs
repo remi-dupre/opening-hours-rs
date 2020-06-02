@@ -14,7 +14,7 @@ pub struct TimeDomain {
 }
 
 impl TimeDomain {
-    pub fn feasible_date(&self, date: &NaiveDate) -> bool {
+    pub fn feasible_date(&self, date: NaiveDate) -> bool {
         self.rules[0].feasible_date(date)
     }
 }
@@ -27,7 +27,7 @@ pub struct RuleSequence {
 }
 
 impl RuleSequence {
-    pub fn feasible_date(&self, date: &NaiveDate) -> bool {
+    pub fn feasible_date(&self, date: NaiveDate) -> bool {
         self.selector.feasible_date(date)
     }
 }
@@ -48,13 +48,13 @@ pub struct Selector {
     pub time: Vec<TimeSpan>,
 }
 
-fn check_date_selector_field<T: DateFilter>(selector_field: &[T], date: &NaiveDate) -> bool {
+fn check_date_selector_field<T: DateFilter>(selector_field: &[T], date: NaiveDate) -> bool {
     selector_field.is_empty() || selector_field.iter().any(|x| x.filter(date))
 }
 
 impl Selector {
     // TODO: this should be private
-    pub fn feasible_date(&self, date: &NaiveDate) -> bool {
+    pub fn feasible_date(&self, date: NaiveDate) -> bool {
         check_date_selector_field(&self.year, date)
             && check_date_selector_field(&self.monthday, date)
             && check_date_selector_field(&self.week, date)
@@ -117,8 +117,7 @@ pub struct DateOffset {
 }
 
 impl DateOffset {
-    pub fn apply(&self, date: &NaiveDate) -> NaiveDate {
-        let mut date = date.clone();
+    pub fn apply(&self, mut date: NaiveDate) -> NaiveDate {
         date += Duration::days(self.day_offset);
 
         match self.wday_offset {
@@ -227,8 +226,8 @@ impl Month {
         })
     }
 
-    pub fn next(&self) -> Self {
-        let num = *self as u8;
+    pub fn next(self) -> Self {
+        let num = self as u8;
         Self::from_u8((num % 12) + 1).unwrap()
     }
 }
