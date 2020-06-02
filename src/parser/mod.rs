@@ -4,11 +4,12 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::ops::RangeInclusive;
 
-use chrono::{NaiveTime, Timelike};
+use chrono::Duration;
 
 use pest::iterators::Pair;
 use pest::Parser;
 
+use crate::extended_time::ExtendedTime;
 use crate::time_domain as td;
 
 #[derive(Parser)]
@@ -241,13 +242,16 @@ pub fn build_timespan(pair: Pair<Rule>) -> td::TimeSpan {
     let (open_end, repeats) = match pairs.peek().map(|x| x.as_rule()) {
         None => (false, None),
         Some(Rule::timespan_plus) => (true, None),
-        Some(Rule::minute) => todo!(),
-        Some(Rule::hour_minutes) => todo!(),
+        Some(Rule::minute) => (false, Some(build_minute(pairs.next().unwrap()))),
+        Some(Rule::hour_minutes) => (
+            false,
+            Some(build_hour_minutes_as_duration(pairs.next().unwrap())),
+        ),
         Some(other) => unexpected_token(other, Rule::timespan),
     };
 
     td::TimeSpan {
-        range: start..=end,
+        range: start..end,
         repeats,
         open_end,
     }
@@ -286,7 +290,7 @@ pub fn build_variable_time(pair: Pair<Rule>) -> td::VariableTime {
             let sign = build_plus_or_minus(pairs.next().unwrap());
 
             let mins: i16 = build_hour_minutes(pairs.next().expect("missing hour minutes"))
-                .num_seconds_from_midnight()
+                .mins_from_midnight()
                 .try_into()
                 .expect("offset overflow");
 
@@ -636,7 +640,7 @@ pub fn build_plus_or_minus(pair: Pair<Rule>) -> PlusOrMinus {
     }
 }
 
-pub fn build_minute(pair: Pair<Rule>) -> NaiveTime {
+pub fn build_minute(pair: Pair<Rule>) -> Duration {
     assert_eq!(pair.as_rule(), Rule::minute);
 
     let minutes = pair
@@ -647,10 +651,10 @@ pub fn build_minute(pair: Pair<Rule>) -> NaiveTime {
         .parse()
         .expect("invalid minute");
 
-    NaiveTime::from_hms(0, minutes, 0)
+    Duration::minutes(minutes)
 }
 
-pub fn build_hour_minutes(pair: Pair<Rule>) -> NaiveTime {
+pub fn build_hour_minutes(pair: Pair<Rule>) -> ExtendedTime {
     assert_eq!(pair.as_rule(), Rule::hour_minutes);
     let mut pairs = pair.into_inner();
 
@@ -668,10 +672,31 @@ pub fn build_hour_minutes(pair: Pair<Rule>) -> NaiveTime {
         .parse()
         .expect("invalid minutes");
 
-    NaiveTime::from_hms(hour, minutes, 0)
+    ExtendedTime::new(hour, minutes)
 }
 
-pub fn build_extended_hour_minutes(pair: Pair<Rule>) -> NaiveTime {
+pub fn build_hour_minutes_as_duration(pair: Pair<Rule>) -> Duration {
+    assert_eq!(pair.as_rule(), Rule::hour_minutes);
+    let mut pairs = pair.into_inner();
+
+    let hour = pairs
+        .next()
+        .expect("missing hour")
+        .as_str()
+        .parse()
+        .expect("invalid hour");
+
+    let minutes = pairs
+        .next()
+        .expect("missing minutes")
+        .as_str()
+        .parse()
+        .expect("invalid minutes");
+
+    Duration::hours(hour) + Duration::minutes(minutes)
+}
+
+pub fn build_extended_hour_minutes(pair: Pair<Rule>) -> ExtendedTime {
     assert_eq!(pair.as_rule(), Rule::extended_hour_minutes);
     let mut pairs = pair.into_inner();
 
@@ -689,7 +714,7 @@ pub fn build_extended_hour_minutes(pair: Pair<Rule>) -> NaiveTime {
         .parse()
         .expect("invalid minutes");
 
-    NaiveTime::from_hms(hour, minutes, 0)
+    ExtendedTime::new(hour, minutes)
 }
 
 pub fn build_wday(pair: Pair<Rule>) -> td::Weekday {

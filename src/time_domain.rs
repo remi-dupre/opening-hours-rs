@@ -1,23 +1,44 @@
-use std::ops::RangeInclusive;
+use std::ops::{Range, RangeInclusive};
 
 use chrono::prelude::Datelike;
 use chrono::Duration;
-use chrono::{NaiveDate, NaiveTime};
+use chrono::NaiveDate;
 
+use crate::extended_time::ExtendedTime;
+use crate::schedule::Schedule;
 use crate::time_selector::DateFilter;
+use crate::utils::time_ranges_union;
 
 pub type Weekday = chrono::Weekday;
 
+// TimeDomain
+
 #[derive(Clone, Debug)]
 pub struct TimeDomain {
+    // TODO: handle additional rule
+    // TODO: use internal time repr
     pub rules: Vec<RuleSequence>,
 }
 
 impl TimeDomain {
+    pub fn schedule_at(&self, date: NaiveDate) -> Schedule {
+        // TODO: handle "additional rule"
+        self.rules
+            .iter()
+            .filter(|rules_seq| rules_seq.feasible_date(date))
+            .last()
+            .map(|rules_seq| rules_seq.schedule_at(date))
+            .unwrap_or_default()
+    }
+
     pub fn feasible_date(&self, date: NaiveDate) -> bool {
-        self.rules[0].feasible_date(date)
+        self.rules
+            .iter()
+            .any(|rules_seq| rules_seq.feasible_date(date))
     }
 }
+
+// RuleSequence
 
 #[derive(Clone, Debug)]
 pub struct RuleSequence {
@@ -30,14 +51,23 @@ impl RuleSequence {
     pub fn feasible_date(&self, date: NaiveDate) -> bool {
         self.selector.feasible_date(date)
     }
+
+    pub fn schedule_at(&self, date: NaiveDate) -> Schedule {
+        let ranges = self.selector.intervals_at(date);
+        Schedule::from_ranges(ranges, self.modifier)
+    }
 }
 
-#[derive(Clone, Debug)]
+// RulesModifier
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum RulesModifier {
     Closed,
     Open,
     Unknown,
 }
+
+// Selector
 
 #[derive(Clone, Debug, Default)]
 pub struct Selector {
@@ -48,23 +78,29 @@ pub struct Selector {
     pub time: Vec<TimeSpan>,
 }
 
-fn check_date_selector_field<T: DateFilter>(selector_field: &[T], date: NaiveDate) -> bool {
-    selector_field.is_empty() || selector_field.iter().any(|x| x.filter(date))
-}
-
 impl Selector {
+    pub fn intervals_at(&self, date: NaiveDate) -> Vec<Range<ExtendedTime>> {
+        time_ranges_union(self.time.iter().map(|span| span.as_naive_time(date)))
+    }
+
     // TODO: this should be private
     pub fn feasible_date(&self, date: NaiveDate) -> bool {
-        check_date_selector_field(&self.year, date)
-            && check_date_selector_field(&self.monthday, date)
-            && check_date_selector_field(&self.week, date)
-            && check_date_selector_field(&self.weekday, date)
+        Self::check_date_field(&self.year, date)
+            && Self::check_date_field(&self.monthday, date)
+            && Self::check_date_field(&self.week, date)
+            && Self::check_date_field(&self.weekday, date)
+    }
+
+    fn check_date_field<T: DateFilter>(selector_field: &[T], date: NaiveDate) -> bool {
+        selector_field.is_empty() || selector_field.iter().any(|x| x.filter(date))
     }
 }
 
 // ---
 // --- Year selector
 // ---
+
+// YearRange
 
 #[derive(Clone, Debug)]
 pub struct YearRange {
@@ -88,7 +124,9 @@ pub enum MonthdayRange {
     },
 }
 
-#[derive(Clone, Debug)]
+// Date
+
+#[derive(Clone, Copy, Debug)]
 pub enum Date {
     Fixed {
         year: Option<u16>,
@@ -110,7 +148,9 @@ impl Date {
     }
 }
 
-#[derive(Clone, Debug)]
+// DateOffset
+
+#[derive(Clone, Debug, Default)]
 pub struct DateOffset {
     pub wday_offset: WeekDayOffset,
     pub day_offset: i64,
@@ -138,25 +178,26 @@ impl DateOffset {
     }
 }
 
-impl Default for DateOffset {
-    fn default() -> Self {
-        Self {
-            wday_offset: WeekDayOffset::None,
-            day_offset: 0,
-        }
-    }
-}
+// WeekDayOffset
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum WeekDayOffset {
     None,
     Next(Weekday),
     Prev(Weekday),
 }
 
+impl Default for WeekDayOffset {
+    fn default() -> Self {
+        Self::None
+    }
+}
+
 // ---
 // --- WeekDay selector
 // ---
+
+// WeekDayRange
 
 #[derive(Clone, Debug)]
 pub enum WeekDayRange {
@@ -171,7 +212,9 @@ pub enum WeekDayRange {
     },
 }
 
-#[derive(Clone, Debug)]
+// HolidayKind
+
+#[derive(Clone, Copy, Debug)]
 pub enum HolidayKind {
     Public,
     School,
@@ -180,6 +223,8 @@ pub enum HolidayKind {
 // ---
 // --- Week selector
 // ---
+
+// Week selector
 
 #[derive(Clone, Debug)]
 pub struct WeekRange {
@@ -190,6 +235,8 @@ pub struct WeekRange {
 // ---
 // --- Day selector
 // ---
+
+// Month
 
 #[derive(Copy, Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub enum Month {
@@ -236,29 +283,75 @@ impl Month {
 // --- Time selector
 // ---
 
+// TimeSpan
+
 #[derive(Clone, Debug)]
 pub struct TimeSpan {
-    pub range: RangeInclusive<Time>,
+    pub range: Range<Time>,
     pub open_end: bool,
     pub repeats: Option<Duration>,
 }
 
-#[derive(Clone, Debug)]
+impl TimeSpan {
+    pub fn as_naive_time(&self, date: NaiveDate) -> Range<ExtendedTime> {
+        let start = self.range.start.as_naive(date);
+        let end = self.range.end.as_naive(date);
+        start..end
+    }
+}
+
+// Time
+
+#[derive(Copy, Clone, Debug)]
 pub enum Time {
-    Fixed(NaiveTime),
+    Fixed(ExtendedTime),
     Variable(VariableTime),
 }
 
-#[derive(Clone, Debug)]
+impl Time {
+    pub fn as_naive(self, date: NaiveDate) -> ExtendedTime {
+        match self {
+            Time::Fixed(naive) => naive,
+            Time::Variable(variable) => variable.as_naive(date),
+        }
+    }
+}
+
+// VariableTime
+
+#[derive(Copy, Clone, Debug)]
 pub struct VariableTime {
     pub event: TimeEvent,
     pub offset: i16,
 }
 
-#[derive(Clone, Debug)]
+impl VariableTime {
+    pub fn as_naive(self, date: NaiveDate) -> ExtendedTime {
+        self.event
+            .as_naive(date)
+            .add_minutes(self.offset)
+            .unwrap_or_else(|_| ExtendedTime::new(0, 0))
+    }
+}
+
+// TimeEvent
+
+#[derive(Clone, Copy, Debug)]
 pub enum TimeEvent {
     Dawn,
     Sunrise,
     Sunset,
     Dusk,
+}
+
+impl TimeEvent {
+    pub fn as_naive(self, _date: NaiveDate) -> ExtendedTime {
+        // TODO: real computation based on the day (and position/timezone?)
+        match self {
+            Self::Dawn => ExtendedTime::new(6, 0),
+            Self::Sunrise => ExtendedTime::new(7, 0),
+            Self::Sunset => ExtendedTime::new(19, 0),
+            Self::Dusk => ExtendedTime::new(18, 0),
+        }
+    }
 }
