@@ -1,8 +1,10 @@
+use std::boxed::Box;
+use std::convert::TryInto;
+use std::iter::Peekable;
 use std::ops::{Range, RangeInclusive};
 
 use chrono::prelude::Datelike;
-use chrono::Duration;
-use chrono::NaiveDate;
+use chrono::{Duration, NaiveDate, NaiveDateTime};
 
 use crate::extended_time::ExtendedTime;
 use crate::schedule::Schedule;
@@ -16,7 +18,6 @@ pub type Weekday = chrono::Weekday;
 #[derive(Clone, Debug)]
 pub struct TimeDomain {
     // TODO: handle additional rule
-    // TODO: use internal time repr
     pub rules: Vec<RuleSequence>,
 }
 
@@ -35,6 +36,90 @@ impl TimeDomain {
         self.rules
             .iter()
             .any(|rules_seq| rules_seq.feasible_date(date))
+    }
+
+    pub fn iter_from(&self, date: NaiveDate) -> TimeDomainIterator {
+        TimeDomainIterator::new(self, date)
+    }
+}
+
+// TimeDomainIterator
+
+pub struct TimeDomainIterator<'d> {
+    time_domain: &'d TimeDomain,
+    curr_date: NaiveDate,
+    curr_schedule: Peekable<Box<dyn Iterator<Item = (Range<ExtendedTime>, RulesModifier)>>>,
+}
+
+impl<'d> TimeDomainIterator<'d> {
+    pub fn new(time_domain: &'d TimeDomain, start_date: NaiveDate) -> Self {
+        let curr_schedule = {
+            if start_date.year() <= 9999 {
+                time_domain.schedule_at(start_date).into_iter_with_closed()
+            } else {
+                Box::new(std::iter::empty())
+            }
+        };
+
+        Self {
+            time_domain,
+            curr_date: start_date,
+            curr_schedule: curr_schedule.peekable(),
+        }
+    }
+}
+
+impl TimeDomainIterator<'_> {
+    fn consume_until_next_state(&mut self, curr_state: RulesModifier) {
+        while self.curr_schedule.peek().map(|(_, st)| *st) == Some(curr_state) {
+            self.curr_schedule.next();
+
+            if self.curr_schedule.peek().is_none() {
+                self.curr_date += Duration::days(1);
+
+                if self.curr_date.year() <= 9999 {
+                    self.curr_schedule = self
+                        .time_domain
+                        .schedule_at(self.curr_date)
+                        .into_iter_with_closed()
+                        .peekable()
+                }
+            }
+        }
+    }
+}
+
+impl Iterator for TimeDomainIterator<'_> {
+    type Item = (Range<NaiveDateTime>, RulesModifier);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some((curr_range, curr_state)) = self.curr_schedule.peek().cloned() {
+            let start = NaiveDateTime::new(
+                self.curr_date,
+                curr_range
+                    .start
+                    .try_into()
+                    .expect("got invalid time from schedule"),
+            );
+
+            self.consume_until_next_state(curr_state);
+
+            let end_date = self.curr_date;
+            let end_time = self
+                .curr_schedule
+                .peek()
+                .map(|(range, _)| range.start)
+                .unwrap_or_else(|| ExtendedTime::new(0, 0));
+
+            let end = NaiveDateTime::new(
+                end_date,
+                end_time.try_into().expect("got invalid time from schedule"),
+            );
+
+            Some((start..end, curr_state))
+        } else {
+            None
+        }
     }
 }
 

@@ -489,9 +489,9 @@ pub fn build_monthday_range(pair: Pair<Rule>) -> td::MonthdayRange {
             };
 
             let end = match pairs.peek().map(|x| x.as_rule()) {
-                Some(Rule::date_to) => build_date_to(pairs.next().unwrap(), &start),
+                Some(Rule::date_to) => build_date_to(pairs.next().unwrap(), start),
                 Some(Rule::monthday_range_plus) => td::Date::day(31, td::Month::December, 9999),
-                None => start.clone(),
+                None => start,
                 Some(other) => unexpected_token(other, Rule::monthday_range),
             };
 
@@ -555,7 +555,7 @@ pub fn build_date_from(pair: Pair<Rule>) -> td::Date {
     }
 }
 
-pub fn build_date_to(pair: Pair<Rule>, from: &td::Date) -> td::Date {
+pub fn build_date_to(pair: Pair<Rule>, from: td::Date) -> td::Date {
     assert_eq!(pair.as_rule(), Rule::date_to);
     let pair = pair.into_inner().next().expect("empty date (to)");
 
@@ -576,7 +576,7 @@ pub fn build_date_to(pair: Pair<Rule>, from: &td::Date) -> td::Date {
                     mut month,
                     day,
                 } => {
-                    if *day > daynum {
+                    if day > daynum {
                         month = month.next();
 
                         if month == td::Month::January {

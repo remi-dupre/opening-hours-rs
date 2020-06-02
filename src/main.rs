@@ -26,8 +26,12 @@ fn main() {
         println!(
             "{:?}: {:?}",
             date,
-            res.schedule_at(date).get_with_closed().collect::<Vec<_>>()
+            res.schedule_at(date).into_iter().collect::<Vec<_>>()
         );
         date += Duration::days(1);
+    }
+
+    for range in res.iter_from(date).take(1000) {
+        println!("{:?}", range);
     }
 }
