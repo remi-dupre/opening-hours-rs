@@ -3,11 +3,12 @@ extern crate pest;
 extern crate pest_derive;
 extern crate chrono;
 
+pub mod day_selector;
 pub mod extended_time;
 pub mod parser;
 pub mod schedule;
-pub mod selector;
 pub mod time_domain;
+pub mod time_selector;
 pub mod utils;
 
 use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime};

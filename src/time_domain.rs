@@ -7,9 +7,10 @@ use std::ops::Range;
 use chrono::prelude::Datelike;
 use chrono::{Duration, NaiveDate, NaiveDateTime};
 
+use crate::day_selector::{DateFilter, DaySelector};
 use crate::extended_time::ExtendedTime;
 use crate::schedule::Schedule;
-use crate::selector::Selector;
+use crate::time_selector::TimeSelector;
 
 pub type Weekday = chrono::Weekday;
 
@@ -35,16 +36,10 @@ impl TimeDomain {
         // TODO: handle comments
         self.rules
             .iter()
-            .filter(|rules_seq| rules_seq.feasible_date(date))
+            .filter(|rules_seq| rules_seq.day_selector.filter(date))
             .last()
             .map(|rules_seq| rules_seq.schedule_at(date))
             .unwrap_or_default()
-    }
-
-    pub fn feasible_date(&self, date: NaiveDate) -> bool {
-        self.rules
-            .iter()
-            .any(|rules_seq| rules_seq.feasible_date(date))
     }
 
     pub fn iter_from(&self, from: NaiveDateTime) -> TimeDomainIterator {
@@ -188,18 +183,15 @@ impl Iterator for TimeDomainIterator<'_> {
 
 #[derive(Clone, Debug)]
 pub struct RuleSequence {
-    pub selector: Selector,
+    pub day_selector: DaySelector,
+    pub time_selector: TimeSelector,
     pub modifier: RulesModifier,
     pub comment: Option<String>,
 }
 
 impl RuleSequence {
-    pub fn feasible_date(&self, date: NaiveDate) -> bool {
-        self.selector.feasible_date(date)
-    }
-
     pub fn schedule_at(&self, date: NaiveDate) -> Schedule {
-        let ranges = self.selector.intervals_at(date);
+        let ranges = self.time_selector.intervals_at(date);
         Schedule::from_ranges(ranges, self.modifier)
     }
 }

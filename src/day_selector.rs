@@ -1,44 +1,38 @@
-use std::ops::{Range, RangeInclusive};
+use std::ops::RangeInclusive;
 
 use chrono::prelude::Datelike;
 use chrono::{Duration, NaiveDate};
 
-use crate::extended_time::ExtendedTime;
-use crate::utils::time_ranges_union;
-
 pub type Weekday = chrono::Weekday;
 
-// Selector
+/// Generic trait to specify the behavior of a selector over dates.
+pub trait DateFilter {
+    fn filter(&self, date: NaiveDate) -> bool;
+}
+
+impl<T: DateFilter> DateFilter for [T] {
+    fn filter(&self, date: NaiveDate) -> bool {
+        self.is_empty() || self.iter().any(|x| x.filter(date))
+    }
+}
+
+// DaySelector
 
 #[derive(Clone, Debug, Default)]
-pub struct Selector {
+pub struct DaySelector {
     pub year: Vec<YearRange>,
     pub monthday: Vec<MonthdayRange>,
     pub week: Vec<WeekRange>,
     pub weekday: Vec<WeekDayRange>,
-    pub time: Vec<TimeSpan>,
 }
 
-impl Selector {
-    pub fn intervals_at(&self, date: NaiveDate) -> Vec<Range<ExtendedTime>> {
-        time_ranges_union(self.time.iter().map(|span| span.as_naive_time(date)))
+impl DateFilter for DaySelector {
+    fn filter(&self, date: NaiveDate) -> bool {
+        self.year.filter(date)
+            && self.monthday.filter(date)
+            && self.week.filter(date)
+            && self.weekday.filter(date)
     }
-
-    // TODO: this should be private
-    pub fn feasible_date(&self, date: NaiveDate) -> bool {
-        Self::check_date_field(&self.year, date)
-            && Self::check_date_field(&self.monthday, date)
-            && Self::check_date_field(&self.week, date)
-            && Self::check_date_field(&self.weekday, date)
-    }
-
-    fn check_date_field<T: DateFilter>(selector_field: &[T], date: NaiveDate) -> bool {
-        selector_field.is_empty() || selector_field.iter().any(|x| x.filter(date))
-    }
-}
-
-trait DateFilter {
-    fn filter(&self, date: NaiveDate) -> bool;
 }
 
 // ---
@@ -304,79 +298,3 @@ impl Month {
     }
 }
 
-// ---
-// --- Time selector
-// ---
-
-// TimeSpan
-
-#[derive(Clone, Debug)]
-pub struct TimeSpan {
-    pub range: Range<Time>,
-    pub open_end: bool,
-    pub repeats: Option<Duration>,
-}
-
-impl TimeSpan {
-    pub fn as_naive_time(&self, date: NaiveDate) -> Range<ExtendedTime> {
-        let start = self.range.start.as_naive(date);
-        let end = self.range.end.as_naive(date);
-        start..end
-    }
-}
-
-// Time
-
-#[derive(Copy, Clone, Debug)]
-pub enum Time {
-    Fixed(ExtendedTime),
-    Variable(VariableTime),
-}
-
-impl Time {
-    pub fn as_naive(self, date: NaiveDate) -> ExtendedTime {
-        match self {
-            Time::Fixed(naive) => naive,
-            Time::Variable(variable) => variable.as_naive(date),
-        }
-    }
-}
-
-// VariableTime
-
-#[derive(Copy, Clone, Debug)]
-pub struct VariableTime {
-    pub event: TimeEvent,
-    pub offset: i16,
-}
-
-impl VariableTime {
-    pub fn as_naive(self, date: NaiveDate) -> ExtendedTime {
-        self.event
-            .as_naive(date)
-            .add_minutes(self.offset)
-            .unwrap_or_else(|_| ExtendedTime::new(0, 0))
-    }
-}
-
-// TimeEvent
-
-#[derive(Clone, Copy, Debug)]
-pub enum TimeEvent {
-    Dawn,
-    Sunrise,
-    Sunset,
-    Dusk,
-}
-
-impl TimeEvent {
-    pub fn as_naive(self, _date: NaiveDate) -> ExtendedTime {
-        // TODO: real computation based on the day (and position/timezone?)
-        match self {
-            Self::Dawn => ExtendedTime::new(6, 0),
-            Self::Sunrise => ExtendedTime::new(7, 0),
-            Self::Sunset => ExtendedTime::new(19, 0),
-            Self::Dusk => ExtendedTime::new(18, 0),
-        }
-    }
-}
