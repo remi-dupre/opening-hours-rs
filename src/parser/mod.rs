@@ -45,7 +45,7 @@ pub fn unexpected_token<T>(token: Rule, parent: Rule) -> T {
 }
 
 pub fn parse(data: &str) -> Result<td::TimeDomain, Error> {
-    let time_domain_pair = CSVParser::parse(Rule::time_domain, data)
+    let time_domain_pair = CSVParser::parse(Rule::input_time_domain, data)
         .map_err(Error::from)?
         .next()
         .expect("grammar error: no time_domain found");
@@ -188,6 +188,7 @@ pub fn build_wide_range_selectors(
             Rule::year_selector => year_selector = build_year_selector(pair),
             Rule::monthday_selector => monthday_selector = build_monthday_selector(pair),
             Rule::week_selector => week_selector = build_week_selector(pair),
+            Rule::comment => {} // TODO
             other => unexpected_token(other, Rule::wide_range_selectors),
         }
     }

@@ -10,17 +10,21 @@ pub mod time_domain;
 pub mod time_selector;
 pub mod utils;
 
-use chrono::{Duration, NaiveDate};
+use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime};
 
 fn main() {
-    let res = parser::parse(
-        r#"2020-2050week24-50,30-40:Mo1-3,5 08:00-13:00,14:00-17:00,13:00-14:00 unknown "not on bad weather days!""#,
-    )
-    .unwrap();
+    let res =
+        parser::parse(r#"Mo 12:00-14:00 open "female only", Mo 14:00-16:00 unknown "male only""#)
+            .map_err(|err| {
+                println!("Got Parsing Error:");
+                println!("{}", err.description);
+            })
+            .unwrap();
 
     println!("{:#?}", &res);
 
     let mut date = NaiveDate::from_ymd(2020, 6, 1);
+    let time = NaiveTime::from_hms(23, 59, 59);
 
     for _ in 0..31 {
         println!(
@@ -31,7 +35,7 @@ fn main() {
         date += Duration::days(1);
     }
 
-    for range in res.iter_from(date).take(1000) {
+    for range in res.iter_from(NaiveDateTime::new(date, time)).take(1000) {
         println!("{:?}", range);
     }
 }

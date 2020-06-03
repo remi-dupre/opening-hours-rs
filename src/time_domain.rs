@@ -1,4 +1,5 @@
 use std::boxed::Box;
+use std::cmp::{max, min};
 use std::convert::TryInto;
 use std::iter::Peekable;
 use std::ops::{Range, RangeInclusive};
@@ -22,8 +23,17 @@ pub struct TimeDomain {
 }
 
 impl TimeDomain {
+    // Low level implementations.
+    //
+    // Following functions are used to build the TimeDomainIterator which is
+    // used to implement all other functions.
+    //
+    // This means that performances matters a lot for these functions and it
+    // would be relevant to focus on optimisatons to this regard.
+
     pub fn schedule_at(&self, date: NaiveDate) -> Schedule {
         // TODO: handle "additional rule"
+        // TODO: handle comments
         self.rules
             .iter()
             .filter(|rules_seq| rules_seq.feasible_date(date))
@@ -38,8 +48,50 @@ impl TimeDomain {
             .any(|rules_seq| rules_seq.feasible_date(date))
     }
 
-    pub fn iter_from(&self, date: NaiveDate) -> TimeDomainIterator {
-        TimeDomainIterator::new(self, date)
+    pub fn iter_from(&self, from: NaiveDateTime) -> TimeDomainIterator {
+        TimeDomainIterator::new(self, from)
+    }
+
+    // High level implementations
+
+    pub fn next_change(&self, current_time: NaiveDateTime) -> NaiveDateTime {
+        self.iter_from(current_time)
+            .next()
+            .map(|(range, _)| range.end)
+            .unwrap_or(current_time)
+    }
+
+    pub fn state(&self, current_time: NaiveDateTime) -> RulesModifier {
+        self.iter_from(current_time)
+            .next()
+            .map(|(_, state)| state)
+            .unwrap_or(RulesModifier::Unknown)
+    }
+
+    pub fn is_open(&self, current_time: NaiveDateTime) -> bool {
+        self.state(current_time) == RulesModifier::Open
+    }
+
+    pub fn is_closed(&self, current_time: NaiveDateTime) -> bool {
+        self.state(current_time) == RulesModifier::Closed
+    }
+
+    pub fn is_unknown(&self, current_time: NaiveDateTime) -> bool {
+        self.state(current_time) == RulesModifier::Unknown
+    }
+
+    pub fn intervals<'s>(
+        &'s self,
+        from: NaiveDateTime,
+        to: NaiveDateTime,
+    ) -> impl Iterator<Item = (Range<NaiveDateTime>, RulesModifier)> + 's {
+        self.iter_from(from)
+            .take_while(move |(range, _)| range.start < to)
+            .map(move |(range, state)| {
+                let start = max(range.start, from);
+                let end = min(range.end, to);
+                (start..end, state)
+            })
     }
 }
 
@@ -52,24 +104,34 @@ pub struct TimeDomainIterator<'d> {
 }
 
 impl<'d> TimeDomainIterator<'d> {
-    pub fn new(time_domain: &'d TimeDomain, start_date: NaiveDate) -> Self {
-        let curr_schedule = {
+    pub fn new(time_domain: &'d TimeDomain, start_datetime: NaiveDateTime) -> Self {
+        let start_date = start_datetime.date();
+        let start_time = start_datetime.time().into();
+
+        let mut curr_schedule = {
             if start_date.year() <= 9999 {
                 time_domain.schedule_at(start_date).into_iter_with_closed()
             } else {
                 Box::new(std::iter::empty())
             }
-        };
+        }
+        .peekable();
+
+        while curr_schedule
+            .peek()
+            .map(|(range, _)| !range.contains(&start_time))
+            .unwrap_or(false)
+        {
+            curr_schedule.next();
+        }
 
         Self {
             time_domain,
             curr_date: start_date,
-            curr_schedule: curr_schedule.peekable(),
+            curr_schedule,
         }
     }
-}
 
-impl TimeDomainIterator<'_> {
     fn consume_until_next_state(&mut self, curr_state: RulesModifier) {
         while self.curr_schedule.peek().map(|(_, st)| *st) == Some(curr_state) {
             self.curr_schedule.next();

@@ -3,25 +3,26 @@
 
 // Time domain
 
-input_time_domain = _{ SOI ~ time_domain ~ &EOI }
+input_time_domain = _{ SOI ~ time_domain ~ EOI }
 
 time_domain = { rule_sequence ~ ( any_rule_separator ~ rule_sequence )* }
 
 rule_sequence = { selector_sequence ~ (space ~ rules_modifier)? }
 
 // Rule separators
+// TODO: handle kinds of rules
 
-any_rule_separator = {
+any_rule_separator = _{
       normal_rule_separator
     | additional_rule_separator
     | fallback_rule_separator
 }
 
-normal_rule_separator = { ";" ~ space }
+normal_rule_separator = _{ ";" ~ space }
 
-additional_rule_separator = { "," ~ space }
+additional_rule_separator = _{ "," ~ space }
 
-fallback_rule_separator = { space ~ "||" ~ space }
+fallback_rule_separator = _{ space ~ "||" ~ space }
 
 // Rule modifier
 
@@ -44,13 +45,14 @@ rules_modifier_enum_unknown = @{ "unknown" }
 
 selector_sequence = {
       always_open
-    | wide_range_selectors ~ small_range_selectors
+    | wide_range_selectors ~ small_range_selectors?
 }
 
 always_open = @{ "24/7" }
 
 wide_range_selectors = {
-    year_selector? ~ monthday_selector? ~ week_selector? ~
+      comment
+    | year_selector? ~ monthday_selector? ~ week_selector? ~
     separator_for_readability?
 }
 
