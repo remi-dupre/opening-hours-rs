@@ -102,26 +102,19 @@ fn build_any_rule_separator(pair: Pair<Rule>) -> td::RuleOperator {
 // --- Rule modifier
 // ---
 
-// TODO: rewrite with mutables to get something readable
 fn build_rules_modifier(pair: Pair<Rule>) -> (td::RulesModifier, Option<String>) {
     assert_eq!(pair.as_rule(), Rule::rules_modifier);
     let mut pairs = pair.into_inner();
 
-    let (modifier_pair, comment_pair) = match (pairs.next(), pairs.next()) {
-        (Some(modifier_pair), Some(comment_pair)) => {
-            assert_eq!(modifier_pair.as_rule(), Rule::rules_modifier_enum);
-            assert_eq!(comment_pair.as_rule(), Rule::comment);
-            (Some(modifier_pair), Some(comment_pair))
+    let modifier = {
+        if pairs.peek().expect("empty rules_modifier").as_rule() == Rule::rules_modifier_enum {
+            build_rules_modifier_enum(pairs.next().unwrap())
+        } else {
+            td::RulesModifier::Open
         }
-        (Some(pair), None) if pair.as_rule() == Rule::rules_modifier_enum => (Some(pair), None),
-        (Some(pair), None) if pair.as_rule() == Rule::comment => (None, Some(pair)),
-        _ => todo!(),
     };
 
-    let comment = comment_pair.map(|pair| pair.as_str().to_string());
-    let modifier = modifier_pair
-        .map(build_rules_modifier_enum)
-        .unwrap_or(td::RulesModifier::Open);
+    let comment = pairs.next().map(|pair| pair.as_str().to_string());
 
     (modifier, comment)
 }
