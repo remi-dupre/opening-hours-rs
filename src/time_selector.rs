@@ -12,7 +12,11 @@ pub struct TimeSelector {
 
 impl TimeSelector {
     pub fn intervals_at(&self, date: NaiveDate) -> Vec<Range<ExtendedTime>> {
-        time_ranges_union(self.time.iter().map(|span| span.as_naive_time(date)))
+        if self.time.is_empty() {
+            vec![ExtendedTime::new(0, 0)..ExtendedTime::new(24, 0)]
+        } else {
+            time_ranges_union(self.time.iter().map(|span| span.as_naive_time(date)))
+        }
     }
 }
 

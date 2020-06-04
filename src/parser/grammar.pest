@@ -12,17 +12,17 @@ rule_sequence = { selector_sequence ~ (space ~ rules_modifier)? }
 // Rule separators
 // TODO: handle kinds of rules
 
-any_rule_separator = _{
+any_rule_separator = {
       normal_rule_separator
     | additional_rule_separator
     | fallback_rule_separator
 }
 
-normal_rule_separator = _{ ";" ~ space }
+normal_rule_separator = @{ ";" ~ space }
 
-additional_rule_separator = _{ "," ~ space }
+additional_rule_separator = @{ "," ~ space }
 
-fallback_rule_separator = _{ space ~ "||" ~ space }
+fallback_rule_separator = @{ space ~ "||" ~ space }
 
 // Rule modifier
 
@@ -51,7 +51,7 @@ selector_sequence = {
 always_open = @{ "24/7" }
 
 wide_range_selectors = {
-      comment
+      comment ~ ":"
     | year_selector? ~ monthday_selector? ~ week_selector? ~
     separator_for_readability?
 }

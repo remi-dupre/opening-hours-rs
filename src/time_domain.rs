@@ -32,14 +32,43 @@ impl TimeDomain {
     // would be relevant to focus on optimisatons to this regard.
 
     pub fn schedule_at(&self, date: NaiveDate) -> Schedule {
-        // TODO: handle "additional rule"
         // TODO: handle comments
         self.rules
             .iter()
-            .filter(|rules_seq| rules_seq.day_selector.filter(date))
-            .last()
-            .map(|rules_seq| rules_seq.schedule_at(date))
-            .unwrap_or_default()
+            .fold(
+                (false, Schedule::empty()),
+                |(prev_matched, prev_eval), rules_seq| {
+                    let curr_matched = rules_seq.day_selector.filter(date);
+                    let curr_eval = {
+                        if curr_matched {
+                            rules_seq.schedule_at(date)
+                        } else {
+                            Schedule::empty()
+                        }
+                    };
+
+                    let schedule = match rules_seq.operator {
+                        RuleOperator::Normal => {
+                            if curr_matched {
+                                curr_eval
+                            } else {
+                                prev_eval
+                            }
+                        }
+                        RuleOperator::Additional => prev_eval.addition(curr_eval),
+                        RuleOperator::Fallback => {
+                            if prev_matched {
+                                prev_eval
+                            } else {
+                                curr_eval
+                            }
+                        }
+                    };
+
+                    (prev_matched || curr_matched, schedule)
+                },
+            )
+            .1
     }
 
     pub fn iter_from(&self, from: NaiveDateTime) -> TimeDomainIterator {
@@ -104,7 +133,7 @@ impl<'d> TimeDomainIterator<'d> {
 
         let mut curr_schedule = {
             if start_date.year() <= 9999 {
-                time_domain.schedule_at(start_date).into_iter_with_closed()
+                time_domain.schedule_at(start_date).into_iter_filled()
             } else {
                 Box::new(empty())
             }
@@ -137,7 +166,7 @@ impl<'d> TimeDomainIterator<'d> {
                     self.curr_schedule = self
                         .time_domain
                         .schedule_at(self.curr_date)
-                        .into_iter_with_closed()
+                        .into_iter_filled()
                         .peekable()
                 }
             }
@@ -186,6 +215,7 @@ pub struct RuleSequence {
     pub day_selector: DaySelector,
     pub time_selector: TimeSelector,
     pub modifier: RulesModifier,
+    pub operator: RuleOperator,
     pub comment: Option<String>,
 }
 
@@ -198,9 +228,17 @@ impl RuleSequence {
 
 // RulesModifier
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub enum RulesModifier {
-    Closed,
+    // TODO: rename (at least no s)
     Open,
+    Closed,
     Unknown,
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum RuleOperator {
+    Normal,
+    Additional,
+    Fallback,
 }

@@ -14,13 +14,12 @@ pub mod utils;
 use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime};
 
 fn main() {
-    let res =
-        parser::parse(r#"Mo 12:00-14:00 open "female only", Mo 14:00-16:00 unknown "male only""#)
-            .map_err(|err| {
-                println!("Got Parsing Error:");
-                println!("{}", err.description);
-            })
-            .unwrap();
+    let res = parser::parse(r#"Mo-Sa 08:00-13:00,14:00-17:00 || "closed": unknown"#)
+        .map_err(|err| {
+            println!("Got Parsing Error:");
+            println!("{}", err.description);
+        })
+        .unwrap();
 
     println!("{:#?}", &res);
 
@@ -36,7 +35,7 @@ fn main() {
         date += Duration::days(1);
     }
 
-    for range in res.iter_from(NaiveDateTime::new(date, time)).take(1000) {
+    for range in res.iter_from(NaiveDateTime::new(date, time)) {
         println!("{:?}", range);
     }
 }

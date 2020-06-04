@@ -61,19 +61,24 @@ pub fn parse(data: &str) -> Result<td::TimeDomain, Error> {
 
 pub fn build_time_domain(pair: Pair<Rule>) -> td::TimeDomain {
     assert_eq!(pair.as_rule(), Rule::time_domain);
+    let mut pairs = pair.into_inner();
+    let mut rules = Vec::new();
 
-    let rules = pair
-        .into_inner()
-        .map(|pair| match pair.as_rule() {
-            Rule::rule_sequence => build_rule_sequence(pair),
-            t => unexpected_token(t, Rule::time_domain),
+    while let Some(pair) = pairs.next() {
+        rules.push(match pair.as_rule() {
+            Rule::rule_sequence => build_rule_sequence(pair, td::RuleOperator::Normal),
+            Rule::any_rule_separator => build_rule_sequence(
+                pairs.next().expect("separator not followed by any rule"),
+                build_any_rule_separator(pair),
+            ),
+            other => unexpected_token(other, Rule::time_domain),
         })
-        .collect();
+    }
 
     td::TimeDomain { rules }
 }
 
-pub fn build_rule_sequence(pair: Pair<Rule>) -> td::RuleSequence {
+pub fn build_rule_sequence(pair: Pair<Rule>, operator: td::RuleOperator) -> td::RuleSequence {
     assert_eq!(pair.as_rule(), Rule::rule_sequence);
     let mut pairs = pair.into_inner();
 
@@ -90,6 +95,23 @@ pub fn build_rule_sequence(pair: Pair<Rule>) -> td::RuleSequence {
         comment,
         day_selector,
         time_selector,
+        operator,
+    }
+}
+
+pub fn build_any_rule_separator(pair: Pair<Rule>) -> td::RuleOperator {
+    assert_eq!(pair.as_rule(), Rule::any_rule_separator);
+
+    match pair
+        .into_inner()
+        .next()
+        .expect("empty rule separator")
+        .as_rule()
+    {
+        Rule::normal_rule_separator => td::RuleOperator::Normal,
+        Rule::additional_rule_separator => td::RuleOperator::Additional,
+        Rule::fallback_rule_separator => td::RuleOperator::Fallback,
+        other => unexpected_token(other, Rule::any_rule_separator),
     }
 }
 
