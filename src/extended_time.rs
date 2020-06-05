@@ -35,9 +35,16 @@ impl ExtendedTime {
         self.minute
     }
 
-    pub fn add_minutes(&mut self, minutes: i16) -> Result<Self, TryFromIntError> {
+    pub fn add_minutes(&self, minutes: i16) -> Result<Self, TryFromIntError> {
         let as_minutes = self.mins_from_midnight() as i16 + minutes;
         Ok(Self::from_mins_from_midnight(as_minutes.try_into()?))
+    }
+
+    pub fn add_hours(&self, hours: i16) -> Result<Self, TryFromIntError> {
+        Ok(Self {
+            hour: (i16::from(self.hour) + hours).try_into()?,
+            minute: self.minute,
+        })
     }
 
     pub fn from_mins_from_midnight(minute: u16) -> Self {

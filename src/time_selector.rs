@@ -3,7 +3,7 @@ use std::ops::Range;
 use chrono::{Duration, NaiveDate};
 
 use crate::extended_time::ExtendedTime;
-use crate::utils::time_ranges_union;
+use crate::utils::{range_intersection, time_ranges_union};
 
 #[derive(Clone, Debug, Default)]
 pub struct TimeSelector {
@@ -11,12 +11,47 @@ pub struct TimeSelector {
 }
 
 impl TimeSelector {
+    pub fn new(time: Vec<TimeSpan>) -> Self {
+        let time = {
+            if time.is_empty() {
+                vec![TimeSpan::fixed_range(
+                    ExtendedTime::new(0, 0),
+                    ExtendedTime::new(24, 0),
+                )]
+            } else {
+                time
+            }
+        };
+
+        Self { time }
+    }
+
     pub fn intervals_at(&self, date: NaiveDate) -> Vec<Range<ExtendedTime>> {
-        if self.time.is_empty() {
-            vec![ExtendedTime::new(0, 0)..ExtendedTime::new(24, 0)]
-        } else {
-            time_ranges_union(self.time.iter().map(|span| span.as_naive_time(date)))
-        }
+        time_ranges_union(self.as_naive_time(date).filter_map(|range| {
+            let dstart = ExtendedTime::new(0, 0);
+            let dend = ExtendedTime::new(24, 0);
+            range_intersection(range, dstart..dend)
+        }))
+    }
+
+    pub fn intervals_at_next_day(&self, date: NaiveDate) -> Vec<Range<ExtendedTime>> {
+        time_ranges_union(
+            self.as_naive_time(date)
+                .filter_map(|range| {
+                    let dstart = ExtendedTime::new(24, 0);
+                    let dend = ExtendedTime::new(48, 0);
+                    range_intersection(range, dstart..dend)
+                })
+                .map(|range| {
+                    let start = range.start.add_hours(-24).unwrap();
+                    let end = range.end.add_hours(-24).unwrap();
+                    start..end
+                }),
+        )
+    }
+
+    pub fn as_naive_time(&self, date: NaiveDate) -> impl Iterator<Item = Range<ExtendedTime>> + '_ {
+        self.time.iter().map(move |span| span.as_naive_time(date))
     }
 }
 
@@ -34,6 +69,14 @@ pub struct TimeSpan {
 }
 
 impl TimeSpan {
+    pub fn fixed_range(start: ExtendedTime, end: ExtendedTime) -> Self {
+        Self {
+            range: Time::Fixed(start)..Time::Fixed(end),
+            open_end: false,
+            repeats: None,
+        }
+    }
+
     pub fn as_naive_time(&self, date: NaiveDate) -> Range<ExtendedTime> {
         let start = self.range.start.as_naive(date);
         let end = self.range.end.as_naive(date);

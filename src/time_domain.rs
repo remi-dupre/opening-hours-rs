@@ -18,7 +18,6 @@ pub type Weekday = chrono::Weekday;
 
 #[derive(Clone, Debug)]
 pub struct TimeDomain {
-    // TODO: handle additional rule
     pub rules: Vec<RuleSequence>,
 }
 
@@ -35,40 +34,20 @@ impl TimeDomain {
         // TODO: handle comments
         self.rules
             .iter()
-            .fold(
-                (false, Schedule::empty()),
-                |(prev_matched, prev_eval), rules_seq| {
-                    let curr_matched = rules_seq.day_selector.filter(date);
-                    let curr_eval = {
-                        if curr_matched {
-                            rules_seq.schedule_at(date)
-                        } else {
-                            Schedule::empty()
-                        }
-                    };
+            .fold(None, |prev_eval, rules_seq| {
+                let curr_eval = rules_seq.schedule_at(date);
 
-                    let schedule = match rules_seq.operator {
-                        RuleOperator::Normal => {
-                            if curr_matched {
-                                curr_eval
-                            } else {
-                                prev_eval
-                            }
-                        }
-                        RuleOperator::Additional => prev_eval.addition(curr_eval),
-                        RuleOperator::Fallback => {
-                            if prev_matched {
-                                prev_eval
-                            } else {
-                                curr_eval
-                            }
-                        }
-                    };
-
-                    (prev_matched || curr_matched, schedule)
-                },
-            )
-            .1
+                match rules_seq.operator {
+                    RuleOperator::Normal => curr_eval,
+                    RuleOperator::Additional => match (prev_eval, curr_eval) {
+                        (Some(prev), Some(curr)) => Some(prev.addition(curr)),
+                        (Some(schd), None) | (None, Some(schd)) => Some(schd),
+                        (None, None) => None,
+                    },
+                    RuleOperator::Fallback => prev_eval.or(curr_eval),
+                }
+            })
+            .unwrap_or_else(Schedule::empty)
     }
 
     pub fn iter_from(&self, from: NaiveDateTime) -> TimeDomainIterator {
@@ -220,9 +199,32 @@ pub struct RuleSequence {
 }
 
 impl RuleSequence {
-    pub fn schedule_at(&self, date: NaiveDate) -> Schedule {
-        let ranges = self.time_selector.intervals_at(date);
-        Schedule::from_ranges(ranges, self.kind)
+    pub fn schedule_at(&self, date: NaiveDate) -> Option<Schedule> {
+        let today = {
+            if self.day_selector.filter(date) {
+                let ranges = self.time_selector.intervals_at(date);
+                Some(Schedule::from_ranges(ranges, self.kind))
+            } else {
+                None
+            }
+        };
+
+        let yesterday = {
+            if self.day_selector.filter(date) {
+                let ranges = self
+                    .time_selector
+                    .intervals_at_next_day(date - Duration::days(1));
+                Some(Schedule::from_ranges(ranges, self.kind))
+            } else {
+                None
+            }
+        };
+
+        match (today, yesterday) {
+            (None, None) => None,
+            (Some(sched), None) | (None, Some(sched)) => Some(sched),
+            (Some(sched_1), Some(sched_2)) => Some(sched_1.addition(sched_2)),
+        }
     }
 }
 

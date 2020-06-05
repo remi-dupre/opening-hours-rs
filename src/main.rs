@@ -14,7 +14,7 @@ pub mod utils;
 use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime};
 
 fn main() {
-    let res = parser::parse(r#"Mo-Su 18:00-22:00, Mo-Fr 11:00-14:00"#)
+    let res = parser::parse(r#"Mo-Su 18:00-25:00, Mo-Fr 11:00-14:00"#)
         .map_err(|err| {
             println!("Got Parsing Error:");
             println!("{}", err);

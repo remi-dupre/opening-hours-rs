@@ -1,8 +1,9 @@
-use std::cmp::max;
+use std::cmp::{max, min};
 use std::ops::Range;
 
 use crate::extended_time::ExtendedTime;
 
+// TODO: can we gain performances by returning an iterator (requires custom implem).
 pub fn time_ranges_union(
     ranges: impl Iterator<Item = Range<ExtendedTime>>,
 ) -> Vec<Range<ExtendedTime>> {
@@ -30,4 +31,14 @@ pub fn time_ranges_union(
     }
 
     output
+}
+
+pub fn range_intersection<T: Ord>(range_1: Range<T>, range_2: Range<T>) -> Option<Range<T>> {
+    let result = max(range_1.start, range_2.start)..min(range_1.end, range_2.end);
+
+    if result.start < result.end {
+        Some(result)
+    } else {
+        None
+    }
 }

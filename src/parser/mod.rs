@@ -576,7 +576,7 @@ fn build_date_to(pair: Pair<Rule>, from: ds::Date) -> Result<ds::Date> {
 
             match from {
                 ds::Date::Easter { .. } => {
-                    // TODO: this is actually not a specified constraint, but it is quite confusing
+                    // NOTE: this is actually not a specified constraint, but it is quite confusing
                     //       that this is allowed
                     return Err(Error::Unsupported("Easter followed by a day number"));
                 }

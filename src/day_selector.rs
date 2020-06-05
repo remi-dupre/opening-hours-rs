@@ -216,7 +216,7 @@ impl DateFilter for WeekDayRange {
                 // Apply the reverse of the offset
                 let date = date - Duration::days(*offset);
                 let range = (*range.start() as u8)..=(*range.end() as u8);
-                let date_nth = (date.day() as u8 + 6) / 7;
+                let date_nth = (date.day() as u8 - 1) / 7;
                 range.contains(&(date.weekday() as u8)) && nth[usize::from(date_nth)]
             }
             WeekDayRange::Holiday { .. } => todo!("Holiday not implemented yet"),

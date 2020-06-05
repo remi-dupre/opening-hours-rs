@@ -10,7 +10,6 @@ time_domain = { rule_sequence ~ ( any_rule_separator ~ rule_sequence )* }
 rule_sequence = { selector_sequence ~ (space ~ rules_modifier)? }
 
 // Rule separators
-// TODO: handle kinds of rules
 
 any_rule_separator = {
       normal_rule_separator
