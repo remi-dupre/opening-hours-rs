@@ -41,8 +41,7 @@ impl TimeDomain {
                     RuleOperator::Normal => curr_eval,
                     RuleOperator::Additional => match (prev_eval, curr_eval) {
                         (Some(prev), Some(curr)) => Some(prev.addition(curr)),
-                        (Some(schd), None) | (None, Some(schd)) => Some(schd),
-                        (None, None) => None,
+                        (prev, curr) => prev.or(curr),
                     },
                     RuleOperator::Fallback => prev_eval.or(curr_eval),
                 }
@@ -195,7 +194,7 @@ pub struct RuleSequence {
     pub time_selector: TimeSelector,
     pub kind: RuleKind,
     pub operator: RuleOperator,
-    pub comment: Option<String>,
+    pub comments: Vec<String>,
 }
 
 impl RuleSequence {
@@ -210,10 +209,10 @@ impl RuleSequence {
         };
 
         let yesterday = {
+            let date = date - Duration::days(1);
+
             if self.day_selector.filter(date) {
-                let ranges = self
-                    .time_selector
-                    .intervals_at_next_day(date - Duration::days(1));
+                let ranges = self.time_selector.intervals_at_next_day(date);
                 Some(Schedule::from_ranges(ranges, self.kind))
             } else {
                 None
@@ -221,9 +220,8 @@ impl RuleSequence {
         };
 
         match (today, yesterday) {
-            (None, None) => None,
-            (Some(sched), None) | (None, Some(sched)) => Some(sched),
             (Some(sched_1), Some(sched_2)) => Some(sched_1.addition(sched_2)),
+            (today, yesterday) => today.or(yesterday),
         }
     }
 }

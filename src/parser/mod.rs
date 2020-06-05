@@ -65,7 +65,7 @@ fn build_rule_sequence(pair: Pair<Rule>, operator: td::RuleOperator) -> Result<t
     assert_eq!(pair.as_rule(), Rule::rule_sequence);
     let mut pairs = pair.into_inner();
 
-    let (day_selector, time_selector) =
+    let (day_selector, time_selector, extra_comment) =
         build_selector_sequence(pairs.next().expect("grammar error: empty rule sequence"))?;
 
     let (kind, comment) = pairs
@@ -73,9 +73,14 @@ fn build_rule_sequence(pair: Pair<Rule>, operator: td::RuleOperator) -> Result<t
         .map(build_rules_modifier)
         .unwrap_or((td::RuleKind::Open, None));
 
+    let comments = comment
+        .into_iter()
+        .chain(extra_comment.into_iter())
+        .collect();
+
     Ok(td::RuleSequence {
         kind,
-        comment,
+        comments,
         day_selector,
         time_selector,
         operator,
@@ -139,7 +144,9 @@ fn build_rules_modifier_enum(pair: Pair<Rule>) -> td::RuleKind {
 // --- Selectors
 // ---
 
-fn build_selector_sequence(pair: Pair<Rule>) -> Result<(ds::DaySelector, ts::TimeSelector)> {
+fn build_selector_sequence(
+    pair: Pair<Rule>,
+) -> Result<(ds::DaySelector, ts::TimeSelector, Option<String>)> {
     assert_eq!(pair.as_rule(), Rule::selector_sequence);
     let mut pairs = pair.into_inner();
 
@@ -147,11 +154,11 @@ fn build_selector_sequence(pair: Pair<Rule>) -> Result<(ds::DaySelector, ts::Tim
         return Ok(Default::default());
     }
 
-    let (year, monthday, week) = {
+    let (year, monthday, week, comment) = {
         if pairs.peek().map(|x| x.as_rule()).unwrap() == Rule::wide_range_selectors {
             build_wide_range_selectors(pairs.next().unwrap())?
         } else {
-            (Vec::new(), Vec::new(), Vec::new())
+            (Vec::new(), Vec::new(), Vec::new(), None)
         }
     };
 
@@ -171,33 +178,37 @@ fn build_selector_sequence(pair: Pair<Rule>) -> Result<(ds::DaySelector, ts::Tim
             weekday,
         },
         ts::TimeSelector { time },
+        comment,
     ))
 }
 
+#[allow(clippy::type_complexity)]
 fn build_wide_range_selectors(
     pair: Pair<Rule>,
 ) -> Result<(
     Vec<ds::YearRange>,
     Vec<ds::MonthdayRange>,
     Vec<ds::WeekRange>,
+    Option<String>,
 )> {
     assert_eq!(pair.as_rule(), Rule::wide_range_selectors);
 
     let mut year_selector = Vec::new();
     let mut monthday_selector = Vec::new();
     let mut week_selector = Vec::new();
+    let mut comment = None;
 
     for pair in pair.into_inner() {
         match pair.as_rule() {
             Rule::year_selector => year_selector = build_year_selector(pair),
             Rule::monthday_selector => monthday_selector = build_monthday_selector(pair)?,
             Rule::week_selector => week_selector = build_week_selector(pair),
-            Rule::comment => {} // TODO
+            Rule::comment => comment = Some(pair.as_str().to_string()),
             other => unexpected_token(other, Rule::wide_range_selectors),
         }
     }
 
-    Ok((year_selector, monthday_selector, week_selector))
+    Ok((year_selector, monthday_selector, week_selector, comment))
 }
 
 fn build_small_range_selectors(

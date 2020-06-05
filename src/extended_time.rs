@@ -4,8 +4,6 @@ use std::num::TryFromIntError;
 
 use chrono::{NaiveTime, Timelike};
 
-// TODO: rename as DateTime and take Month enum?
-
 #[derive(Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ExtendedTime {
     hour: u8,
@@ -37,7 +35,7 @@ impl ExtendedTime {
 
     pub fn add_minutes(&self, minutes: i16) -> Result<Self, TryFromIntError> {
         let as_minutes = self.mins_from_midnight() as i16 + minutes;
-        Ok(Self::from_mins_from_midnight(as_minutes.try_into()?))
+        Self::from_mins_from_midnight(as_minutes.try_into()?)
     }
 
     pub fn add_hours(&self, hours: i16) -> Result<Self, TryFromIntError> {
@@ -47,10 +45,10 @@ impl ExtendedTime {
         })
     }
 
-    pub fn from_mins_from_midnight(minute: u16) -> Self {
+    pub fn from_mins_from_midnight(minute: u16) -> Result<Self, TryFromIntError> {
         let hour = (minute / 60).try_into().unwrap();
-        let minute = (minute % 60).try_into().expect("time from minute overflow");
-        Self { hour, minute }
+        let minute = (minute % 60).try_into()?;
+        Ok(Self { hour, minute })
     }
 
     pub fn mins_from_midnight(self) -> u16 {
