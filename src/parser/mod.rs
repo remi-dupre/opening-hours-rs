@@ -355,15 +355,16 @@ fn build_weekday_range(pair: Pair<Rule>) -> Result<ds::WeekDayRange> {
         }
     };
 
-    let mut nth = Vec::new();
+    let mut nth = [false; 5];
 
     while pairs.peek().map(|x| x.as_rule()) == Some(Rule::nth_entry) {
-        nth.extend(build_nth_entry(pairs.next().unwrap()))
+        for i in build_nth_entry(pairs.next().unwrap()) {
+            nth[usize::from(i - 1)] = true;
+        }
     }
 
-    if nth.is_empty() {
-        // TODO: that's quite ugly :(
-        nth = vec![1, 2, 3, 4, 5]
+    if nth.iter().all(|x| !x) {
+        nth = [true; 5]
     }
 
     let offset = {

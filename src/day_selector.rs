@@ -200,8 +200,8 @@ impl Default for WeekDayOffset {
 pub enum WeekDayRange {
     Fixed {
         range: RangeInclusive<Weekday>,
-        nth: Vec<u8>, // TODO: maybe a tiny bitset would make more sense
         offset: i64,
+        nth: [bool; 5],
     },
     Holiday {
         kind: HolidayKind,
@@ -217,7 +217,7 @@ impl DateFilter for WeekDayRange {
                 let date = date - Duration::days(*offset);
                 let range = (*range.start() as u8)..=(*range.end() as u8);
                 let date_nth = (date.day() as u8 + 6) / 7;
-                range.contains(&(date.weekday() as u8)) && nth.contains(&date_nth)
+                range.contains(&(date.weekday() as u8)) && nth[usize::from(date_nth)]
             }
             WeekDayRange::Holiday { .. } => todo!("Holiday not implemented yet"),
         }
@@ -297,4 +297,3 @@ impl Month {
         Self::from_u8((num % 12) + 1).unwrap()
     }
 }
-
