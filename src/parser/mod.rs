@@ -68,13 +68,13 @@ fn build_rule_sequence(pair: Pair<Rule>, operator: td::RuleOperator) -> Result<t
     let (day_selector, time_selector) =
         build_selector_sequence(pairs.next().expect("grammar error: empty rule sequence"))?;
 
-    let (modifier, comment) = pairs
+    let (kind, comment) = pairs
         .next()
         .map(build_rules_modifier)
-        .unwrap_or((td::RulesModifier::Open, None));
+        .unwrap_or((td::RuleKind::Open, None));
 
     Ok(td::RuleSequence {
-        modifier,
+        kind,
         comment,
         day_selector,
         time_selector,
@@ -102,24 +102,24 @@ fn build_any_rule_separator(pair: Pair<Rule>) -> td::RuleOperator {
 // --- Rule modifier
 // ---
 
-fn build_rules_modifier(pair: Pair<Rule>) -> (td::RulesModifier, Option<String>) {
+fn build_rules_modifier(pair: Pair<Rule>) -> (td::RuleKind, Option<String>) {
     assert_eq!(pair.as_rule(), Rule::rules_modifier);
     let mut pairs = pair.into_inner();
 
-    let modifier = {
+    let kind = {
         if pairs.peek().expect("empty rules_modifier").as_rule() == Rule::rules_modifier_enum {
             build_rules_modifier_enum(pairs.next().unwrap())
         } else {
-            td::RulesModifier::Open
+            td::RuleKind::Open
         }
     };
 
     let comment = pairs.next().map(|pair| pair.as_str().to_string());
 
-    (modifier, comment)
+    (kind, comment)
 }
 
-fn build_rules_modifier_enum(pair: Pair<Rule>) -> td::RulesModifier {
+fn build_rules_modifier_enum(pair: Pair<Rule>) -> td::RuleKind {
     assert_eq!(pair.as_rule(), Rule::rules_modifier_enum);
 
     let pair = pair
@@ -128,9 +128,9 @@ fn build_rules_modifier_enum(pair: Pair<Rule>) -> td::RulesModifier {
         .expect("grammar error: empty rules modifier enum");
 
     match pair.as_rule() {
-        Rule::rules_modifier_enum_closed => td::RulesModifier::Closed,
-        Rule::rules_modifier_enum_open => td::RulesModifier::Open,
-        Rule::rules_modifier_enum_unknown => td::RulesModifier::Unknown,
+        Rule::rules_modifier_enum_closed => td::RuleKind::Closed,
+        Rule::rules_modifier_enum_open => td::RuleKind::Open,
+        Rule::rules_modifier_enum_unknown => td::RuleKind::Unknown,
         other => unexpected_token(other, Rule::rules_modifier_enum),
     }
 }

@@ -84,30 +84,30 @@ impl TimeDomain {
             .unwrap_or(current_time)
     }
 
-    pub fn state(&self, current_time: NaiveDateTime) -> RulesModifier {
+    pub fn state(&self, current_time: NaiveDateTime) -> RuleKind {
         self.iter_from(current_time)
             .next()
             .map(|(_, state)| state)
-            .unwrap_or(RulesModifier::Unknown)
+            .unwrap_or(RuleKind::Unknown)
     }
 
     pub fn is_open(&self, current_time: NaiveDateTime) -> bool {
-        self.state(current_time) == RulesModifier::Open
+        self.state(current_time) == RuleKind::Open
     }
 
     pub fn is_closed(&self, current_time: NaiveDateTime) -> bool {
-        self.state(current_time) == RulesModifier::Closed
+        self.state(current_time) == RuleKind::Closed
     }
 
     pub fn is_unknown(&self, current_time: NaiveDateTime) -> bool {
-        self.state(current_time) == RulesModifier::Unknown
+        self.state(current_time) == RuleKind::Unknown
     }
 
     pub fn intervals<'s>(
         &'s self,
         from: NaiveDateTime,
         to: NaiveDateTime,
-    ) -> impl Iterator<Item = (Range<NaiveDateTime>, RulesModifier)> + 's {
+    ) -> impl Iterator<Item = (Range<NaiveDateTime>, RuleKind)> + 's {
         self.iter_from(from)
             .take_while(move |(range, _)| range.start < to)
             .map(move |(range, state)| {
@@ -123,7 +123,7 @@ impl TimeDomain {
 pub struct TimeDomainIterator<'d> {
     time_domain: &'d TimeDomain,
     curr_date: NaiveDate,
-    curr_schedule: Peekable<Box<dyn Iterator<Item = (Range<ExtendedTime>, RulesModifier)>>>,
+    curr_schedule: Peekable<Box<dyn Iterator<Item = (Range<ExtendedTime>, RuleKind)>>>,
 }
 
 impl<'d> TimeDomainIterator<'d> {
@@ -155,7 +155,7 @@ impl<'d> TimeDomainIterator<'d> {
         }
     }
 
-    fn consume_until_next_state(&mut self, curr_state: RulesModifier) {
+    fn consume_until_next_state(&mut self, curr_state: RuleKind) {
         while self.curr_schedule.peek().map(|(_, st)| *st) == Some(curr_state) {
             self.curr_schedule.next();
 
@@ -175,7 +175,7 @@ impl<'d> TimeDomainIterator<'d> {
 }
 
 impl Iterator for TimeDomainIterator<'_> {
-    type Item = (Range<NaiveDateTime>, RulesModifier);
+    type Item = (Range<NaiveDateTime>, RuleKind);
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some((curr_range, curr_state)) = self.curr_schedule.peek().cloned() {
@@ -214,7 +214,7 @@ impl Iterator for TimeDomainIterator<'_> {
 pub struct RuleSequence {
     pub day_selector: DaySelector,
     pub time_selector: TimeSelector,
-    pub modifier: RulesModifier,
+    pub kind: RuleKind,
     pub operator: RuleOperator,
     pub comment: Option<String>,
 }
@@ -222,15 +222,14 @@ pub struct RuleSequence {
 impl RuleSequence {
     pub fn schedule_at(&self, date: NaiveDate) -> Schedule {
         let ranges = self.time_selector.intervals_at(date);
-        Schedule::from_ranges(ranges, self.modifier)
+        Schedule::from_ranges(ranges, self.kind)
     }
 }
 
-// RulesModifier
+// RuleKind
 
 #[derive(Copy, Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
-pub enum RulesModifier {
-    // TODO: rename (at least no s)
+pub enum RuleKind {
     Open,
     Closed,
     Unknown,
