@@ -78,13 +78,13 @@ fn build_rule_sequence(pair: Pair<Rule>, operator: td::RuleOperator) -> Result<t
         .chain(extra_comment.into_iter())
         .collect();
 
-    Ok(td::RuleSequence {
-        kind,
-        comments,
+    Ok(td::RuleSequence::new(
         day_selector,
         time_selector,
+        kind,
         operator,
-    })
+        comments,
+    ))
 }
 
 fn build_any_rule_separator(pair: Pair<Rule>) -> td::RuleOperator {

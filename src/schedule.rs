@@ -7,17 +7,17 @@ use std::ops::Range;
 
 use crate::extended_time::ExtendedTime;
 use crate::time_domain::RuleKind;
-use crate::utils::union_sorted;
+use crate::utils::{is_sorted, union_sorted};
 
 #[derive(Clone)]
-pub struct TimeRange {
+pub struct TimeRange<'c> {
     pub range: Range<ExtendedTime>,
     pub kind: RuleKind,
-    pub comments: Vec<String>,
+    pub comments: Vec<&'c str>,
     _private: (),
 }
 
-impl fmt::Debug for TimeRange {
+impl fmt::Debug for TimeRange<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("TimeRange")
             .field("range", &self.range)
@@ -27,17 +27,14 @@ impl fmt::Debug for TimeRange {
     }
 }
 
-impl TimeRange {
-    pub fn new(range: Range<ExtendedTime>, kind: RuleKind, mut comments: Vec<String>) -> Self {
-        comments.sort_unstable();
-        TimeRange::new_with_sorted_comments(range, kind, comments)
-    }
-
-    pub fn new_with_sorted_comments(
+impl<'c> TimeRange<'c> {
+    fn new_with_sorted_comments(
         range: Range<ExtendedTime>,
         kind: RuleKind,
-        comments: Vec<String>,
+        comments: Vec<&'c str>,
     ) -> Self {
+        debug_assert!(is_sorted(&comments));
+
         TimeRange {
             range,
             kind,
@@ -53,12 +50,12 @@ impl TimeRange {
 /// Internal arrays always keep a sequence of non-overlaping, increasing time
 /// ranges.
 #[derive(Clone, Debug, Default)]
-pub struct Schedule {
-    inner: Vec<TimeRange>,
+pub struct Schedule<'c> {
+    inner: Vec<TimeRange<'c>>,
 }
 
-impl IntoIterator for Schedule {
-    type Item = TimeRange;
+impl<'c> IntoIterator for Schedule<'c> {
+    type Item = TimeRange<'c>;
     type IntoIter = <Vec<Self::Item> as IntoIterator>::IntoIter;
 
     fn into_iter(self) -> Self::IntoIter {
@@ -66,17 +63,17 @@ impl IntoIterator for Schedule {
     }
 }
 
-impl Schedule {
+impl<'c> Schedule<'c> {
     pub fn empty() -> Self {
         Self { inner: Vec::new() }
     }
 
-    pub fn from_ranges(
+    pub fn from_ranges_with_sorted_comments(
         ranges: impl IntoIterator<Item = Range<ExtendedTime>>,
         kind: RuleKind,
-        mut comments: Vec<String>,
+        comments: Vec<&'c str>,
     ) -> Self {
-        comments.sort_unstable();
+        debug_assert!(is_sorted(&comments));
 
         Schedule {
             inner: ranges
@@ -95,7 +92,7 @@ impl Schedule {
     //       iterator could give some performances: it would avoid Boxing,
     //       Vtable, cloning inner array and allow to implement `peek()`
     //       without any wrapper.
-    pub fn into_iter_filled(self) -> Box<dyn Iterator<Item = TimeRange>> {
+    pub fn into_iter_filled(self) -> Box<dyn Iterator<Item = TimeRange<'c>> + 'c> {
         let time_points = self
             .inner
             .into_iter()
@@ -135,7 +132,7 @@ impl Schedule {
         }
     }
 
-    fn insert(self, mut ins_tr: TimeRange) -> Self {
+    fn insert(self, mut ins_tr: TimeRange<'c>) -> Self {
         // Build sets of intervals before and after the inserted interval
 
         let ins_start = ins_tr.range.start;

@@ -18,14 +18,14 @@ pub type Weekday = chrono::Weekday;
 // DateTimeRange
 
 #[derive(Clone)]
-pub struct DateTimeRange {
+pub struct DateTimeRange<'c> {
     pub range: Range<NaiveDateTime>,
     pub kind: RuleKind,
-    pub comments: Vec<String>,
+    pub comments: Vec<&'c str>,
     _private: (),
 }
 
-impl fmt::Debug for DateTimeRange {
+impl fmt::Debug for DateTimeRange<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("DateTimeRange")
             .field("range", &self.range)
@@ -35,11 +35,11 @@ impl fmt::Debug for DateTimeRange {
     }
 }
 
-impl DateTimeRange {
+impl<'c> DateTimeRange<'c> {
     fn new_with_sorted_comments(
         range: Range<NaiveDateTime>,
         kind: RuleKind,
-        comments: Vec<String>,
+        comments: Vec<&'c str>,
     ) -> Self {
         Self {
             range,
@@ -136,7 +136,7 @@ impl TimeDomain {
 pub struct TimeDomainIterator<'d> {
     time_domain: &'d TimeDomain,
     curr_date: NaiveDate,
-    curr_schedule: Peekable<Box<dyn Iterator<Item = TimeRange>>>,
+    curr_schedule: Peekable<Box<dyn Iterator<Item = TimeRange<'d>> + 'd>>,
 }
 
 impl<'d> TimeDomainIterator<'d> {
@@ -187,8 +187,8 @@ impl<'d> TimeDomainIterator<'d> {
     }
 }
 
-impl Iterator for TimeDomainIterator<'_> {
-    type Item = DateTimeRange;
+impl<'d> Iterator for TimeDomainIterator<'d> {
+    type Item = DateTimeRange<'d>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(curr_tr) = self.curr_schedule.peek().cloned() {
@@ -235,6 +235,28 @@ pub struct RuleSequence {
     pub kind: RuleKind,
     pub operator: RuleOperator,
     pub comments: Vec<String>,
+    _private: (),
+}
+
+impl RuleSequence {
+    pub fn new(
+        day_selector: DaySelector,
+        time_selector: TimeSelector,
+        kind: RuleKind,
+        operator: RuleOperator,
+        mut comments: Vec<String>,
+    ) -> Self {
+        comments.sort_unstable();
+
+        Self {
+            day_selector,
+            time_selector,
+            kind,
+            operator,
+            comments,
+            _private: (),
+        }
+    }
 }
 
 impl RuleSequence {
@@ -242,11 +264,10 @@ impl RuleSequence {
         let today = {
             if self.day_selector.filter(date) {
                 let ranges = self.time_selector.intervals_at(date);
-                // TODO: sort comments during parsing
-                Some(Schedule::from_ranges(
+                Some(Schedule::from_ranges_with_sorted_comments(
                     ranges,
                     self.kind,
-                    self.comments.clone(),
+                    self.get_comments(),
                 ))
             } else {
                 None
@@ -258,10 +279,10 @@ impl RuleSequence {
 
             if self.day_selector.filter(date) {
                 let ranges = self.time_selector.intervals_at_next_day(date);
-                Some(Schedule::from_ranges(
+                Some(Schedule::from_ranges_with_sorted_comments(
                     ranges,
                     self.kind,
-                    self.comments.clone(),
+                    self.get_comments(),
                 ))
             } else {
                 None
@@ -272,6 +293,10 @@ impl RuleSequence {
             (Some(sched_1), Some(sched_2)) => Some(sched_1.addition(sched_2)),
             (today, yesterday) => today.or(yesterday),
         }
+    }
+
+    pub fn get_comments(&self) -> Vec<&str> {
+        self.comments.iter().map(|x| x.as_str()).collect()
     }
 }
 
