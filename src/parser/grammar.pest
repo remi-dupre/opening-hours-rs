@@ -7,7 +7,9 @@ input_time_domain = _{ SOI ~ time_domain ~ EOI }
 
 time_domain = { rule_sequence ~ ( any_rule_separator ~ rule_sequence )* }
 
-rule_sequence = { selector_sequence ~ (space ~ rules_modifier)? }
+// NOTE: the space is made optional, overwise the syntax `RULE || "comment"`
+//       requires two spaces before the comment.
+rule_sequence = { selector_sequence ~ (space? ~ rules_modifier)? }
 
 // Rule separators
 
@@ -26,8 +28,8 @@ fallback_rule_separator = @{ space ~ "||" ~ space }
 // Rule modifier
 
 rules_modifier = {
-      rules_modifier_enum ~ ( space ~ comment )?
-    | comment
+      comment
+    | rules_modifier_enum ~ ( space ~ comment )?
 }
 
 rules_modifier_enum = {

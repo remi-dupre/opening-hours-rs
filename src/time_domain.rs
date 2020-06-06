@@ -13,8 +13,6 @@ use crate::extended_time::ExtendedTime;
 use crate::schedule::{Schedule, TimeRange};
 use crate::time_selector::TimeSelector;
 
-pub type Weekday = chrono::Weekday;
-
 // DateTimeRange
 
 #[derive(Clone)]
@@ -69,18 +67,29 @@ impl TimeDomain {
     pub fn schedule_at(&self, date: NaiveDate) -> Schedule {
         self.rules
             .iter()
-            .fold(None, |prev_eval, rules_seq| {
+            .fold((false, None), |(prev_match, prev_eval), rules_seq| {
+                let curr_match = rules_seq.day_selector.filter(date);
                 let curr_eval = rules_seq.schedule_at(date);
 
                 match rules_seq.operator {
-                    RuleOperator::Normal => curr_eval,
-                    RuleOperator::Additional => match (prev_eval, curr_eval) {
-                        (Some(prev), Some(curr)) => Some(prev.addition(curr)),
-                        (prev, curr) => prev.or(curr),
-                    },
-                    RuleOperator::Fallback => prev_eval.or(curr_eval),
+                    RuleOperator::Normal => (curr_match, curr_eval),
+                    RuleOperator::Additional => (
+                        prev_match || curr_match,
+                        match (prev_eval, curr_eval) {
+                            (Some(prev), Some(curr)) => Some(prev.addition(curr)),
+                            (prev, curr) => prev.or(curr),
+                        },
+                    ),
+                    RuleOperator::Fallback => {
+                        if prev_match {
+                            (prev_match, prev_eval)
+                        } else {
+                            (curr_match, curr_eval)
+                        }
+                    }
                 }
             })
+            .1
             .unwrap_or_else(Schedule::empty)
     }
 
