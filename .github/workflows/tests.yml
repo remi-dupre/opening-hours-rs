@@ -10,17 +10,33 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-     - uses: actions/checkout@v2
-     - name: Display rust version
-       run: |
-         rustc --version
-         cargo clippy -- --version
-         cargo fmt -- --version
-     - name: Build
-       run: cargo build
-     - name: Lint
-       run: cargo clippy --all-targets -- -D warnings
-     - name: Format
-       run: cargo fmt -- --check
-     - name: Tests
-       run: cargo test
+      - uses: actions/checkout@v2
+
+      - name: Display rust version
+        run: |
+          rustc --version
+          cargo clippy -- --version
+          cargo fmt -- --version
+
+      - name: Build
+        run: cargo build
+
+      - name: Lint
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Format
+        run: cargo fmt -- --check
+
+      - name: Tests
+        run: cargo test
+
+      - name: Coverage
+        uses: actions-rs/tarpaulin@v0.1
+        with:
+          args: '--ignore-panics'
+
+
+      - name: Upload to codecov.io
+        uses: codecov/codecov-action@v1.0.2
+        with:
+          token: ${{secrets.CODECOV_TOKEN}}
