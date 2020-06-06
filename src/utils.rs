@@ -3,7 +3,7 @@ use std::ops::Range;
 
 use crate::extended_time::ExtendedTime;
 
-// TODO: can we gain performances by returning an iterator (requires custom implem).
+// TODO: can we gain performances by returning an iterator? (requires custom implem)
 pub fn time_ranges_union(
     ranges: impl Iterator<Item = Range<ExtendedTime>>,
 ) -> Vec<Range<ExtendedTime>> {
