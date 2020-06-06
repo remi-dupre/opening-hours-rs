@@ -178,7 +178,7 @@ fn build_selector_sequence(
             week,
             weekday,
         },
-        ts::TimeSelector { time },
+        ts::TimeSelector::new(time),
         comment,
     ))
 }

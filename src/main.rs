@@ -18,7 +18,7 @@ mod tests;
 use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime};
 
 fn main() {
-    let res = parser::parse(r#"Mo-Su 11:00-19:00 "salut", Mo-Fr 18:00-25:00 "lol""#)
+    let res = parser::parse(r#"2020Jun01"#)
         .map_err(|err| {
             println!("Got Parsing Error:");
             println!("{}", err);
