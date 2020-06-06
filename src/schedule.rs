@@ -9,7 +9,7 @@ use crate::extended_time::ExtendedTime;
 use crate::time_domain::RuleKind;
 use crate::utils::{is_sorted, union_sorted};
 
-#[derive(Clone)]
+#[derive(Clone, Eq, PartialEq)]
 pub struct TimeRange<'c> {
     pub range: Range<ExtendedTime>,
     pub kind: RuleKind,
@@ -17,18 +17,8 @@ pub struct TimeRange<'c> {
     _private: (),
 }
 
-impl fmt::Debug for TimeRange<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("TimeRange")
-            .field("range", &self.range)
-            .field("kind", &self.kind)
-            .field("comments", &self.comments)
-            .finish()
-    }
-}
-
 impl<'c> TimeRange<'c> {
-    fn new_with_sorted_comments(
+    pub(crate) fn new_with_sorted_comments(
         range: Range<ExtendedTime>,
         kind: RuleKind,
         comments: Vec<&'c str>,
@@ -44,14 +34,24 @@ impl<'c> TimeRange<'c> {
     }
 }
 
+impl fmt::Debug for TimeRange<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("TimeRange")
+            .field("range", &self.range)
+            .field("kind", &self.kind)
+            .field("comments", &self.comments)
+            .finish()
+    }
+}
+
 /// Describe a full schedule for a day, keeping track of open, closed and
 /// unknown periods
 ///
 /// Internal arrays always keep a sequence of non-overlaping, increasing time
 /// ranges.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Schedule<'c> {
-    inner: Vec<TimeRange<'c>>,
+    pub(crate) inner: Vec<TimeRange<'c>>,
 }
 
 impl<'c> IntoIterator for Schedule<'c> {
@@ -201,4 +201,40 @@ impl<'c> Schedule<'c> {
 
         Schedule { inner }
     }
+}
+
+#[macro_export]
+macro_rules! schedule {
+    (
+        $( $hh1:expr,$mm1:expr $( => $kind:expr $( , $comment:expr )* => $hh2:expr,$mm2:expr )+ );*
+        $( ; )?
+    ) => {{
+        #[allow(unused_imports)]
+        use crate::{
+            schedule::{Schedule, TimeRange},
+            extended_time::ExtendedTime,
+        };
+
+        #[allow(unused_mut)]
+        let mut inner = Vec::new();
+
+        $(
+            let mut prev = ExtendedTime::new($hh1, $mm1);
+
+            $(
+                let curr = ExtendedTime::new($hh2, $mm2);
+
+                let mut comments = Vec::new();
+                $( comments.push($comment); )*
+                comments.sort_unstable();
+
+                inner.push(TimeRange::new_with_sorted_comments(prev..curr, $kind, comments));
+
+                #[allow(unused_assignments)]
+                { prev = curr }
+            )+
+        )*
+
+        Schedule { inner }
+    }};
 }

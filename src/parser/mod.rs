@@ -16,7 +16,8 @@ use crate::day_selector as ds;
 use crate::extended_time::ExtendedTime;
 use crate::time_domain as td;
 use crate::time_selector as ts;
-use error::{Error, Result};
+
+pub use error::{Error, Result};
 
 #[derive(Parser)]
 #[grammar = "parser/grammar.pest"]

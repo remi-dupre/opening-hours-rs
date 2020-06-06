@@ -6,10 +6,14 @@ extern crate chrono;
 pub mod day_selector;
 pub mod extended_time;
 pub mod parser;
+#[macro_use]
 pub mod schedule;
 pub mod time_domain;
 pub mod time_selector;
 pub mod utils;
+
+#[cfg(test)]
+mod tests;
 
 use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime};
 
