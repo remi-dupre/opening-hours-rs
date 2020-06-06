@@ -256,9 +256,11 @@ year = @{
 
 positive_number = @{ "0"* ~ ASCII_NONZERO_DIGIT ~ ASCII_DIGIT* }
 
-comment = @{ comment_delimiter ~ comment_character+ ~ comment_delimiter }
+comment = { comment_delimiter ~ comment_inner ~ comment_delimiter }
 
-comment_delimiter = @{ "\"" }
+comment_delimiter = _{ "\"" }
+
+comment_inner = @{ comment_character+ }
 
 comment_character = @{ !comment_delimiter ~ ANY }
 

@@ -119,7 +119,7 @@ fn build_rules_modifier(pair: Pair<Rule>) -> (td::RuleKind, Option<String>) {
         }
     };
 
-    let comment = pairs.next().map(|pair| pair.as_str().to_string());
+    let comment = pairs.next().map(build_comment);
 
     (kind, comment)
 }
@@ -203,7 +203,7 @@ fn build_wide_range_selectors(
             Rule::year_selector => year_selector = build_year_selector(pair),
             Rule::monthday_selector => monthday_selector = build_monthday_selector(pair)?,
             Rule::week_selector => week_selector = build_week_selector(pair),
-            Rule::comment => comment = Some(pair.as_str().to_string()),
+            Rule::comment => comment = Some(build_comment(pair)),
             other => unexpected_token(other, Rule::wide_range_selectors),
         }
     }
@@ -792,6 +792,16 @@ fn build_year(pair: Pair<Rule>) -> u16 {
 fn build_positive_number(pair: Pair<Rule>) -> u64 {
     assert_eq!(pair.as_rule(), Rule::positive_number);
     pair.as_str().parse().expect("invalid positive_number")
+}
+
+fn build_comment(pair: Pair<Rule>) -> String {
+    assert_eq!(pair.as_rule(), Rule::comment);
+    build_comment_inner(pair.into_inner().next().expect("empty comment"))
+}
+
+fn build_comment_inner(pair: Pair<Rule>) -> String {
+    assert_eq!(pair.as_rule(), Rule::comment_inner);
+    pair.as_str().to_string()
 }
 
 // Mics

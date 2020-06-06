@@ -1,6 +1,7 @@
 use std::boxed::Box;
 use std::cmp::{max, min};
 use std::convert::TryInto;
+use std::fmt;
 use std::iter::{empty, Peekable};
 use std::ops::Range;
 
@@ -9,10 +10,45 @@ use chrono::{Duration, NaiveDate, NaiveDateTime};
 
 use crate::day_selector::{DateFilter, DaySelector};
 use crate::extended_time::ExtendedTime;
-use crate::schedule::Schedule;
+use crate::schedule::{Schedule, TimeRange};
 use crate::time_selector::TimeSelector;
 
 pub type Weekday = chrono::Weekday;
+
+// DateTimeRange
+
+#[derive(Clone)]
+pub struct DateTimeRange {
+    pub range: Range<NaiveDateTime>,
+    pub kind: RuleKind,
+    pub comments: Vec<String>,
+    _private: (),
+}
+
+impl fmt::Debug for DateTimeRange {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("DateTimeRange")
+            .field("range", &self.range)
+            .field("kind", &self.kind)
+            .field("comments", &self.comments)
+            .finish()
+    }
+}
+
+impl DateTimeRange {
+    fn new_with_sorted_comments(
+        range: Range<NaiveDateTime>,
+        kind: RuleKind,
+        comments: Vec<String>,
+    ) -> Self {
+        Self {
+            range,
+            kind,
+            comments,
+            _private: (),
+        }
+    }
+}
 
 // TimeDomain
 
@@ -31,7 +67,6 @@ impl TimeDomain {
     // would be relevant to focus on optimisatons to this regard.
 
     pub fn schedule_at(&self, date: NaiveDate) -> Schedule {
-        // TODO: handle comments
         self.rules
             .iter()
             .fold(None, |prev_eval, rules_seq| {
@@ -58,14 +93,14 @@ impl TimeDomain {
     pub fn next_change(&self, current_time: NaiveDateTime) -> NaiveDateTime {
         self.iter_from(current_time)
             .next()
-            .map(|(range, _)| range.end)
+            .map(|dtr| dtr.range.end)
             .unwrap_or(current_time)
     }
 
     pub fn state(&self, current_time: NaiveDateTime) -> RuleKind {
         self.iter_from(current_time)
             .next()
-            .map(|(_, state)| state)
+            .map(|dtr| dtr.kind)
             .unwrap_or(RuleKind::Unknown)
     }
 
@@ -85,13 +120,13 @@ impl TimeDomain {
         &'s self,
         from: NaiveDateTime,
         to: NaiveDateTime,
-    ) -> impl Iterator<Item = (Range<NaiveDateTime>, RuleKind)> + 's {
+    ) -> impl Iterator<Item = DateTimeRange> + 's {
         self.iter_from(from)
-            .take_while(move |(range, _)| range.start < to)
-            .map(move |(range, state)| {
-                let start = max(range.start, from);
-                let end = min(range.end, to);
-                (start..end, state)
+            .take_while(move |dtr| dtr.range.start < to)
+            .map(move |dtr| {
+                let start = max(dtr.range.start, from);
+                let end = min(dtr.range.end, to);
+                DateTimeRange::new_with_sorted_comments(start..end, dtr.kind, dtr.comments)
             })
     }
 }
@@ -101,7 +136,7 @@ impl TimeDomain {
 pub struct TimeDomainIterator<'d> {
     time_domain: &'d TimeDomain,
     curr_date: NaiveDate,
-    curr_schedule: Peekable<Box<dyn Iterator<Item = (Range<ExtendedTime>, RuleKind)>>>,
+    curr_schedule: Peekable<Box<dyn Iterator<Item = TimeRange>>>,
 }
 
 impl<'d> TimeDomainIterator<'d> {
@@ -120,7 +155,7 @@ impl<'d> TimeDomainIterator<'d> {
 
         while curr_schedule
             .peek()
-            .map(|(range, _)| !range.contains(&start_time))
+            .map(|tr| !tr.range.contains(&start_time))
             .unwrap_or(false)
         {
             curr_schedule.next();
@@ -133,8 +168,8 @@ impl<'d> TimeDomainIterator<'d> {
         }
     }
 
-    fn consume_until_next_state(&mut self, curr_state: RuleKind) {
-        while self.curr_schedule.peek().map(|(_, st)| *st) == Some(curr_state) {
+    fn consume_until_next_kind(&mut self, curr_kind: RuleKind) {
+        while self.curr_schedule.peek().map(|tr| tr.kind) == Some(curr_kind) {
             self.curr_schedule.next();
 
             if self.curr_schedule.peek().is_none() {
@@ -153,25 +188,26 @@ impl<'d> TimeDomainIterator<'d> {
 }
 
 impl Iterator for TimeDomainIterator<'_> {
-    type Item = (Range<NaiveDateTime>, RuleKind);
+    type Item = DateTimeRange;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some((curr_range, curr_state)) = self.curr_schedule.peek().cloned() {
+        if let Some(curr_tr) = self.curr_schedule.peek().cloned() {
             let start = NaiveDateTime::new(
                 self.curr_date,
-                curr_range
+                curr_tr
+                    .range
                     .start
                     .try_into()
                     .expect("got invalid time from schedule"),
             );
 
-            self.consume_until_next_state(curr_state);
+            self.consume_until_next_kind(curr_tr.kind);
 
             let end_date = self.curr_date;
             let end_time = self
                 .curr_schedule
                 .peek()
-                .map(|(range, _)| range.start)
+                .map(|tr| tr.range.start)
                 .unwrap_or_else(|| ExtendedTime::new(0, 0));
 
             let end = NaiveDateTime::new(
@@ -179,7 +215,11 @@ impl Iterator for TimeDomainIterator<'_> {
                 end_time.try_into().expect("got invalid time from schedule"),
             );
 
-            Some((start..end, curr_state))
+            Some(DateTimeRange::new_with_sorted_comments(
+                start..end,
+                curr_tr.kind,
+                curr_tr.comments,
+            ))
         } else {
             None
         }
@@ -202,7 +242,12 @@ impl RuleSequence {
         let today = {
             if self.day_selector.filter(date) {
                 let ranges = self.time_selector.intervals_at(date);
-                Some(Schedule::from_ranges(ranges, self.kind))
+                // TODO: sort comments during parsing
+                Some(Schedule::from_ranges(
+                    ranges,
+                    self.kind,
+                    self.comments.clone(),
+                ))
             } else {
                 None
             }
@@ -213,7 +258,11 @@ impl RuleSequence {
 
             if self.day_selector.filter(date) {
                 let ranges = self.time_selector.intervals_at_next_day(date);
-                Some(Schedule::from_ranges(ranges, self.kind))
+                Some(Schedule::from_ranges(
+                    ranges,
+                    self.kind,
+                    self.comments.clone(),
+                ))
             } else {
                 None
             }
