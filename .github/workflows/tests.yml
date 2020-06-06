@@ -1,0 +1,26 @@
+name: Lints and Tests
+
+on:
+  - push
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+     - uses: actions/checkout@v2
+     - name: Display rust version
+       run: |
+         rustc --version
+         cargo clippy -- --version
+         cargo fmt -- --version
+     - name: Build
+       run: cargo build
+     - name: Lint
+       run: cargo clippy --all-targets -- -D warnings
+     - name: Format
+       run: cargo fmt -- --check
+     - name: Tests
+       run: cargo test
