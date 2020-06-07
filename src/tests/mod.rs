@@ -3,6 +3,7 @@ mod rules;
 mod time_selector;
 mod week_selector;
 mod weekday_selector;
+mod year_selector;
 
 #[macro_export]
 macro_rules! schedule_at {

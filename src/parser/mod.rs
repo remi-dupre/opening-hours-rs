@@ -201,7 +201,7 @@ fn build_wide_range_selectors(
 
     for pair in pair.into_inner() {
         match pair.as_rule() {
-            Rule::year_selector => year_selector = build_year_selector(pair),
+            Rule::year_selector => year_selector = build_year_selector(pair)?,
             Rule::monthday_selector => monthday_selector = build_monthday_selector(pair)?,
             Rule::week_selector => week_selector = build_week_selector(pair)?,
             Rule::comment => comment = Some(build_comment(pair)),
@@ -463,14 +463,16 @@ fn build_week(pair: Pair<Rule>) -> Result<ds::WeekRange> {
 
     let start = build_weeknum(rules.next().expect("empty weeknum range"));
     let end = rules.next().map(build_weeknum);
+
     let step = rules.next().map(build_positive_number);
+    let step = step.unwrap_or(1).try_into().map_err(|_| Error::Overflow {
+        value: format!("{}", step.unwrap()),
+        expected: "an integer in [0, 255]".to_string(),
+    })?;
 
     Ok(ds::WeekRange {
         range: start..=end.unwrap_or(start),
-        step: step.unwrap_or(1).try_into().map_err(|_| Error::Overflow {
-            value: format!("{}", step.unwrap()),
-            expected: "an integer in [0, 255]".to_string(),
-        })?,
+        step,
     })
 }
 
@@ -486,6 +488,7 @@ fn build_monthday_selector(pair: Pair<Rule>) -> Result<Vec<ds::MonthdayRange>> {
 fn build_monthday_range(pair: Pair<Rule>) -> Result<ds::MonthdayRange> {
     assert_eq!(pair.as_rule(), Rule::monthday_range);
     let mut pairs = pair.into_inner();
+    dbg!(&pairs);
 
     let year = {
         if pairs.peek().map(|x| x.as_rule()) == Some(Rule::year) {
@@ -518,7 +521,10 @@ fn build_monthday_range(pair: Pair<Rule>) -> Result<ds::MonthdayRange> {
 
             let end = match pairs.peek().map(|x| x.as_rule()) {
                 Some(Rule::date_to) => build_date_to(pairs.next().unwrap(), start)?,
-                Some(Rule::monthday_range_plus) => ds::Date::day(31, ds::Month::December, 9999),
+                Some(Rule::monthday_range_plus) => {
+                    pairs.next();
+                    ds::Date::day(31, ds::Month::December, 9999)
+                }
                 None => start,
                 Some(other) => unexpected_token(other, Rule::monthday_range),
             };
@@ -632,12 +638,12 @@ fn build_date_to(pair: Pair<Rule>, from: ds::Date) -> Result<ds::Date> {
 // --- Year selector
 // ---
 
-fn build_year_selector(pair: Pair<Rule>) -> Vec<ds::YearRange> {
+fn build_year_selector(pair: Pair<Rule>) -> Result<Vec<ds::YearRange>> {
     assert_eq!(pair.as_rule(), Rule::year_selector);
     pair.into_inner().map(build_year_range).collect()
 }
 
-fn build_year_range(pair: Pair<Rule>) -> ds::YearRange {
+fn build_year_range(pair: Pair<Rule>) -> Result<ds::YearRange> {
     assert_eq!(pair.as_rule(), Rule::year_range);
     let mut rules = pair.into_inner();
 
@@ -647,12 +653,17 @@ fn build_year_range(pair: Pair<Rule>) -> ds::YearRange {
         Rule::year_range_plus => 9999,
         other => unexpected_token(other, Rule::year_range),
     });
-    let step = rules.next().map(build_year);
 
-    ds::YearRange {
+    let step = rules.next().map(build_positive_number);
+    let step = step.unwrap_or(1).try_into().map_err(|_| Error::Overflow {
+        value: format!("{}", step.unwrap()),
+        expected: "an integer in [0, 2**16[".to_string(),
+    })?;
+
+    Ok(ds::YearRange {
         range: start..=end.unwrap_or(start),
-        step: step.unwrap_or(1),
-    }
+        step,
+    })
 }
 
 // ---

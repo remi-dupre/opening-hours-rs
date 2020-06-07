@@ -65,32 +65,42 @@ impl TimeDomain {
     // would be relevant to focus on optimisatons to this regard.
 
     pub fn schedule_at(&self, date: NaiveDate) -> Schedule {
-        self.rules
-            .iter()
-            .fold((false, None), |(prev_match, prev_eval), rules_seq| {
-                let curr_match = rules_seq.day_selector.filter(date);
-                let curr_eval = rules_seq.schedule_at(date);
+        let mut prev_match = false;
+        let mut prev_eval = None;
 
-                match rules_seq.operator {
-                    RuleOperator::Normal => (curr_match, curr_eval),
-                    RuleOperator::Additional => (
-                        prev_match || curr_match,
-                        match (prev_eval, curr_eval) {
-                            (Some(prev), Some(curr)) => Some(prev.addition(curr)),
-                            (prev, curr) => prev.or(curr),
-                        },
-                    ),
-                    RuleOperator::Fallback => {
-                        if prev_match {
-                            (prev_match, prev_eval)
-                        } else {
-                            (curr_match, curr_eval)
-                        }
+        for rules_seq in &self.rules {
+            let curr_match = rules_seq.day_selector.filter(date);
+            let curr_eval = rules_seq.schedule_at(date);
+
+            let (new_match, new_eval) = match rules_seq.operator {
+                RuleOperator::Normal => {
+                    if prev_match {
+                        return prev_eval.expect("schedule can't be None for matching days");
+                    } else {
+                        (curr_match, curr_eval)
                     }
                 }
-            })
-            .1
-            .unwrap_or_else(Schedule::empty)
+                RuleOperator::Additional => (
+                    prev_match || curr_match,
+                    match (prev_eval, curr_eval) {
+                        (Some(prev), Some(curr)) => Some(prev.addition(curr)),
+                        (prev, curr) => prev.or(curr),
+                    },
+                ),
+                RuleOperator::Fallback => {
+                    if prev_match {
+                        (prev_match, prev_eval)
+                    } else {
+                        (curr_match, curr_eval)
+                    }
+                }
+            };
+
+            prev_match = new_match;
+            prev_eval = new_eval;
+        }
+
+        prev_eval.unwrap_or_else(Schedule::empty)
     }
 
     pub fn iter_from(&self, from: NaiveDateTime) -> TimeDomainIterator {

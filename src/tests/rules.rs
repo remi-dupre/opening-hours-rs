@@ -23,6 +23,21 @@ fn always_open() -> Result<(), Error> {
 }
 
 #[test]
+fn regular_rule() -> Result<(), Error> {
+    assert_eq!(
+        schedule_at!("Sa,Su 11:00-13:45 open; 10:00-18:00", "2020-06-01"),
+        schedule! { 10,00 => Open => 18,00 }
+    );
+
+    assert_eq!(
+        schedule_at!("Sa,Su 11:00-13:45 open; 10:00-18:00", "2020-05-31"),
+        schedule! { 11,00 => Open => 13,45 }
+    );
+
+    Ok(())
+}
+
+#[test]
 fn additional_rule() -> Result<(), Error> {
     assert_eq!(
         schedule_at!(
@@ -50,10 +65,54 @@ fn additional_rule() -> Result<(), Error> {
 }
 
 #[test]
+fn fallback_rule() -> Result<(), Error> {
+    assert_eq!(
+        schedule_at!("Jun:10:00-12:00 open || unknown", "2020-06-01"),
+        schedule! { 10,00 => Open => 12,00 }
+    );
+
+    assert_eq!(
+        schedule_at!("Jun:10:00-12:00 open || unknown", "2020-05-31"),
+        schedule! { 0,00 => Unknown => 24,00 }
+    );
+
+    assert_eq!(
+        schedule_at!(
+            "Jun:10:00-12:00 open || Mo-Fr closed || unknown",
+            "2020-06-01"
+        ),
+        schedule! { 10,00 => Open => 12,00 }
+    );
+
+    assert_eq!(
+        schedule_at!(
+            "Jun:10:00-12:00 open || Mo-Fr closed || unknown",
+            "2020-05-29"
+        ),
+        schedule! { 0,00 => Closed => 24,00 }
+    );
+
+    assert_eq!(
+        schedule_at!(
+            "Jun:10:00-12:00 open || Mo-Fr closed || unknown",
+            "2020-05-30"
+        ),
+        schedule! { 0,00 => Unknown => 24,00 }
+    );
+
+    Ok(())
+}
+
+#[test]
 fn comments() -> Result<(), Error> {
     assert_eq!(
         schedule_at!(r#"10:00-12:00 open "welcome!""#, "2020-06-01"),
         schedule! { 10,00 => Open, "welcome!" => 12,00 }
+    );
+
+    assert_eq!(
+        schedule_at!(r#""42", "31", "53", "53", "42", "01""#, "2020-06-01"),
+        schedule! { 0,00 => Open, "01", "31", "42", "53" => 24,00 }
     );
 
     Ok(())

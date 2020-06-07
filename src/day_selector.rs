@@ -96,23 +96,40 @@ impl DateFilter for MonthdayRange {
                     },
                 ) => {
                     let start = NaiveDate::from_ymd(
-                        year_1.unwrap_or(date.year() as u16) as i32,
+                        year_1.map(|x| x as i32).unwrap_or_else(|| date.year()),
                         *month_1 as u32,
                         *day_1 as u32,
                     );
 
-                    let mut end = NaiveDate::from_ymd(
-                        year_2.unwrap_or(date.year() as u16) as i32,
+                    let mut start = start_offset.apply(start);
+
+                    // If no year is specified we can shift of as many years as needed.
+                    if year_1.is_none() {
+                        start = start.with_year(date.year()).unwrap();
+
+                        if start > date {
+                            start = start.with_year(start.year() - 1).expect("year overflow");
+                        }
+                    }
+
+                    let end = NaiveDate::from_ymd(
+                        year_2.map(|x| x as i32).unwrap_or_else(|| start.year()),
                         *month_2 as u32,
                         *day_2 as u32,
                     );
 
-                    if end < start {
-                        end = end.with_year(end.year() + 1).expect("year overflow")
+                    let mut end = end_offset.apply(end);
+
+                    // If no year is specified we can shift of as many years as needed.
+                    if year_2.is_none() {
+                        end = end.with_year(start.year()).unwrap();
+
+                        // If end's month is prior that start's month, end must be next year.
+                        if end < start {
+                            end = end.with_year(end.year() + 1).expect("year overflow")
+                        }
                     }
 
-                    let start = start_offset.apply(start);
-                    let end = end_offset.apply(end);
                     (start..=end).contains(&date)
                 }
                 _ => todo!("Easter not implemented yet"),

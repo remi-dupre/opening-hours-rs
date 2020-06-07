@@ -53,8 +53,13 @@ always_open = @{ "24/7" }
 
 wide_range_selectors = {
       comment ~ ":"
+    | // The specified grammar is ambiguous: `year_selector` can contain a
+      // single year which could also be the optional prefix of
+      // `monthday_selector`. In such a case `monthday_selector` will be
+      // favored.
+      monthday_selector ~ week_selector? ~ separator_for_readability?
     | year_selector? ~ monthday_selector? ~ week_selector? ~
-    separator_for_readability?
+      separator_for_readability?
 }
 
 small_range_selectors = {
@@ -154,7 +159,7 @@ monthday_selector = { monthday_range ~ ( "," ~ monthday_range )* }
 monthday_range = {
       date_from ~ date_offset? ~ "-" ~ date_to ~ date_offset?
     | date_from ~ date_offset ~ monthday_range_plus?
-    | date_from
+    | date_from               ~ monthday_range_plus?
     | year? ~ month ~ ( "-" ~ month )?
 }
 
