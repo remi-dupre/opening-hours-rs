@@ -1,0 +1,51 @@
+use crate::parser::Error;
+use crate::schedule_at;
+use crate::time_domain::RuleKind::*;
+
+#[test]
+fn basic_timespan() -> Result<(), Error> {
+    assert_eq!(
+        schedule_at!("14:00-19:00", "2020-06-01"),
+        schedule! { 14,00 => Open => 19,00 }
+    );
+
+    assert_eq!(
+        schedule_at!("10:00-12:00,14:00-16:00", "2020-06-01"),
+        schedule! {
+            10,00 => Open => 12,00;
+            14,00 => Open => 16,00;
+        }
+    );
+
+    assert_eq!(
+        schedule_at!("10:00-12:00,11:00-16:00 unknown", "2020-06-01"),
+        schedule! { 10,00 => Unknown => 16,00 }
+    );
+
+    Ok(())
+}
+
+#[test]
+fn events() -> Result<(), Error> {
+    assert_eq!(
+        schedule_at!("(dawn-02:30)-(dusk+02:30)", "2020-06-01"),
+        schedule! { 3,30 => Open => 22,30 }
+    );
+
+    assert_eq!(
+        schedule_at!("(dawn+00:30)-(dusk-00:30)", "2020-06-01"),
+        schedule! { 6,30 => Open => 19,30 }
+    );
+
+    assert_eq!(
+        schedule_at!("sunrise-19:45", "2020-06-01"),
+        schedule! { 7,00 => Open => 19,45 }
+    );
+
+    assert_eq!(
+        schedule_at!("08:15-sunset", "2020-06-01"),
+        schedule! { 8,15 => Open => 19,00 }
+    );
+
+    Ok(())
+}

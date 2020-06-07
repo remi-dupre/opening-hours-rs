@@ -113,7 +113,7 @@ weekday_selector = {
 weekday_sequence = { weekday_range ~ ( "," ~ weekday_range )* }
 
 weekday_range = {
-      wday ~ ( nth_entry ~ ( "," ~ nth_entry )* ) ~ date_offset?
+      wday ~ "[" ~ nth_entry ~ ( "," ~ nth_entry )* ~ "]" ~ day_offset?
     | wday ~ "-" ~ wday
     | wday
 }
@@ -131,11 +131,13 @@ school_holiday = @{ "SH" }
 
 nth_entry = {
       nth ~ "-" ~ nth
-    | "-" ~ nth
+    | nth_minus ~ nth         // TODO: "nth last day of the month"
     | nth
 }
 
 nth = { '1'..'5' }
+
+nth_minus = { "-" }
 
 day_offset = { space ~ plus_or_minus ~ positive_number ~ space ~ "day" ~ "s"? }
 
@@ -190,11 +192,11 @@ year_range_plus = @{ "+" }
 
 // Basic elements
 
-plus_or_minus = @{ plus | minus }
+plus_or_minus = { plus | minus }
 
-plus = _{ "+" }
+plus = @{ "+" }
 
-minus = _{ "-" }
+minus = @{ "-" }
 
 hour = @{
       '0'..'1' ~ '0'..'9'  // 00 -> 19

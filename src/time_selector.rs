@@ -5,25 +5,18 @@ use chrono::{Duration, NaiveDate};
 use crate::extended_time::ExtendedTime;
 use crate::utils::{range_intersection, time_ranges_union};
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct TimeSelector {
     pub time: Vec<TimeSpan>,
 }
 
 impl TimeSelector {
     pub fn new(time: Vec<TimeSpan>) -> Self {
-        let time = {
-            if time.is_empty() {
-                vec![TimeSpan::fixed_range(
-                    ExtendedTime::new(0, 0),
-                    ExtendedTime::new(24, 0),
-                )]
-            } else {
-                time
-            }
-        };
-
-        Self { time }
+        if time.is_empty() {
+            Self::default()
+        } else {
+            Self { time }
+        }
     }
 
     pub fn intervals_at(&self, date: NaiveDate) -> Vec<Range<ExtendedTime>> {
@@ -52,6 +45,17 @@ impl TimeSelector {
 
     pub fn as_naive_time(&self, date: NaiveDate) -> impl Iterator<Item = Range<ExtendedTime>> + '_ {
         self.time.iter().map(move |span| span.as_naive_time(date))
+    }
+}
+
+impl Default for TimeSelector {
+    fn default() -> Self {
+        Self {
+            time: vec![TimeSpan::fixed_range(
+                ExtendedTime::new(0, 0),
+                ExtendedTime::new(24, 0),
+            )],
+        }
     }
 }
 
@@ -135,7 +139,7 @@ impl TimeEvent {
             Self::Dawn => ExtendedTime::new(6, 0),
             Self::Sunrise => ExtendedTime::new(7, 0),
             Self::Sunset => ExtendedTime::new(19, 0),
-            Self::Dusk => ExtendedTime::new(18, 0),
+            Self::Dusk => ExtendedTime::new(20, 0),
         }
     }
 }

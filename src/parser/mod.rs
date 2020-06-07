@@ -370,7 +370,7 @@ fn build_weekday_range(pair: Pair<Rule>) -> Result<ds::WeekDayRange> {
     let mut nth = [false; 5];
 
     while pairs.peek().map(|x| x.as_rule()) == Some(Rule::nth_entry) {
-        for i in build_nth_entry(pairs.next().unwrap()) {
+        for i in build_nth_entry(pairs.next().unwrap())? {
             nth[usize::from(i - 1)] = true;
         }
     }
@@ -409,14 +409,20 @@ fn build_holiday(pair: Pair<Rule>) -> Result<ds::WeekDayRange> {
     Ok(ds::WeekDayRange::Holiday { kind, offset })
 }
 
-fn build_nth_entry(pair: Pair<Rule>) -> RangeInclusive<u8> {
+fn build_nth_entry(pair: Pair<Rule>) -> Result<RangeInclusive<u8>> {
     assert_eq!(pair.as_rule(), Rule::nth_entry);
     let mut pairs = pair.into_inner();
+
+    if pairs.peek().map(|x| x.as_rule()) == Some(Rule::nth_minus) {
+        return Err(Error::Unsupported(
+            "nth day relative to the end of the month",
+        ));
+    }
 
     let start = build_nth(pairs.next().expect("empty nth entry"));
     let end = pairs.next().map(build_nth).unwrap_or(start);
 
-    start..=end
+    Ok(start..=end)
 }
 
 fn build_nth(pair: Pair<Rule>) -> u8 {
