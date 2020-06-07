@@ -49,3 +49,22 @@ fn events() -> Result<(), Error> {
 
     Ok(())
 }
+
+#[test]
+fn overlap() -> Result<(), Error> {
+    assert_eq!(
+        schedule_at!("10:00-12:00,14:00-25:30", "2020-06-01"),
+        schedule! {
+            00,00 => Open =>  1,30;
+            10,00 => Open => 12,00;
+            14,00 => Open => 24,00;
+        }
+    );
+
+    assert_eq!(
+        schedule_at!("Mo 14:00-25:30", "2020-06-02"),
+        schedule! { 00,00 => Open =>  1,30 }
+    );
+
+    Ok(())
+}

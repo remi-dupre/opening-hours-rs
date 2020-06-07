@@ -1,6 +1,7 @@
 mod month_selector;
 mod rules;
 mod time_selector;
+mod week_selector;
 mod weekday_selector;
 
 #[macro_export]

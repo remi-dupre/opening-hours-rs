@@ -203,7 +203,7 @@ fn build_wide_range_selectors(
         match pair.as_rule() {
             Rule::year_selector => year_selector = build_year_selector(pair),
             Rule::monthday_selector => monthday_selector = build_monthday_selector(pair)?,
-            Rule::week_selector => week_selector = build_week_selector(pair),
+            Rule::week_selector => week_selector = build_week_selector(pair)?,
             Rule::comment => comment = Some(build_comment(pair)),
             other => unexpected_token(other, Rule::wide_range_selectors),
         }
@@ -452,23 +452,26 @@ fn build_day_offset(pair: Pair<Rule>) -> Result<i64> {
 // --- Week selector
 // ---
 
-fn build_week_selector(pair: Pair<Rule>) -> Vec<ds::WeekRange> {
+fn build_week_selector(pair: Pair<Rule>) -> Result<Vec<ds::WeekRange>> {
     assert_eq!(pair.as_rule(), Rule::week_selector);
     pair.into_inner().map(build_week).collect()
 }
 
-fn build_week(pair: Pair<Rule>) -> ds::WeekRange {
+fn build_week(pair: Pair<Rule>) -> Result<ds::WeekRange> {
     assert_eq!(pair.as_rule(), Rule::week);
     let mut rules = pair.into_inner();
 
     let start = build_weeknum(rules.next().expect("empty weeknum range"));
     let end = rules.next().map(build_weeknum);
-    let step = rules.next().map(build_weeknum);
+    let step = rules.next().map(build_positive_number);
 
-    ds::WeekRange {
+    Ok(ds::WeekRange {
         range: start..=end.unwrap_or(start),
-        step: step.unwrap_or(1),
-    }
+        step: step.unwrap_or(1).try_into().map_err(|_| Error::Overflow {
+            value: format!("{}", step.unwrap()),
+            expected: "an integer in [0, 255]".to_string(),
+        })?,
+    })
 }
 
 // ---
