@@ -15,12 +15,12 @@ use crate::time_selector::TimeSelector;
 
 // DateTimeRange
 
+#[non_exhaustive]
 #[derive(Clone)]
 pub struct DateTimeRange<'c> {
     pub range: Range<NaiveDateTime>,
     pub kind: RuleKind,
     pub comments: Vec<&'c str>,
-    _private: (),
 }
 
 impl fmt::Debug for DateTimeRange<'_> {
@@ -43,7 +43,6 @@ impl<'c> DateTimeRange<'c> {
             range,
             kind,
             comments,
-            _private: (),
         }
     }
 }
@@ -247,6 +246,7 @@ impl<'d> Iterator for TimeDomainIterator<'d> {
 
 // RuleSequence
 
+#[non_exhaustive]
 #[derive(Clone, Debug)]
 pub struct RuleSequence {
     pub day_selector: DaySelector,
@@ -254,7 +254,6 @@ pub struct RuleSequence {
     pub kind: RuleKind,
     pub operator: RuleOperator,
     pub comments: Vec<String>,
-    _private: (),
 }
 
 impl RuleSequence {
@@ -273,7 +272,6 @@ impl RuleSequence {
             kind,
             operator,
             comments,
-            _private: (),
         }
     }
 }

@@ -3,13 +3,13 @@ extern crate pest;
 extern crate pest_derive;
 extern crate chrono;
 
-mod day_selector;
-mod extended_time;
-mod parser;
+pub mod day_selector;
+pub mod extended_time;
+pub mod parser;
 #[macro_use]
-mod schedule;
-mod time_domain;
-mod time_selector;
+pub mod schedule;
+pub mod time_domain;
+pub mod time_selector;
 mod utils;
 
 #[cfg(test)]

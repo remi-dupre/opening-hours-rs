@@ -9,12 +9,12 @@ use crate::extended_time::ExtendedTime;
 use crate::time_domain::RuleKind;
 use crate::utils::{is_sorted, union_sorted};
 
+#[non_exhaustive]
 #[derive(Clone, Eq, PartialEq)]
 pub struct TimeRange<'c> {
     pub range: Range<ExtendedTime>,
     pub kind: RuleKind,
     pub comments: Vec<&'c str>,
-    _private: (),
 }
 
 impl<'c> TimeRange<'c> {
@@ -29,7 +29,6 @@ impl<'c> TimeRange<'c> {
             range,
             kind,
             comments,
-            _private: (),
         }
     }
 }
