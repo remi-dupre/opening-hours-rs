@@ -5,13 +5,20 @@ use std::fmt;
 use std::iter::{empty, Peekable};
 use std::ops::Range;
 
-use chrono::prelude::Datelike;
-use chrono::{Duration, NaiveDate, NaiveDateTime};
+use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime};
+use once_cell::sync::Lazy;
 
 use crate::day_selector::{DateFilter, DaySelector};
 use crate::extended_time::ExtendedTime;
 use crate::schedule::{Schedule, TimeRange};
 use crate::time_selector::TimeSelector;
+
+static DATE_LIMIT: Lazy<NaiveDateTime> = Lazy::new(|| {
+    NaiveDateTime::new(
+        NaiveDate::from_ymd(10_000, 1, 1),
+        NaiveTime::from_hms(0, 0, 0),
+    )
+});
 
 // DateTimeRange
 
@@ -102,8 +109,13 @@ impl TimeDomain {
         prev_eval.unwrap_or_else(Schedule::empty)
     }
 
+    pub fn iter_range(&self, from: NaiveDateTime, to: NaiveDateTime) -> TimeDomainIterator {
+        assert!(to <= *DATE_LIMIT);
+        TimeDomainIterator::new(self, from, to)
+    }
+
     pub fn iter_from(&self, from: NaiveDateTime) -> TimeDomainIterator {
-        TimeDomainIterator::new(self, from)
+        self.iter_range(from, *DATE_LIMIT)
     }
 
     // High level implementations
@@ -116,7 +128,7 @@ impl TimeDomain {
     }
 
     pub fn state(&self, current_time: NaiveDateTime) -> RuleKind {
-        self.iter_from(current_time)
+        self.iter_range(current_time, current_time + Duration::minutes(1))
             .next()
             .map(|dtr| dtr.kind)
             .unwrap_or(RuleKind::Unknown)
@@ -155,15 +167,20 @@ pub struct TimeDomainIterator<'d> {
     time_domain: &'d TimeDomain,
     curr_date: NaiveDate,
     curr_schedule: Peekable<Box<dyn Iterator<Item = TimeRange<'d>> + 'd>>,
+    end_datetime: NaiveDateTime,
 }
 
 impl<'d> TimeDomainIterator<'d> {
-    pub fn new(time_domain: &'d TimeDomain, start_datetime: NaiveDateTime) -> Self {
+    pub fn new(
+        time_domain: &'d TimeDomain,
+        start_datetime: NaiveDateTime,
+        end_datetime: NaiveDateTime,
+    ) -> Self {
         let start_date = start_datetime.date();
         let start_time = start_datetime.time().into();
 
         let mut curr_schedule = {
-            if start_date.year() <= 9999 {
+            if start_datetime < end_datetime {
                 time_domain.schedule_at(start_date).into_iter_filled()
             } else {
                 Box::new(empty())
@@ -183,6 +200,7 @@ impl<'d> TimeDomainIterator<'d> {
             time_domain,
             curr_date: start_date,
             curr_schedule,
+            end_datetime,
         }
     }
 
@@ -193,7 +211,7 @@ impl<'d> TimeDomainIterator<'d> {
             if self.curr_schedule.peek().is_none() {
                 self.curr_date += Duration::days(1);
 
-                if self.curr_date.year() <= 9999 {
+                if self.curr_date <= self.end_datetime.date() {
                     self.curr_schedule = self
                         .time_domain
                         .schedule_at(self.curr_date)
@@ -228,9 +246,12 @@ impl<'d> Iterator for TimeDomainIterator<'d> {
                 .map(|tr| tr.range.start)
                 .unwrap_or_else(|| ExtendedTime::new(0, 0));
 
-            let end = NaiveDateTime::new(
-                end_date,
-                end_time.try_into().expect("got invalid time from schedule"),
+            let end = std::cmp::min(
+                self.end_datetime,
+                NaiveDateTime::new(
+                    end_date,
+                    end_time.try_into().expect("got invalid time from schedule"),
+                ),
             );
 
             Some(DateTimeRange::new_with_sorted_comments(
