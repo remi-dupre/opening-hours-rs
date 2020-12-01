@@ -79,13 +79,7 @@ impl TimeDomain {
             let curr_eval = rules_seq.schedule_at(date);
 
             let (new_match, new_eval) = match rules_seq.operator {
-                RuleOperator::Normal => {
-                    if prev_match {
-                        return prev_eval.expect("schedule can't be None for matching days");
-                    } else {
-                        (curr_match, curr_eval)
-                    }
-                }
+                RuleOperator::Normal => (curr_match || prev_match, curr_eval.or(prev_eval)),
                 RuleOperator::Additional => (
                     prev_match || curr_match,
                     match (prev_eval, curr_eval) {

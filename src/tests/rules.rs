@@ -31,7 +31,7 @@ fn regular_rule() -> Result<(), Error> {
 
     assert_eq!(
         schedule_at!("Sa,Su 11:00-13:45 open; 10:00-18:00", "2020-05-31"),
-        schedule! { 11,00 => Open => 13,45 }
+        schedule! { 10,00 => Open => 18,00 }
     );
 
     Ok(())
