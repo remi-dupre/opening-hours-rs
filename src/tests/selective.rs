@@ -4,7 +4,7 @@ use crate::parser::Error;
 use crate::time_domain::RuleKind::*;
 
 #[test]
-fn s000_idunn_empty_interval() -> Result<(), Error> {
+fn s000_idunn_interval_stops_next_day() -> Result<(), Error> {
     use crate::time_domain::DateTimeRange;
     use chrono::Duration;
 
@@ -13,12 +13,12 @@ fn s000_idunn_empty_interval() -> Result<(), Error> {
     let end = start + Duration::days(1);
 
     assert_eq!(
-        Some(DateTimeRange {
+        vec![DateTimeRange {
             range: start..end,
             kind: Closed,
             comments: vec![],
-        }),
-        oh.intervals(start, end).next()
+        }],
+        oh.iter_range(start, end).collect::<Vec<_>>()
     );
 
     Ok(())

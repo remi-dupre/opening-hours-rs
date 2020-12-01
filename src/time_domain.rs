@@ -109,13 +109,23 @@ impl TimeDomain {
         prev_eval.unwrap_or_else(Schedule::empty)
     }
 
-    pub fn iter_range(&self, from: NaiveDateTime, to: NaiveDateTime) -> TimeDomainIterator {
-        assert!(to <= *DATE_LIMIT);
-        TimeDomainIterator::new(self, from, to)
+    pub fn iter_from(&self, from: NaiveDateTime) -> impl Iterator<Item = DateTimeRange> + '_ {
+        self.iter_range(from, *DATE_LIMIT)
     }
 
-    pub fn iter_from(&self, from: NaiveDateTime) -> TimeDomainIterator {
-        self.iter_range(from, *DATE_LIMIT)
+    pub fn iter_range(
+        &self,
+        from: NaiveDateTime,
+        to: NaiveDateTime,
+    ) -> impl Iterator<Item = DateTimeRange> + '_ {
+        assert!(to <= *DATE_LIMIT);
+        TimeDomainIterator::new(&self, from, to)
+            .take_while(move |dtr| dtr.range.start < to)
+            .map(move |dtr| {
+                let start = max(dtr.range.start, from);
+                let end = min(dtr.range.end, to);
+                DateTimeRange::new_with_sorted_comments(start..end, dtr.kind, dtr.comments)
+            })
     }
 
     // High level implementations
@@ -144,20 +154,6 @@ impl TimeDomain {
 
     pub fn is_unknown(&self, current_time: NaiveDateTime) -> bool {
         self.state(current_time) == RuleKind::Unknown
-    }
-
-    pub fn intervals<'s>(
-        &'s self,
-        from: NaiveDateTime,
-        to: NaiveDateTime,
-    ) -> impl Iterator<Item = DateTimeRange> + 's {
-        self.iter_from(from)
-            .take_while(move |dtr| dtr.range.start < to)
-            .map(move |dtr| {
-                let start = max(dtr.range.start, from);
-                let end = min(dtr.range.end, to);
-                DateTimeRange::new_with_sorted_comments(start..end, dtr.kind, dtr.comments)
-            })
     }
 }
 
