@@ -47,3 +47,13 @@ fn s002_idunn_override_weekday_keep_unmatched() -> Result<(), Error> {
 fn s003_idunn_space_separator() {
     assert!(parse("Jan-Feb 10:00-20:00").is_ok());
 }
+
+#[test]
+fn s004_idunn_until_midnight_as_00() -> Result<(), Error> {
+    assert_eq!(
+        schedule_at!("Mo-Su 09:00-00:00 open", "2018-06-14"),
+        schedule! { 9,00 => Open => 24,00 }
+    );
+
+    Ok(())
+}

@@ -84,6 +84,18 @@ impl TimeSpan {
     pub fn as_naive_time(&self, date: NaiveDate) -> Range<ExtendedTime> {
         let start = self.range.start.as_naive(date);
         let end = self.range.end.as_naive(date);
+
+        // If end < start, it actually wraps to next day
+        let end = {
+            if start <= end {
+                end
+            } else {
+                end.add_hours(24)
+                    .expect("overflow during TimeSpan resolution")
+            }
+        };
+
+        assert!(start <= end);
         start..end
     }
 }
