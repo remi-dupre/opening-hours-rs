@@ -68,7 +68,9 @@ small_range_selectors = {
     | time_selector
 }
 
-separator_for_readability = _{ ":" }
+// NOTE: In specification, space is not a valid separator, but this is quite
+//       often used.
+separator_for_readability = _{ ":" | " " }
 
 // Time selector
 

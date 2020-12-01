@@ -42,3 +42,8 @@ fn s002_idunn_override_weekday_keep_unmatched() -> Result<(), Error> {
 
     Ok(())
 }
+
+#[test]
+fn s003_idunn_space_separator() {
+    assert!(parse("Jan-Feb 10:00-20:00").is_ok());
+}
