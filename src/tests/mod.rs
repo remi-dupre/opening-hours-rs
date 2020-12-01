@@ -1,4 +1,5 @@
 mod month_selector;
+mod parser;
 mod rules;
 mod time_selector;
 mod week_selector;
