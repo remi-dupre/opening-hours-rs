@@ -32,3 +32,13 @@ fn s001_idunn_override_weekday() -> Result<(), Error> {
 
     Ok(())
 }
+
+#[test]
+fn s002_idunn_override_weekday_keep_unmatched() -> Result<(), Error> {
+    assert_eq!(
+        schedule_at!("Tu-Su 09:30-18:00; Th 09:30-21:45", "2018-06-15"),
+        schedule! { 9,30 => Open => 18,00 }
+    );
+
+    Ok(())
+}

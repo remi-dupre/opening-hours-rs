@@ -79,7 +79,14 @@ impl TimeDomain {
             let curr_eval = rules_seq.schedule_at(date);
 
             let (new_match, new_eval) = match rules_seq.operator {
-                RuleOperator::Normal => (curr_match || prev_match, curr_eval.or(prev_eval)),
+                RuleOperator::Normal => (
+                    curr_match || prev_match,
+                    if curr_match {
+                        curr_eval
+                    } else {
+                        prev_eval.or(curr_eval)
+                    },
+                ),
                 RuleOperator::Additional => (
                     prev_match || curr_match,
                     match (prev_eval, curr_eval) {

@@ -488,7 +488,6 @@ fn build_monthday_selector(pair: Pair<Rule>) -> Result<Vec<ds::MonthdayRange>> {
 fn build_monthday_range(pair: Pair<Rule>) -> Result<ds::MonthdayRange> {
     assert_eq!(pair.as_rule(), Rule::monthday_range);
     let mut pairs = pair.into_inner();
-    dbg!(&pairs);
 
     let year = {
         if pairs.peek().map(|x| x.as_rule()) == Some(Rule::year) {
