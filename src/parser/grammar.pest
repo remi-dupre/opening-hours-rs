@@ -68,9 +68,9 @@ small_range_selectors = {
     | time_selector
 }
 
-// NOTE: In specification, space is not a valid separator, but this is quite
-//       often used.
-separator_for_readability = _{ ":" | " " }
+// NOTE: In specification, only ":" is allowed, but other forms are quite
+//       common.
+separator_for_readability = _{ " " | ": " | ":" }
 
 // Time selector
 
@@ -173,8 +173,9 @@ date_offset = {
     | day_offset
 }
 
+// NOTE: In specification space separators are not allowed.
 date_from = {
-      year? ~ month ~ daynum
+      (year ~ " "?)? ~ month ~ " "? ~ daynum
     | year? ~ variable_date
 }
 
@@ -231,9 +232,12 @@ thursday = @{ "Th" }
 friday = @{ "Fr" }
 saturday = @{ "Sa" }
 
+// NOTE: In specification, single digit numbers are not allowed, but it seems
+//       pretty common.
 daynum = @{
       '0'..'2' ~ '0'..'9'  // 00 -> 29
     |      "3" ~ '0'..'1'  // 30 -> 31
+    |            '0'..'9'  //  0 -> 9
 }
 
 weeknum = @{

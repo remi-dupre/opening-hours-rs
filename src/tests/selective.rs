@@ -93,3 +93,11 @@ fn s006_idunn_month_cycle() -> Result<(), Error> {
 
     Ok(())
 }
+
+#[test]
+fn s007_idunn_date_separator() {
+    assert!(
+        parse("Mo,Th,Sa,Su 09:00-18:00; We,Fr 09:00-21:45; Tu off; Jan 1,May 1,Dec 25: off")
+            .is_ok()
+    );
+}
