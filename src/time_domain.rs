@@ -23,7 +23,7 @@ static DATE_LIMIT: Lazy<NaiveDateTime> = Lazy::new(|| {
 // DateTimeRange
 
 #[non_exhaustive]
-#[derive(Clone)]
+#[derive(Clone, Eq, PartialEq)]
 pub struct DateTimeRange<'c> {
     pub range: Range<NaiveDateTime>,
     pub kind: RuleKind,
