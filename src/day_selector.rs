@@ -3,6 +3,8 @@ use std::ops::RangeInclusive;
 use chrono::prelude::Datelike;
 use chrono::{Duration, NaiveDate};
 
+use crate::utils::wrapping_range_contains;
+
 pub type Weekday = chrono::Weekday;
 
 /// Generic trait to specify the behavior of a selector over dates.
@@ -77,7 +79,7 @@ impl DateFilter for MonthdayRange {
 
         match self {
             MonthdayRange::Month { year, range } => {
-                year.unwrap_or(in_year) == in_year && range.contains(&in_month)
+                year.unwrap_or(in_year) == in_year && wrapping_range_contains(range, &in_month)
             }
             MonthdayRange::Date {
                 start: (start, start_offset),
@@ -213,18 +215,6 @@ impl Default for WeekDayOffset {
 
 // WeekDayRange
 
-fn weekday_range_contains(range: &RangeInclusive<Weekday>, day: Weekday) -> bool {
-    let start = *range.start() as u8;
-    let mut end = *range.end() as u8;
-
-    if end < start {
-        end += 7;
-    }
-
-    assert!(start <= end);
-    (start..=end).contains(&(day as u8)) || (start..=end).contains(&(7 + day as u8))
-}
-
 #[derive(Clone, Debug)]
 pub enum WeekDayRange {
     Fixed {
@@ -245,7 +235,9 @@ impl DateFilter for WeekDayRange {
                 // Apply the reverse of the offset
                 let date = date - Duration::days(*offset);
                 let date_nth = (date.day() as u8 - 1) / 7;
-                weekday_range_contains(range, date.weekday()) && nth[usize::from(date_nth)]
+                let range_u8 = (*range.start() as u8)..=(*range.end() as u8);
+                wrapping_range_contains(&range_u8, &(date.weekday() as u8))
+                    && nth[usize::from(date_nth)]
             }
             WeekDayRange::Holiday { .. } => todo!("Holiday not implemented yet"),
         }
@@ -275,7 +267,7 @@ pub struct WeekRange {
 impl DateFilter for WeekRange {
     fn filter(&self, date: NaiveDate) -> bool {
         let week = date.iso_week().week() as u8;
-        self.range.contains(&week) && (week - self.range.start()) % self.step == 0
+        wrapping_range_contains(&self.range, &week) && (week - self.range.start()) % self.step == 0
     }
 }
 

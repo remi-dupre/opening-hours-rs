@@ -82,3 +82,14 @@ fn s005_idunn_days_cycle() -> Result<(), Error> {
 
     Ok(())
 }
+
+#[test]
+fn s006_idunn_month_cycle() -> Result<(), Error> {
+    assert_eq!(
+        parse("Oct-Mar 07:30-19:30; Apr-Sep 07:00-21:00")?
+            .next_change(datetime!("2019-02-10 11:00")),
+        datetime!("2019-02-10 19:30")
+    );
+
+    Ok(())
+}

@@ -1,7 +1,16 @@
 use std::cmp::{max, min, Ordering};
 use std::ops::Range;
+use std::ops::RangeInclusive;
 
 use crate::extended_time::ExtendedTime;
+
+pub fn wrapping_range_contains<T: PartialOrd>(range: &RangeInclusive<T>, elt: &T) -> bool {
+    if range.start() <= range.end() {
+        range.contains(elt)
+    } else {
+        range.start() <= elt || elt <= range.end()
+    }
+}
 
 // TODO: can we gain performances by returning an iterator (requires custom implem).
 pub fn time_ranges_union(
