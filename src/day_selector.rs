@@ -213,6 +213,18 @@ impl Default for WeekDayOffset {
 
 // WeekDayRange
 
+fn weekday_range_contains(range: &RangeInclusive<Weekday>, day: Weekday) -> bool {
+    let start = *range.start() as u8;
+    let mut end = *range.end() as u8;
+
+    if end < start {
+        end += 7;
+    }
+
+    assert!(start <= end);
+    (start..=end).contains(&(day as u8)) || (start..=end).contains(&(7 + day as u8))
+}
+
 #[derive(Clone, Debug)]
 pub enum WeekDayRange {
     Fixed {
@@ -232,9 +244,8 @@ impl DateFilter for WeekDayRange {
             WeekDayRange::Fixed { range, nth, offset } => {
                 // Apply the reverse of the offset
                 let date = date - Duration::days(*offset);
-                let range = (*range.start() as u8)..=(*range.end() as u8);
                 let date_nth = (date.day() as u8 - 1) / 7;
-                range.contains(&(date.weekday() as u8)) && nth[usize::from(date_nth)]
+                weekday_range_contains(range, date.weekday()) && nth[usize::from(date_nth)]
             }
             WeekDayRange::Holiday { .. } => todo!("Holiday not implemented yet"),
         }

@@ -57,3 +57,28 @@ fn s004_idunn_until_midnight_as_00() -> Result<(), Error> {
 
     Ok(())
 }
+
+#[test]
+fn s005_idunn_days_cycle() -> Result<(), Error> {
+    assert_eq!(
+        schedule_at!("We-Mo 11:00-19:00", "2018-06-11"),
+        schedule! { 11,00 => Open => 19,00 }
+    );
+
+    assert_eq!(
+        schedule_at!("We-Mo 11:00-19:00", "2018-06-12"),
+        schedule! {}
+    );
+
+    assert_eq!(
+        schedule_at!("We-Mo 11:00-19:00", "2018-06-13"),
+        schedule! { 11,00 => Open => 19,00 }
+    );
+
+    assert_eq!(
+        schedule_at!("We-Mo 11:00-19:00", "2018-06-14"),
+        schedule! { 11,00 => Open => 19,00 }
+    );
+
+    Ok(())
+}
