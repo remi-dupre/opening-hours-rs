@@ -1,0 +1,17 @@
+[package]
+name = "fuzz"
+version = "0.1.0"
+authors = ["Rémi Dupré <r.dupre@qwant.com>"]
+edition = "2018"
+
+[[bin]]
+name = "parse_oh"
+path = "fuzz_targets/oh.rs"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+chrono = "0.4"
+libfuzzer-sys = "0.3"
+opening-hours = { path = ".." }

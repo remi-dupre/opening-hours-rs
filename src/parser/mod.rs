@@ -435,7 +435,7 @@ fn build_day_offset(pair: Pair<Rule>) -> Result<i64> {
     let mut pairs = pair.into_inner();
 
     let sign = build_plus_or_minus(pairs.next().expect("empty day offset"));
-    let val_abs = build_positive_number(pairs.next().expect("missing value"));
+    let val_abs = build_positive_number(pairs.next().expect("missing value"))?;
 
     let val_abs: i64 = val_abs.try_into().map_err(|_| Error::Overflow {
         value: format!("{}", val_abs),
@@ -464,7 +464,7 @@ fn build_week(pair: Pair<Rule>) -> Result<ds::WeekRange> {
     let start = build_weeknum(rules.next().expect("empty weeknum range"));
     let end = rules.next().map(build_weeknum);
 
-    let step = rules.next().map(build_positive_number);
+    let step = rules.next().map(build_positive_number).transpose()?;
     let step = step.unwrap_or(1).try_into().map_err(|_| Error::Overflow {
         value: format!("{}", step.unwrap()),
         expected: "an integer in [0, 255]".to_string(),
@@ -653,7 +653,7 @@ fn build_year_range(pair: Pair<Rule>) -> Result<ds::YearRange> {
         other => unexpected_token(other, Rule::year_range),
     });
 
-    let step = rules.next().map(build_positive_number);
+    let step = rules.next().map(build_positive_number).transpose()?;
     let step = step.unwrap_or(1).try_into().map_err(|_| Error::Overflow {
         value: format!("{}", step.unwrap()),
         expected: "an integer in [0, 2**16[".to_string(),
@@ -809,9 +809,12 @@ fn build_year(pair: Pair<Rule>) -> u16 {
     pair.as_str().parse().expect("invalid year format")
 }
 
-fn build_positive_number(pair: Pair<Rule>) -> u64 {
+fn build_positive_number(pair: Pair<Rule>) -> Result<u64> {
     assert_eq!(pair.as_rule(), Rule::positive_number);
-    pair.as_str().parse().expect("invalid positive_number")
+    pair.as_str().parse().map_err(|_| Error::Overflow {
+        value: pair.as_str().to_string(),
+        expected: "a number between 0 and 2**64".to_string(),
+    })
 }
 
 fn build_comment(pair: Pair<Rule>) -> String {
