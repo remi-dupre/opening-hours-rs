@@ -1,18 +1,26 @@
 #![no_main]
+use arbitrary::Arbitrary;
 use chrono::NaiveDateTime;
 use libfuzzer_sys::fuzz_target;
 
-fuzz_target!(|data: &[u8]| {
-    let mut data = std::str::from_utf8(data).unwrap_or("").splitn(2, '\n');
-    let raw_date = data.next().unwrap_or_default();
-    let raw_oh = data.next().unwrap_or_default();
+#[derive(Arbitrary, Clone, Debug)]
+pub struct Data {
+    date_secs: i64,
+    date_nsecs: u32,
+    oh: String,
+}
 
-    let date = NaiveDateTime::parse_from_str(raw_date, "%d-%m-%Y %H:%M:%S");
-    let oh = opening_hours::parse(raw_oh);
+fuzz_target!(|data: Data| {
+    if let Some(date) = NaiveDateTime::from_timestamp_opt(data.date_secs, data.date_nsecs) {
+        if let Ok(oh) = opening_hours::parse(&data.oh) {
+            eprintln!(
+                "oh: {:?} -- date: {}",
+                data.oh,
+                date.format("%Y-%m-%d %H:%M:%S")
+            );
 
-    if let (Ok(date), Ok(oh)) = (date, oh) {
-        eprintln!("oh: '{}' -- date: '{}'", raw_oh, raw_date);
-        let _ = oh.is_open(date);
-        let _ = oh.next_change(date);
+            let _ = oh.is_open(date);
+            let _ = oh.next_change(date);
+        }
     }
 });

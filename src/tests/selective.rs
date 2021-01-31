@@ -12,7 +12,7 @@ fn s000_idunn_interval_stops_next_day() -> Result<(), Error> {
     let end = start + Duration::days(1);
 
     assert_eq!(
-        oh.iter_range(start, end).collect::<Vec<_>>(),
+        oh.iter_range(start, end).unwrap().collect::<Vec<_>>(),
         vec![DateTimeRange {
             range: start..end,
             kind: Closed,
@@ -87,7 +87,8 @@ fn s005_idunn_days_cycle() -> Result<(), Error> {
 fn s006_idunn_month_cycle() -> Result<(), Error> {
     assert_eq!(
         parse("Oct-Mar 07:30-19:30; Apr-Sep 07:00-21:00")?
-            .next_change(datetime!("2019-02-10 11:00")),
+            .next_change(datetime!("2019-02-10 11:00"))
+            .unwrap(),
         datetime!("2019-02-10 19:30")
     );
 

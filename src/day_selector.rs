@@ -293,8 +293,11 @@ pub enum Month {
     December = 12,
 }
 
+#[derive(Debug)]
+pub struct InvalidMonth;
+
 impl Month {
-    pub fn from_u8(x: u8) -> Result<Self, ()> {
+    pub fn from_u8(x: u8) -> Result<Self, InvalidMonth> {
         Ok(match x {
             1 => Self::January,
             2 => Self::February,
@@ -308,7 +311,7 @@ impl Month {
             10 => Self::October,
             11 => Self::November,
             12 => Self::December,
-            _ => return Err(()),
+            _ => return Err(InvalidMonth),
         })
     }
 

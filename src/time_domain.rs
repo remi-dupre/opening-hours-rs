@@ -20,6 +20,9 @@ static DATE_LIMIT: Lazy<NaiveDateTime> = Lazy::new(|| {
     )
 });
 
+#[derive(Debug)]
+pub struct DateLimitExceeded;
+
 // DateTimeRange
 
 #[non_exhaustive]
@@ -110,7 +113,10 @@ impl TimeDomain {
         prev_eval.unwrap_or_else(Schedule::empty)
     }
 
-    pub fn iter_from(&self, from: NaiveDateTime) -> impl Iterator<Item = DateTimeRange> + '_ {
+    pub fn iter_from(
+        &self,
+        from: NaiveDateTime,
+    ) -> Result<impl Iterator<Item = DateTimeRange> + '_, DateLimitExceeded> {
         self.iter_range(from, *DATE_LIMIT)
     }
 
@@ -118,43 +124,69 @@ impl TimeDomain {
         &self,
         from: NaiveDateTime,
         to: NaiveDateTime,
-    ) -> impl Iterator<Item = DateTimeRange> + '_ {
-        assert!(to <= *DATE_LIMIT);
-        TimeDomainIterator::new(&self, from, to)
+    ) -> Result<impl Iterator<Item = DateTimeRange> + '_, DateLimitExceeded> {
+        if from > *DATE_LIMIT || to > *DATE_LIMIT {
+            Err(DateLimitExceeded)
+        } else {
+            Ok(TimeDomainIterator::new(&self, from, to)
+                .take_while(move |dtr| dtr.range.start < to)
+                .map(move |dtr| {
+                    let start = max(dtr.range.start, from);
+                    let end = min(dtr.range.end, to);
+                    DateTimeRange::new_with_sorted_comments(start..end, dtr.kind, dtr.comments)
+                }))
+        }
+    }
+
+    // High level implementations
+
+    pub fn next_change(
+        &self,
+        current_time: NaiveDateTime,
+    ) -> Result<NaiveDateTime, DateLimitExceeded> {
+        Ok(self
+            .iter_from(current_time)?
+            .next()
+            .map(|dtr| dtr.range.end)
+            .unwrap_or(current_time))
+    }
+
+    pub fn state(&self, current_time: NaiveDateTime) -> Result<RuleKind, DateLimitExceeded> {
+        Ok(self
+            .iter_range(current_time, current_time + Duration::minutes(1))?
+            .next()
+            .map(|dtr| dtr.kind)
+            .unwrap_or(RuleKind::Unknown))
+    }
+
+    pub fn is_open(&self, current_time: NaiveDateTime) -> bool {
+        matches!(self.state(current_time), Ok(RuleKind::Open))
+    }
+
+    pub fn is_closed(&self, current_time: NaiveDateTime) -> bool {
+        matches!(self.state(current_time), Ok(RuleKind::Closed))
+    }
+
+    pub fn is_unknown(&self, current_time: NaiveDateTime) -> bool {
+        matches!(
+            self.state(current_time),
+            Err(DateLimitExceeded) | Ok(RuleKind::Unknown)
+        )
+    }
+
+    pub fn intervals<'s>(
+        &'s self,
+        from: NaiveDateTime,
+        to: NaiveDateTime,
+    ) -> Result<impl Iterator<Item = DateTimeRange> + 's, DateLimitExceeded> {
+        Ok(self
+            .iter_from(from)?
             .take_while(move |dtr| dtr.range.start < to)
             .map(move |dtr| {
                 let start = max(dtr.range.start, from);
                 let end = min(dtr.range.end, to);
                 DateTimeRange::new_with_sorted_comments(start..end, dtr.kind, dtr.comments)
-            })
-    }
-
-    // High level implementations
-
-    pub fn next_change(&self, current_time: NaiveDateTime) -> NaiveDateTime {
-        self.iter_from(current_time)
-            .next()
-            .map(|dtr| dtr.range.end)
-            .unwrap_or(current_time)
-    }
-
-    pub fn state(&self, current_time: NaiveDateTime) -> RuleKind {
-        self.iter_range(current_time, current_time + Duration::minutes(1))
-            .next()
-            .map(|dtr| dtr.kind)
-            .unwrap_or(RuleKind::Unknown)
-    }
-
-    pub fn is_open(&self, current_time: NaiveDateTime) -> bool {
-        self.state(current_time) == RuleKind::Open
-    }
-
-    pub fn is_closed(&self, current_time: NaiveDateTime) -> bool {
-        self.state(current_time) == RuleKind::Closed
-    }
-
-    pub fn is_unknown(&self, current_time: NaiveDateTime) -> bool {
-        self.state(current_time) == RuleKind::Unknown
+            }))
     }
 }
 
