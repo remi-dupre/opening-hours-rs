@@ -12,14 +12,37 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Display rust version
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+
+      - name: Install poetry
         run: |
-          rustc --version
-          cargo clippy -- --version
-          cargo fmt -- --version
+          python -m pip install --upgrade pip
+          pip install poetry
+
+      - name: Display rust version
+        run: rustc --version
 
       - name: Login to crates.io
         run: cargo login $CRATES_IO_TOKEN
 
       - name: Check package for crates.io
         run: cargo publish --dry-run
+
+      - name: Install python dependancies
+        run: poetry install
+        working-directory: python
+
+      - name: Check package for pypi.org
+        run: poetry run maturin develop --release
+        working-directory: python
+
+      - name: Publish to crates.io
+        run: cargo publish
+        if: github.ref == 'ref/head/master'
+
+      - name: Publish to pypi.org
+        run: poetry run maturin publish --username remi-dupre --password $PYPI_PASSWORD
+        working-directory: python
+        if: github.ref == 'ref/head/master'
