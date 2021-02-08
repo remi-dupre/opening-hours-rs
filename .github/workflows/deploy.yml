@@ -25,9 +25,6 @@ jobs:
         run: poetry install
         working-directory: python
 
-      - name: Login to crates.io
-        run: cargo login $CRATES_IO_TOKEN
-
       - name: Check packaging for crates.io
         run: cargo publish --dry-run
 
@@ -50,11 +47,19 @@ jobs:
             sys.exit(1)
           "
 
+      - name: Login to crates.io
+        run: cargo login $TOKEN
+        env:
+          TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
+
       - name: Publish to crates.io
         run: cargo publish
         if: github.ref == 'refs/heads/master'
 
       - name: Publish to pypi.org
-        run: poetry run maturin publish --username remi-dupre --password $PYPI_PASSWORD
+        run: poetry run maturin publish --username $USER --password $PASS
         working-directory: python
         if: github.ref == 'refs/heads/master'
+        env:
+          USER: remi-dupre
+          PASS: ${{ secrets.PYPI_PASSWORD }}
