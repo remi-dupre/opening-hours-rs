@@ -1,0 +1,25 @@
+name: Deploy
+
+on:
+  - push
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Display rust version
+        run: |
+          rustc --version
+          cargo clippy -- --version
+          cargo fmt -- --version
+
+      - name: Login to crates.io
+        run: cargo login $CRATES_IO_TOKEN
+
+      - name: Check package for crates.io
+        run: cargo publish --dry-run
