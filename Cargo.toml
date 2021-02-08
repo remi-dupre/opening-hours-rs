@@ -1,7 +1,10 @@
 [package]
 name = "opening-hours"
 version = "0.1.10"
-authors = ["Rémi Dupré <r.dupre@qwant.com>"]
+authors = ["Rémi Dupré <remi@dupre.io>"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/remi-dupre/opening-hours-rs"
+description = "A parser for the opening_hours fields from OpenStreetMap."
 edition = "2018"
 
 [profile.release]
