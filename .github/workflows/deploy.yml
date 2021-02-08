@@ -21,28 +21,40 @@ jobs:
           python -m pip install --upgrade pip
           pip install poetry
 
-      - name: Display rust version
-        run: rustc --version
-
-      - name: Login to crates.io
-        run: cargo login $CRATES_IO_TOKEN
-
-      - name: Check package for crates.io
-        run: cargo publish --dry-run
-
       - name: Install python dependancies
         run: poetry install
         working-directory: python
 
-      - name: Check package for pypi.org
+      - name: Login to crates.io
+        run: cargo login $CRATES_IO_TOKEN
+
+      - name: Check packaging for crates.io
+        run: cargo publish --dry-run
+
+      - name: Check packaging for pypi.org
         run: poetry run maturin develop --release
         working-directory: python
 
+      - name: Check version consistency
+        working-directory: python
+        run: |
+          poetry run python -c "
+          import sys
+          import toml
+
+          py_version = toml.load('pyproject.toml')['tool']['poetry']['version']
+          rs_version = toml.load('../Cargo.toml')['package']['version']
+
+          if py_version != rs_version:
+            print(f'Python package ({py_version}) is inconsistant with crate ({rs_version})')
+            sys.exit(1)
+          "
+
       - name: Publish to crates.io
         run: cargo publish
-        if: github.ref == 'ref/head/master'
+        if: github.ref == 'refs/heads/master'
 
       - name: Publish to pypi.org
         run: poetry run maturin publish --username remi-dupre --password $PYPI_PASSWORD
         working-directory: python
-        if: github.ref == 'ref/head/master'
+        if: github.ref == 'refs/heads/master'
