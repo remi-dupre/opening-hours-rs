@@ -1,0 +1,35 @@
+[[package]]
+name = "maturin"
+version = "0.9.0"
+description = "Build and publish crates with pyo3, rust-cpython and cffi bindings as well as rust binaries as python packages"
+category = "main"
+optional = false
+python-versions = ">=3.5"
+
+[package.dependencies]
+toml = ">=0.10.0,<0.11.0"
+
+[[package]]
+name = "toml"
+version = "0.10.2"
+description = "Python Library for Tom's Obvious, Minimal Language"
+category = "main"
+optional = false
+python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
+
+[metadata]
+lock-version = "1.0"
+python-versions = "^3.9"
+content-hash = "afdc1f36d704a8c04679c05936f2ba8162f90e5871c1a687de673e7fb35e8d5b"
+
+[metadata.files]
+maturin = [
+    {file = "maturin-0.9.0-py3-none-macosx_10_7_x86_64.whl", hash = "sha256:6a01c7e07e12e75f3c716b274538d92329d1fd1ae66f8aa9b268436aa0168fdb"},
+    {file = "maturin-0.9.0-py3-none-manylinux2010_x86_64.whl", hash = "sha256:b0490d70dc5f01289907fb4b1c75929c2ed4a5d3dfd1843e6cf00babf152034b"},
+    {file = "maturin-0.9.0-py3-none-win_amd64.whl", hash = "sha256:12fce096226e03a56b55c8dc421c94a7c13fb9c182d6912d8ee56cd7d480d19c"},
+    {file = "maturin-0.9.0.tar.gz", hash = "sha256:e5dd4cde0441a2207ce10e9dc463449d94db6108647d810e6673e2e4eb7a43f7"},
+]
+toml = [
+    {file = "toml-0.10.2-py2.py3-none-any.whl", hash = "sha256:806143ae5bfb6a3c6e736a764057db0e6a0e05e338b5630894a5f779cabb4f9b"},
+    {file = "toml-0.10.2.tar.gz", hash = "sha256:b3bda1d108d5dd99f4a20d24d9c348e91c4db7ab1b749200bded2f839ccbe68f"},
+]
