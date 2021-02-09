@@ -125,7 +125,7 @@ impl TimeDomain {
         from: NaiveDateTime,
         to: NaiveDateTime,
     ) -> Result<impl Iterator<Item = DateTimeRange> + '_, DateLimitExceeded> {
-        if from > *DATE_LIMIT || to > *DATE_LIMIT {
+        if from >= *DATE_LIMIT || to > *DATE_LIMIT {
             Err(DateLimitExceeded)
         } else {
             Ok(TimeDomainIterator::new(&self, from, to)
@@ -148,7 +148,7 @@ impl TimeDomain {
             .iter_from(current_time)?
             .next()
             .map(|dtr| dtr.range.end)
-            .unwrap_or(current_time))
+            .unwrap_or(*DATE_LIMIT))
     }
 
     pub fn state(&self, current_time: NaiveDateTime) -> Result<RuleKind, DateLimitExceeded> {

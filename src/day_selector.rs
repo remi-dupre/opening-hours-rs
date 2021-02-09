@@ -86,7 +86,7 @@ impl DateFilter for YearRange {
                 *self.range.start()
             } else if self.step == 1 {
                 // 3. time is in the range and step is naive
-                self.range.end() + 1
+                *self.range.end() + 1
             } else if (curr_year - self.range.start()) % self.step == 0 {
                 // 4. time matches the range with step >= 2
                 curr_year + 1
