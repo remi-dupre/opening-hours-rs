@@ -13,7 +13,7 @@ use crate::extended_time::ExtendedTime;
 use crate::schedule::{Schedule, TimeRange};
 use crate::time_selector::TimeSelector;
 
-static DATE_LIMIT: Lazy<NaiveDateTime> = Lazy::new(|| {
+pub static DATE_LIMIT: Lazy<NaiveDateTime> = Lazy::new(|| {
     NaiveDateTime::new(
         NaiveDate::from_ymd(10_000, 1, 1),
         NaiveTime::from_hms(0, 0, 0),
@@ -188,6 +188,14 @@ impl TimeDomain {
                 DateTimeRange::new_with_sorted_comments(start..end, dtr.kind, dtr.comments)
             }))
     }
+
+    fn next_change_hint(&self, date: NaiveDate) -> Option<NaiveDate> {
+        self.rules
+            .iter()
+            .map(|rule| rule.day_selector.next_change_hint(date))
+            .min()
+            .flatten()
+    }
 }
 
 // TimeDomainIterator
@@ -238,9 +246,12 @@ impl<'d> TimeDomainIterator<'d> {
             self.curr_schedule.next();
 
             if self.curr_schedule.peek().is_none() {
-                self.curr_date += Duration::days(1);
+                self.curr_date = self
+                    .time_domain
+                    .next_change_hint(self.curr_date)
+                    .unwrap_or_else(|| self.curr_date + Duration::days(1));
 
-                if self.curr_date <= self.end_datetime.date() {
+                if self.curr_date < self.end_datetime.date() {
                     self.curr_schedule = self
                         .time_domain
                         .schedule_at(self.curr_date)
