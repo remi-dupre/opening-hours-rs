@@ -1,4 +1,5 @@
 use std::convert::TryInto;
+use std::pin::Pin;
 use std::sync::Arc;
 
 use chrono::prelude::*;
@@ -109,19 +110,21 @@ impl<'p> IntoPy<Py<PyAny>> for NaiveDateTimeWrapper {
 // --- RangeIterator
 // ---
 
+/// Iterator that owns a pointer to a [`time_domain::TimeDomain`] together with a
+/// self reference to it.
 #[pyclass(unsendable)]
 pub struct RangeIterator {
-    _td: Arc<time_domain::TimeDomain>,
+    _td: Pin<Arc<time_domain::TimeDomain>>,
     iter: Box<dyn Iterator<Item = DateTimeRange<'static>>>,
 }
 
 impl RangeIterator {
     pub fn new(
-        td: Arc<time_domain::TimeDomain>,
+        td: Pin<Arc<time_domain::TimeDomain>>,
         start: NaiveDateTime,
         end: Option<NaiveDateTime>,
     ) -> Self {
-        let iter: Box<dyn Iterator<Item = DateTimeRange>> = {
+        let iter = {
             if let Some(end) = end {
                 Box::new(
                     td.iter_range(start, end)
@@ -135,8 +138,14 @@ impl RangeIterator {
             }
         };
 
-        // TODO: There are ways to avoid this ugly transmute.
-        let iter = unsafe { std::mem::transmute(iter) };
+        // Extend the lifetime of the reference to td inside of iter.
+        //   1. `td` won't be dropped before `iter` as they are both owned by the struct.
+        //   2. `td` won't move as it is marked Pin.
+        //   3. we must ensure in [`RangeIterator`]'s implementation that iter is not moved out of
+        //      the struct.
+        let iter: Box<dyn Iterator<Item = DateTimeRange<'_>>> = iter;
+        let iter: Box<dyn Iterator<Item = DateTimeRange<'static>>> =
+            unsafe { std::mem::transmute(iter) };
 
         Self { _td: td, iter }
     }

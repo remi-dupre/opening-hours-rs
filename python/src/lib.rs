@@ -1,6 +1,7 @@
 mod errors;
 mod types;
 
+use std::pin::Pin;
 use std::sync::Arc;
 
 use chrono::offset::Local;
@@ -49,7 +50,7 @@ fn validate(oh: &str) -> bool {
 #[pyclass]
 #[text_signature = "(oh, /)"]
 struct OpeningHours {
-    inner: Arc<time_domain::TimeDomain>,
+    inner: Pin<Arc<time_domain::TimeDomain>>,
 }
 
 #[pymethods]
@@ -57,7 +58,7 @@ impl OpeningHours {
     #[new]
     fn new(oh: &str) -> PyResult<Self> {
         Ok(Self {
-            inner: Arc::new(parser::parse(oh).map_err(ParserError::from)?),
+            inner: Arc::pin(parser::parse(oh).map_err(ParserError::from)?),
         })
     }
 
