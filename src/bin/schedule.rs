@@ -6,7 +6,8 @@ use opening_hours::parse;
 
 fn main() {
     let expression = env::args().nth(1).expect("Usage: ./schedule <EXPRESSION>");
-    let start_date = Local::now().naive_local().date();
+    let start_datetime = Local::now().naive_local();
+    let start_date = start_datetime.date();
 
     let time_domain = match parse(&expression) {
         Ok(val) => val,
@@ -15,6 +16,17 @@ fn main() {
             return;
         }
     };
+
+    println!(" - expression: {:?}", expression);
+    println!(" - date: {:?}", start_date);
+    println!(
+        " - current status: {:?}",
+        time_domain.state(start_datetime).unwrap()
+    );
+    println!(
+        " - next change: {:?}",
+        time_domain.next_change(start_datetime).unwrap()
+    );
 
     for day in 0..7 {
         let date = start_date + Duration::days(day);
