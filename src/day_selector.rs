@@ -65,7 +65,7 @@ pub type Weekday = chrono::Weekday;
 
 /// Generic trait to specify the behavior of a selector over dates.
 pub trait DateFilter {
-    fn filter(&self, date: NaiveDate) -> bool;
+    fn filter(&self, date: NaiveDate, region: Option<&str>) -> bool;
 
     /// Provide a lower bound to the next date with a different result to `filter`.
     fn next_change_hint(&self, _date: NaiveDate) -> Option<NaiveDate> {
@@ -74,8 +74,8 @@ pub trait DateFilter {
 }
 
 impl<T: DateFilter> DateFilter for [T] {
-    fn filter(&self, date: NaiveDate) -> bool {
-        self.is_empty() || self.iter().any(|x| x.filter(date))
+    fn filter(&self, date: NaiveDate, region: Option<&str>) -> bool {
+        self.is_empty() || self.iter().any(|x| x.filter(date, region))
     }
 }
 
@@ -90,11 +90,11 @@ pub struct DaySelector {
 }
 
 impl DateFilter for DaySelector {
-    fn filter(&self, date: NaiveDate) -> bool {
-        self.year.filter(date)
-            && self.monthday.filter(date)
-            && self.week.filter(date)
-            && self.weekday.filter(date)
+    fn filter(&self, date: NaiveDate, region: Option<&str>) -> bool {
+        self.year.filter(date, region)
+            && self.monthday.filter(date, region)
+            && self.week.filter(date, region)
+            && self.weekday.filter(date, region)
     }
 
     fn next_change_hint(&self, date: NaiveDate) -> Option<NaiveDate> {
@@ -123,7 +123,7 @@ pub struct YearRange {
 }
 
 impl DateFilter for YearRange {
-    fn filter(&self, date: NaiveDate) -> bool {
+    fn filter(&self, date: NaiveDate, _region: Option<&str>) -> bool {
         let year: u16 = date.year().try_into().unwrap();
         self.range.contains(&year) && (year - self.range.start()) % self.step == 0
     }
@@ -172,7 +172,7 @@ pub enum MonthdayRange {
 }
 
 impl DateFilter for MonthdayRange {
-    fn filter(&self, date: NaiveDate) -> bool {
+    fn filter(&self, date: NaiveDate, _region: Option<&str>) -> bool {
         let in_year = date.year() as u16;
         let in_month = Month::from_u8(date.month() as u8).expect("invalid month value");
 
@@ -328,7 +328,7 @@ pub enum WeekDayRange {
 }
 
 impl DateFilter for WeekDayRange {
-    fn filter(&self, date: NaiveDate) -> bool {
+    fn filter(&self, date: NaiveDate, region: Option<&str>) -> bool {
         match self {
             WeekDayRange::Fixed { range, nth, offset } => {
                 let date = date - Duration::days(*offset);
@@ -339,8 +339,12 @@ impl DateFilter for WeekDayRange {
             }
             WeekDayRange::Holiday { kind, offset } => match kind {
                 HolidayKind::Public => {
-                    let date = date - Duration::days(*offset);
-                    REGION_HOLIDAYS["FR"].contains(&date)
+                    if let Some(region) = region {
+                        let date = date - Duration::days(*offset);
+                        REGION_HOLIDAYS[region].contains(&date)
+                    } else {
+                        false
+                    }
                 }
                 HolidayKind::School => {
                     eprintln!("[WARN] school holidays are ignored");
@@ -372,7 +376,7 @@ pub struct WeekRange {
 }
 
 impl DateFilter for WeekRange {
-    fn filter(&self, date: NaiveDate) -> bool {
+    fn filter(&self, date: NaiveDate, _region: Option<&str>) -> bool {
         let week = date.iso_week().week() as u8;
         wrapping_range_contains(&self.range, &week) && (week - self.range.start()) % self.step == 0
     }

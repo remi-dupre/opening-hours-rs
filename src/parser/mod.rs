@@ -59,7 +59,7 @@ fn build_time_domain(pair: Pair<Rule>) -> Result<td::TimeDomain> {
         }?)
     }
 
-    Ok(td::TimeDomain { rules })
+    Ok(td::TimeDomain::new(rules))
 }
 
 fn build_rule_sequence(pair: Pair<Rule>, operator: td::RuleOperator) -> Result<td::RuleSequence> {

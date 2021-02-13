@@ -1,3 +1,4 @@
+mod holiday_selector;
 mod month_selector;
 mod next_change;
 mod parser;
@@ -10,7 +11,7 @@ mod year_selector;
 
 #[macro_export]
 macro_rules! date {
-    ( $date:expr ) => {{
+    ( $date: expr ) => {{
         use chrono::NaiveDate;
         NaiveDate::parse_from_str($date, "%Y-%m-%d").expect("invalid date literal")
     }};
@@ -18,7 +19,7 @@ macro_rules! date {
 
 #[macro_export]
 macro_rules! datetime {
-    ( $date:expr ) => {{
+    ( $date: expr ) => {{
         use chrono::NaiveDateTime;
         NaiveDateTime::parse_from_str($date, "%Y-%m-%d %H:%M").expect("invalid datetime literal")
     }};
@@ -26,10 +27,17 @@ macro_rules! datetime {
 
 #[macro_export]
 macro_rules! schedule_at {
-    ( $expression:expr, $date:expr ) => {{
+    ( $expression: expr, $date: expr ) => {{
+        use crate::date;
+        use crate::parser::parse;
+        parse($expression)?.schedule_at(date!($date))
+    }};
+    ( $expression: expr, $date: expr, $region: expr ) => {{
         use crate::date;
         use crate::parser::parse;
 
-        parse($expression)?.schedule_at(date!($date))
+        parse($expression)?
+            .with_region($region)
+            .schedule_at(date!($date))
     }};
 }
