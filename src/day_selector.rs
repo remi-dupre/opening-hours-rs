@@ -1,4 +1,4 @@
-use std::collections::{BTreeSet, HashMap};
+use std::collections::HashMap;
 use std::convert::TryInto;
 use std::env;
 use std::ops::RangeInclusive;
@@ -17,14 +17,14 @@ macro_rules! load_dates {
         let mut regions = HashMap::new();
 
         $(
-            let dates = include_bytes!(concat!(env!("HOLIDAYS_DIR"), "/", $region, ".bin"))
+            let mut dates: Vec<_> = include_bytes!(concat!(env!("HOLIDAYS_DIR"), "/", $region, ".bin"))
                 .chunks_exact(4)
                 .map(|bytes| {
                     let days = i32::from_le_bytes(bytes.try_into().unwrap());
                     NaiveDate::from_num_days_from_ce(days)
                 })
                 .collect();
-
+            dates.sort_unstable();
             regions.insert($region, dates);
         )+
 
@@ -32,7 +32,7 @@ macro_rules! load_dates {
     }};
 }
 
-pub static REGION_HOLIDAYS: Lazy<HashMap<&str, BTreeSet<NaiveDate>>> = Lazy::new(|| {
+pub static REGION_HOLIDAYS: Lazy<HashMap<&str, Vec<NaiveDate>>> = Lazy::new(|| {
     load_dates!(
         "CH-VS", "CA-YT", "BR-CE", "US-LA", "BR-MA", "PL", "CA-BC", "BR-PA", "DE", "CA-NT",
         "BR-RJ", "BR", "IE", "US-MA", "CH-NW", "CH-AI", "US-MD", "CN", "US-RI", "CH-ZG", "GR",
@@ -68,7 +68,7 @@ pub trait DateFilter {
     fn filter(&self, date: NaiveDate, region: Option<&str>) -> bool;
 
     /// Provide a lower bound to the next date with a different result to `filter`.
-    fn next_change_hint(&self, _date: NaiveDate) -> Option<NaiveDate> {
+    fn next_change_hint(&self, _date: NaiveDate, _region: Option<&str>) -> Option<NaiveDate> {
         None
     }
 }
@@ -89,6 +89,18 @@ pub struct DaySelector {
     pub weekday: Vec<WeekDayRange>,
 }
 
+fn slice_next_change_hint(
+    slice: &[impl DateFilter],
+    date: NaiveDate,
+    region: Option<&str>,
+) -> Option<NaiveDate> {
+    slice
+        .iter()
+        .map(|selector| selector.next_change_hint(date, region))
+        .min()
+        .unwrap_or_else(|| Some(DATE_LIMIT.date()))
+}
+
 impl DateFilter for DaySelector {
     fn filter(&self, date: NaiveDate, region: Option<&str>) -> bool {
         self.year.filter(date, region)
@@ -97,16 +109,16 @@ impl DateFilter for DaySelector {
             && self.weekday.filter(date, region)
     }
 
-    fn next_change_hint(&self, date: NaiveDate) -> Option<NaiveDate> {
-        if self.monthday.is_empty() && self.week.is_empty() && self.weekday.is_empty() {
-            self.year
-                .iter()
-                .map(|year_selector| year_selector.next_change_hint(date))
-                .min()
-                .unwrap_or_else(|| Some(DATE_LIMIT.date()))
-        } else {
-            None
-        }
+    fn next_change_hint(&self, date: NaiveDate, region: Option<&str>) -> Option<NaiveDate> {
+        *[
+            slice_next_change_hint(&self.year, date, region),
+            slice_next_change_hint(&self.monthday, date, region),
+            slice_next_change_hint(&self.week, date, region),
+            slice_next_change_hint(&self.weekday, date, region),
+        ]
+        .iter()
+        .min()
+        .unwrap()
     }
 }
 
@@ -128,7 +140,7 @@ impl DateFilter for YearRange {
         self.range.contains(&year) && (year - self.range.start()) % self.step == 0
     }
 
-    fn next_change_hint(&self, date: NaiveDate) -> Option<NaiveDate> {
+    fn next_change_hint(&self, date: NaiveDate, _region: Option<&str>) -> Option<NaiveDate> {
         let curr_year: u16 = date.year().try_into().unwrap();
 
         let next_year = {
@@ -341,16 +353,43 @@ impl DateFilter for WeekDayRange {
                 HolidayKind::Public => {
                     if let Some(region) = region {
                         let date = date - Duration::days(*offset);
-                        REGION_HOLIDAYS[region].contains(&date)
+                        REGION_HOLIDAYS[region].binary_search(&date).is_ok()
                     } else {
                         false
                     }
                 }
                 HolidayKind::School => {
-                    eprintln!("[WARN] school holidays are ignored");
+                    eprintln!("[WARN] school holidays are not supported, thus ignored");
                     false
                 }
             },
+        }
+    }
+
+    fn next_change_hint(&self, date: NaiveDate, region: Option<&str>) -> Option<NaiveDate> {
+        match self {
+            WeekDayRange::Holiday {
+                kind: HolidayKind::Public,
+                offset,
+            } => Some({
+                if let Some(region) = region {
+                    match REGION_HOLIDAYS[region].binary_search(&(date - Duration::days(*offset))) {
+                        Ok(_) => date + Duration::days(1),
+                        Err(i) => {
+                            if i < REGION_HOLIDAYS[region].len() {
+                                // return the next comming holiday
+                                REGION_HOLIDAYS[region][i]
+                            } else {
+                                // there is no next comming holiday
+                                DATE_LIMIT.date()
+                            }
+                        }
+                    }
+                } else {
+                    DATE_LIMIT.date()
+                }
+            }),
+            _ => None,
         }
     }
 }

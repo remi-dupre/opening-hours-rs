@@ -95,7 +95,7 @@ impl TimeDomain {
     fn next_change_hint(&self, date: NaiveDate) -> Option<NaiveDate> {
         self.rules
             .iter()
-            .map(|rule| rule.day_selector.next_change_hint(date))
+            .map(|rule| rule.day_selector.next_change_hint(date, self.region()))
             .min()
             .flatten()
     }
