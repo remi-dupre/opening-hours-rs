@@ -10,7 +10,7 @@ fn main() {
     let start_date = start_datetime.date();
 
     let time_domain = match parse(&expression) {
-        Ok(val) => val,
+        Ok(val) => val.with_region("FR"),
         Err(err) => {
             println!("{}", err);
             return;

@@ -1,6 +1,6 @@
 [package]
 name = "opening-hours"
-version = "0.1.12"
+version = "0.2.0"
 authors = ["Rémi Dupré <remi@dupre.io>"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/remi-dupre/opening-hours-rs"
@@ -16,6 +16,9 @@ chrono = "0.4"
 once_cell = "1.5.2"
 pest = "2.0"
 pest_derive = "2.0"
+
+[build-dependencies]
+chrono = "0.4"
 
 [dev-dependencies]
 criterion = "0.3"

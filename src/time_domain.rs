@@ -61,25 +61,52 @@ impl<'c> DateTimeRange<'c> {
 
 #[derive(Clone, Debug)]
 pub struct TimeDomain {
-    pub rules: Vec<RuleSequence>,
+    rules: Vec<RuleSequence>,
+    region: Option<String>,
 }
 
 impl TimeDomain {
+    pub fn new(rules: Vec<RuleSequence>) -> Self {
+        Self {
+            rules,
+            region: None,
+        }
+    }
+
+    pub fn region(&self) -> Option<&str> {
+        self.region.as_deref()
+    }
+
+    pub fn with_region(self, region: &str) -> Self {
+        Self {
+            region: Some(region.to_uppercase()),
+            ..self
+        }
+    }
+
     // Low level implementations.
     //
     // Following functions are used to build the TimeDomainIterator which is
     // used to implement all other functions.
     //
     // This means that performances matters a lot for these functions and it
-    // would be relevant to focus on optimisatons to this regard.
+    // would be relevant to focus on optimisations to this regard.
+
+    fn next_change_hint(&self, date: NaiveDate) -> Option<NaiveDate> {
+        self.rules
+            .iter()
+            .map(|rule| rule.day_selector.next_change_hint(date, self.region()))
+            .min()
+            .flatten()
+    }
 
     pub fn schedule_at(&self, date: NaiveDate) -> Schedule {
         let mut prev_match = false;
         let mut prev_eval = None;
 
         for rules_seq in &self.rules {
-            let curr_match = rules_seq.day_selector.filter(date);
-            let curr_eval = rules_seq.schedule_at(date);
+            let curr_match = rules_seq.day_selector.filter(date, self.region());
+            let curr_eval = rules_seq.schedule_at(date, self.region());
 
             let (new_match, new_eval) = match rules_seq.operator {
                 RuleOperator::Normal => (
@@ -187,14 +214,6 @@ impl TimeDomain {
                 let end = min(dtr.range.end, to);
                 DateTimeRange::new_with_sorted_comments(start..end, dtr.kind, dtr.comments)
             }))
-    }
-
-    fn next_change_hint(&self, date: NaiveDate) -> Option<NaiveDate> {
-        self.rules
-            .iter()
-            .map(|rule| rule.day_selector.next_change_hint(date))
-            .min()
-            .flatten()
     }
 }
 
@@ -338,9 +357,13 @@ impl RuleSequence {
 }
 
 impl RuleSequence {
-    pub fn schedule_at(&self, date: NaiveDate) -> Option<Schedule> {
+    pub fn schedule_at<'s>(
+        &'s self,
+        date: NaiveDate,
+        region: Option<&str>,
+    ) -> Option<Schedule<'s>> {
         let today = {
-            if self.day_selector.filter(date) {
+            if self.day_selector.filter(date, region) {
                 let ranges = self.time_selector.intervals_at(date);
                 Some(Schedule::from_ranges_with_sorted_comments(
                     ranges,
@@ -355,7 +378,7 @@ impl RuleSequence {
         let yesterday = {
             let date = date - Duration::days(1);
 
-            if self.day_selector.filter(date) {
+            if self.day_selector.filter(date, region) {
                 let ranges = self.time_selector.intervals_at_next_day(date);
                 Some(Schedule::from_ranges_with_sorted_comments(
                     ranges,

@@ -172,6 +172,7 @@ impl<'c> Schedule<'c> {
 
         // Extend the inserted interval if it has adjacent intervals with same value
 
+        #[allow(clippy::suspicious_operation_groupings)]
         while before
             .last()
             .map(|tr| tr.range.end == ins_tr.range.start && tr.kind == ins_tr.kind)
@@ -182,6 +183,7 @@ impl<'c> Schedule<'c> {
             ins_tr.comments = union_sorted(&tr.comments, &ins_tr.comments);
         }
 
+        #[allow(clippy::suspicious_operation_groupings)]
         while after
             .front()
             .map(|tr| ins_tr.range.end == tr.range.start && tr.kind == ins_tr.kind)
