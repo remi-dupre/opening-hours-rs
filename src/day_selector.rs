@@ -1,11 +1,65 @@
+use std::collections::{BTreeSet, HashMap};
 use std::convert::TryInto;
+use std::env;
 use std::ops::RangeInclusive;
 
 use chrono::prelude::Datelike;
 use chrono::{Duration, NaiveDate};
+use once_cell::sync::Lazy;
 
 use crate::time_domain::DATE_LIMIT;
 use crate::utils::wrapping_range_contains;
+
+// Load dates from file
+
+macro_rules! load_dates {
+    ( $( $region: literal ),+ ) => {{
+        let mut regions = HashMap::new();
+
+        $(
+            let dates = include_bytes!(concat!(env!("HOLIDAYS_DIR"), "/", $region, ".bin"))
+                .chunks_exact(4)
+                .map(|bytes| {
+                    let days = i32::from_le_bytes(bytes.try_into().unwrap());
+                    NaiveDate::from_num_days_from_ce(days)
+                })
+                .collect();
+
+            regions.insert($region, dates);
+        )+
+
+        regions
+    }};
+}
+
+pub static REGION_HOLIDAYS: Lazy<HashMap<&str, BTreeSet<NaiveDate>>> = Lazy::new(|| {
+    load_dates!(
+        "CH-VS", "CA-YT", "BR-CE", "US-LA", "BR-MA", "PL", "CA-BC", "BR-PA", "DE", "CA-NT",
+        "BR-RJ", "BR", "IE", "US-MA", "CH-NW", "CH-AI", "US-MD", "CN", "US-RI", "CH-ZG", "GR",
+        "GB-NIR", "CH-SZ", "CH-FR", "AR", "DE-NI", "BB", "US-KY", "NL", "US-WV", "DE-BW", "BR-MG",
+        "US-OK", "BR-DF", "CA-NL", "US-IL", "AU-ACT", "ST", "US-UT", "HR", "AU-NT", "TR", "US-FL",
+        "HU", "AU-WA", "DE-ST", "US-AK", "EE", "HK", "CH-GR", "BJ", "BR-AL", "US-OR", "MX", "PY",
+        "US-GU", "SE", "FI", "CL", "BR-MT", "CH-BS", "US-VA", "RO", "ES-VC", "US-CO", "TW",
+        "US-NC", "US-AZ", "US-NE", "NZ", "BR-AC", "BR-RN", "FR", "ES-PV", "ES-EX", "US-WI",
+        "BR-RR", "RU", "CA-PE", "SG", "AU-VIC", "GB", "US-DE", "IS", "CH-ZH", "CH-AG", "CA-AB",
+        "DE-TH", "CA-SK", "US-CA", "BR-SC", "DE-RP", "ES-CM", "US-NV", "DE-BB", "CH-GL", "DE-BE",
+        "US-WA", "MY", "CA-ON", "CA-NB", "US-CT", "BR-SE", "BR-SP", "LT", "LV", "MC", "CO",
+        "US-IA", "DE-HE", "ES-GA", "CH-NE", "CH-VD", "CH-UR", "US-TN", "CI", "US-ME", "ES-CN",
+        "DE-HB", "US-MN", "BR-RS", "CA-QC", "KR", "US-IN", "US-TX", "CH-JU", "JP", "CZ", "UA",
+        "AU-QLD", "KY", "AU", "US-NY", "DZ", "US-MS", "CY", "DE-HH", "CH-SO", "CH-GE", "DE-MV",
+        "AU-SA", "US-SC", "BR-PE", "DE-SH", "US-MI", "CA-MB", "US-ND", "CH-TI", "US-OH", "BR-RO",
+        "DE-NW", "US-VT", "MH", "BR-PR", "NO", "US-NM", "DE-SN", "US-PA", "US-HI", "ZA", "ES-MD",
+        "US-SD", "BR-AP", "LU", "US-MT", "DE-BY", "KE", "DK", "IL", "ES-RI", "ES-CB", "CA-NU",
+        "BR-PI", "PA", "US-MO", "CA-NS", "CH", "US", "DE-SL", "AO", "US-AR", "QA", "BR-GO", "BE",
+        "BR-BA", "US-NH", "SI", "US-AS", "ES-NA", "BR-MS", "BR-TO", "ES-IB", "ES-AN", "US-GA",
+        "CH-BL", "BY", "ES", "US-WY", "CH-TG", "BR-AM", "MZ", "US-ID", "ES-CT", "PT", "MG",
+        "ES-AR", "AT", "CH-BE", "ES-AS", "US-DC", "CH-AR", "ES-MC", "US-KS", "CA", "AU-NSW",
+        "US-AL", "CH-OW", "MT", "RS", "SK", "BG", "CH-SG", "BR-ES", "US-NJ", "CH-LU", "IT",
+        "ES-CL", "CH-SH", "BR-PB"
+    )
+});
+
+// DateFilter
 
 pub type Weekday = chrono::Weekday;
 
@@ -277,14 +331,22 @@ impl DateFilter for WeekDayRange {
     fn filter(&self, date: NaiveDate) -> bool {
         match self {
             WeekDayRange::Fixed { range, nth, offset } => {
-                // Apply the reverse of the offset
                 let date = date - Duration::days(*offset);
                 let date_nth = (date.day() as u8 - 1) / 7;
                 let range_u8 = (*range.start() as u8)..=(*range.end() as u8);
                 wrapping_range_contains(&range_u8, &(date.weekday() as u8))
                     && nth[usize::from(date_nth)]
             }
-            WeekDayRange::Holiday { .. } => todo!("Holiday not implemented yet"),
+            WeekDayRange::Holiday { kind, offset } => match kind {
+                HolidayKind::Public => {
+                    let date = date - Duration::days(*offset);
+                    REGION_HOLIDAYS["FR"].contains(&date)
+                }
+                HolidayKind::School => {
+                    eprintln!("[WARN] school holidays are ignored");
+                    false
+                }
+            },
         }
     }
 }
