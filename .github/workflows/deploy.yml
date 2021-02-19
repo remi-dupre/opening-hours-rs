@@ -33,7 +33,7 @@ jobs:
         working-directory: python
 
       - name: Build python documentation
-        run: poetry run pdoc -o ~/python-doc -d numpy opening_hours
+        run: poetry run pdoc -o docs -d numpy opening_hours
         working-directory: python
 
       - name: Check version consistency
@@ -74,7 +74,8 @@ jobs:
 
       - name: Publish to github pages
         uses: peaceiris/actions-gh-pages@v3
+        working-directory: python
         if: github.ref == 'refs/heads/master'
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ~/python-doc
+          publish_dir: ./docs
