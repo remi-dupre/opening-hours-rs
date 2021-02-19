@@ -74,8 +74,7 @@ jobs:
 
       - name: Publish to github pages
         uses: peaceiris/actions-gh-pages@v3
-        working-directory: python
         if: github.ref == 'refs/heads/master'
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs
+          publish_dir: ./python/docs
