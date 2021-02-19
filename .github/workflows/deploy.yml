@@ -32,6 +32,10 @@ jobs:
         run: poetry run maturin develop --release
         working-directory: python
 
+      - name: Build python documentation
+        run: poetry run pdoc -o ~/python-doc -d numpy opening_hours
+        working-directory: python
+
       - name: Check version consistency
         working-directory: python
         run: |
@@ -67,3 +71,10 @@ jobs:
         env:
           USER: remi-dupre
           PASS: ${{ secrets.PYPI_PASSWORD }}
+
+      - name: Publish to github pages
+        uses: peaceiris/actions-gh-pages@v3
+        if: github.ref == 'refs/heads/master'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ~/python-doc
