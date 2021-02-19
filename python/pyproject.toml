@@ -1,14 +1,15 @@
 [tool.poetry]
 name = "opening-hours-py"
-version = "0.2.0"
+version = "0.2.1"
 description = "A parser for the opening_hours fields from OpenStreetMap."
 authors = ["Rémi Dupré <remi@dupre.io>"]
 
 [tool.poetry.dependencies]
 python = "^3.9"
-maturin = "^0.9.0"
 
 [tool.poetry.dev-dependencies]
+maturin = "^0.9.0"
+pdoc = "^6.3.1"
 
 [build-system]
 requires = ["poetry>=0.12", "maturin"]
