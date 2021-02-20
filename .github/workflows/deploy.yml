@@ -25,6 +25,10 @@ jobs:
         run: poetry install
         working-directory: python
 
+      - name: Install scripts dependancies
+        run: poetry install
+        working-directory: scripts
+
       - name: Check packaging for crates.io
         run: cargo publish --dry-run
 
@@ -37,23 +41,8 @@ jobs:
         working-directory: python
 
       - name: Check version consistency
-        working-directory: python
-        run: |
-          poetry run python -c "
-          import sys
-          import toml
-
-          py_version = toml.load('pyproject.toml')['tool']['poetry']['version']
-          pyrs_version = toml.load('Cargo.toml')['package']['version']
-          rs_version = toml.load('../Cargo.toml')['package']['version']
-
-          if not py_version == pyrs_version == rs_version:
-            print(
-              f'Python package ({py_version}) and crates ({rs_version}, '
-              f'{pyrs_version}) are inconsistent.'
-            )
-            sys.exit(1)
-          "
+        run: poetry run ./check-version.py
+        working-directory: scripts
 
       - name: Login to crates.io
         run: cargo login $TOKEN

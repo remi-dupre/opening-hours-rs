@@ -1,5 +1,8 @@
 #!/usr/bin/env -S pipenv run python
-import sys
+"""
+Display the list of holidays during a given interval of time.
+By default all known countries in `workalendar` will be exported.
+"""
 from typing import List
 
 from tap import Tap
@@ -8,6 +11,12 @@ from workalendar.exceptions import CalendarError
 
 
 class Arg(Tap):
+    """
+    Pouet pouet
+    """
+
+    # yolo
+
     min_year: int = 2020  # starting year
     max_year: int = 2050  # ending year
     regions: List[str] = None  # list of regions to import events from
@@ -27,5 +36,5 @@ for year in range(args.min_year, args.max_year + 1):
         try:
             for date, _name in cal().holidays(year):
                 print(country, date.isoformat())
-        except Exception:
+        except (CalendarError, KeyError):
             pass
