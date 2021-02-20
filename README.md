@@ -8,7 +8,7 @@ Rust implementation for OSM Opening Hours
 [![Codecov](https://img.shields.io/codecov/c/github/remi-dupre/opening-hours-rs)](https://app.codecov.io/gh/remi-dupre/opening-hours-rs)
 
 
-**TODO: add link to Python library's README**
+**Python bindings can be found [here](https://github.com/remi-dupre/opening-hours-rs/tree/master/python)**
 
 A Rust library for parsing and working with OSM's opening hours field. You can
 find its specification [here](https://wiki.openstreetmap.org/wiki/Key:opening_hours/specification)
