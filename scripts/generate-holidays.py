@@ -11,12 +11,6 @@ from workalendar.exceptions import CalendarError
 
 
 class Arg(Tap):
-    """
-    Pouet pouet
-    """
-
-    # yolo
-
     min_year: int = 2020  # starting year
     max_year: int = 2050  # ending year
     regions: List[str] = None  # list of regions to import events from
