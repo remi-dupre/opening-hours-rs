@@ -6,7 +6,7 @@ use std::iter::once;
 use std::ops::Range;
 
 use crate::extended_time::ExtendedTime;
-use crate::time_domain::RuleKind;
+use crate::opening_hours::RuleKind;
 use crate::utils::{is_sorted, union_sorted};
 
 #[non_exhaustive]

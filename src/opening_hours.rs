@@ -74,32 +74,42 @@ pub static DATE_LIMIT: Lazy<NaiveDateTime> = Lazy::new(|| {
 #[derive(Debug)]
 pub struct DateLimitExceeded;
 
-// TimeDomain
+// OpeningHours
 
-#[derive(Clone, Debug)]
-pub struct TimeDomain {
+#[derive(Clone, Debug, Default)]
+pub struct OpeningHours {
     /// Rules describing opening hours
     rules: Vec<RuleSequence>,
     /// The sorted list of holidays
     holidays: &'static [NaiveDate],
 }
 
-impl TimeDomain {
-    pub fn new(rules: Vec<RuleSequence>) -> Self {
-        Self {
+impl OpeningHours {
+    /// Init a new TimeDomain with the given set of Rules.
+    pub(crate) fn new(rules: Vec<RuleSequence>) -> Self {
+        OpeningHours {
             rules,
             holidays: &[],
         }
     }
 
+    /// Get the list of all loaded public holidays.
     pub fn holidays(&self) -> &'static [NaiveDate] {
         self.holidays
     }
 
+    /// Replace loaded holidays with known holidays for the given region. If
+    /// the region is not existing, no holiday will be loaded.
+    ///
+    /// ```
+    /// let oh = opening_hours::parse("24/7").unwrap();
+    /// assert!(oh.holidays().is_empty());
+    /// assert!(!oh.with_region("FR").holidays().is_empty());
+    /// ```
     pub fn with_region(self, region: &str) -> Self {
-        Self {
+        OpeningHours {
             holidays: REGION_HOLIDAYS
-                .get(region)
+                .get(region.to_uppercase().as_str())
                 .map(Vec::as_slice)
                 .unwrap_or(&[]),
             ..self
@@ -114,6 +124,8 @@ impl TimeDomain {
     // This means that performances matters a lot for these functions and it
     // would be relevant to focus on optimisations to this regard.
 
+    /// Provide a lower bound to the next date when a different set of rules
+    /// could match.
     fn next_change_hint(&self, date: NaiveDate) -> Option<NaiveDate> {
         self.rules
             .iter()
@@ -242,7 +254,7 @@ impl TimeDomain {
 // TimeDomainIterator
 
 pub struct TimeDomainIterator<'d> {
-    time_domain: &'d TimeDomain,
+    opening_hours: &'d OpeningHours,
     curr_date: NaiveDate,
     curr_schedule: Peekable<Box<dyn Iterator<Item = TimeRange<'d>> + 'd>>,
     end_datetime: NaiveDateTime,
@@ -250,7 +262,7 @@ pub struct TimeDomainIterator<'d> {
 
 impl<'d> TimeDomainIterator<'d> {
     pub fn new(
-        time_domain: &'d TimeDomain,
+        opening_hours: &'d OpeningHours,
         start_datetime: NaiveDateTime,
         end_datetime: NaiveDateTime,
     ) -> Self {
@@ -259,7 +271,7 @@ impl<'d> TimeDomainIterator<'d> {
 
         let mut curr_schedule = {
             if start_datetime < end_datetime {
-                time_domain.schedule_at(start_date).into_iter_filled()
+                opening_hours.schedule_at(start_date).into_iter_filled()
             } else {
                 Box::new(empty())
             }
@@ -275,7 +287,7 @@ impl<'d> TimeDomainIterator<'d> {
         }
 
         Self {
-            time_domain,
+            opening_hours,
             curr_date: start_date,
             curr_schedule,
             end_datetime,
@@ -288,13 +300,13 @@ impl<'d> TimeDomainIterator<'d> {
 
             if self.curr_schedule.peek().is_none() {
                 self.curr_date = self
-                    .time_domain
+                    .opening_hours
                     .next_change_hint(self.curr_date)
                     .unwrap_or_else(|| self.curr_date + Duration::days(1));
 
                 if self.curr_date < self.end_datetime.date() {
                     self.curr_schedule = self
-                        .time_domain
+                        .opening_hours
                         .schedule_at(self.curr_date)
                         .into_iter_filled()
                         .peekable()

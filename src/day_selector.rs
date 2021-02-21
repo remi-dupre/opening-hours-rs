@@ -4,7 +4,7 @@ use std::ops::RangeInclusive;
 use chrono::prelude::Datelike;
 use chrono::{Duration, NaiveDate};
 
-use crate::time_domain::DATE_LIMIT;
+use crate::opening_hours::DATE_LIMIT;
 use crate::utils::wrapping_range_contains;
 
 // DateFilter

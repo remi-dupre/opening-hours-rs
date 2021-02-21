@@ -1,10 +1,10 @@
+use crate::opening_hours::RuleKind::*;
 use crate::parser::Error;
-use crate::time_domain::RuleKind::*;
 use crate::{datetime, parse, schedule_at};
 
 #[test]
 fn s000_idunn_interval_stops_next_day() -> Result<(), Error> {
-    use crate::time_domain::DateTimeRange;
+    use crate::opening_hours::DateTimeRange;
     use chrono::Duration;
 
     let oh = parse("Tu-Su 09:30-18:00; Th 09:30-21:45")?;

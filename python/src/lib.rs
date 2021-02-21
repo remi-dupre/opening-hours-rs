@@ -10,7 +10,7 @@ use chrono::NaiveDateTime;
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 
-use opening_hours::{parser, time_domain};
+use opening_hours::parser;
 use types::RangeIterator;
 
 use crate::errors::ParserError;
@@ -50,7 +50,7 @@ fn validate(oh: &str) -> bool {
 #[pyclass]
 #[text_signature = "(oh, /)"]
 struct OpeningHours {
-    inner: Pin<Arc<time_domain::TimeDomain>>,
+    inner: Pin<Arc<opening_hours::OpeningHours>>,
 }
 
 #[pymethods]

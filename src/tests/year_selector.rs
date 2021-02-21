@@ -1,6 +1,6 @@
+use crate::opening_hours::RuleKind::*;
 use crate::parser::Error;
 use crate::schedule_at;
-use crate::time_domain::RuleKind::*;
 
 #[test]
 fn range() -> Result<(), Error> {

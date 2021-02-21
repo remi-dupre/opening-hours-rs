@@ -3,9 +3,9 @@
 
 // Time domain
 
-input_time_domain = _{ SOI ~ time_domain ~ EOI }
+input_opening_hours = _{ SOI ~ opening_hours ~ EOI }
 
-time_domain = { rule_sequence ~ ( any_rule_separator ~ rule_sequence )* }
+opening_hours = { rule_sequence ~ ( any_rule_separator ~ rule_sequence )* }
 
 // NOTE: the space is made optional, overwise the syntax `RULE || "comment"`
 //       requires two spaces before the comment.
