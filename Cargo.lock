@@ -397,6 +397,16 @@ dependencies = [
  "chrono",
  "criterion",
  "once_cell",
+ "opening-hours-syntax",
+ "pest",
+ "pest_derive",
+]
+
+[[package]]
+name = "opening-hours-syntax"
+version = "0.1.0"
+dependencies = [
+ "chrono",
  "pest",
  "pest_derive",
 ]

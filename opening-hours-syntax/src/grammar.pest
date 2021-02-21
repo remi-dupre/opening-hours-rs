@@ -1,0 +1,282 @@
+// Grammar for opening hours description as defined in OSM wiki:
+// https://wiki.openstreetmap.org/wiki/Key:opening_hours/specification
+
+// Time domain
+
+input_opening_hours = _{ SOI ~ opening_hours ~ EOI }
+
+opening_hours = { rule_sequence ~ ( any_rule_separator ~ rule_sequence )* }
+
+// NOTE: the space is made optional, overwise the syntax `RULE || "comment"`
+//       requires two spaces before the comment.
+rule_sequence = { selector_sequence ~ (space? ~ rules_modifier)? }
+
+// Rule separators
+
+any_rule_separator = {
+      normal_rule_separator
+    | additional_rule_separator
+    | fallback_rule_separator
+}
+
+normal_rule_separator = @{ ";" ~ space }
+
+additional_rule_separator = @{ "," ~ space }
+
+fallback_rule_separator = @{ space ~ "||" ~ space }
+
+// Rule modifier
+
+rules_modifier = {
+      comment
+    | rules_modifier_enum ~ ( space ~ comment )?
+}
+
+rules_modifier_enum = {
+      rules_modifier_enum_closed
+    | rules_modifier_enum_open
+    | rules_modifier_enum_unknown
+}
+
+rules_modifier_enum_closed = @{ "closed" | "off" }
+rules_modifier_enum_open = @{ "open" }
+rules_modifier_enum_unknown = @{ "unknown" }
+
+// Selectors
+
+selector_sequence = {
+      always_open
+    | wide_range_selectors ~ small_range_selectors?
+}
+
+always_open = @{ "24/7" }
+
+wide_range_selectors = {
+      comment ~ ":"
+    | // The specified grammar is ambiguous: `year_selector` can contain a
+      // single year which could also be the optional prefix of
+      // `monthday_selector`. In such a case `monthday_selector` will be
+      // favored.
+      monthday_selector ~ week_selector? ~ separator_for_readability?
+    | year_selector? ~ monthday_selector? ~ week_selector? ~
+      separator_for_readability?
+}
+
+small_range_selectors = {
+      weekday_selector ~ space ~ time_selector
+    | weekday_selector
+    | time_selector
+}
+
+// NOTE: In specification, only ":" is allowed, but other forms are quite
+//       common.
+separator_for_readability = _{ " " | ": " | ":" }
+
+// Time selector
+
+time_selector = { timespan ~ ( "," ~ timespan )* }
+
+timespan = {
+      time ~ "-" ~ extended_time ~ "/" ~ hour_minutes
+    | time ~ "-" ~ extended_time ~ "/" ~ minute
+    | time ~ "-" ~ extended_time ~ "+"
+    | time ~ "-" ~ extended_time
+    | time ~ "+"
+    | time
+}
+
+timespan_plus = @{ "+" }
+
+time = {
+      hour_minutes
+    | variable_time
+}
+
+extended_time = {
+      extended_hour_minutes
+    | variable_time
+}
+
+variable_time = {
+      "(" ~ event ~ plus_or_minus ~ hour_minutes ~ ")"
+    | event
+}
+
+event = { dawn | sunrise | sunset | dusk }
+
+dawn = @{ "dawn" }
+sunrise = @{ "sunrise" }
+sunset = @{ "sunset" }
+dusk = @{ "dusk" }
+
+// Weekday selector
+
+weekday_selector = {
+      holiday_sequence ~ ( "," ~ weekday_sequence )?
+    | weekday_sequence ~ ( "," ~ holiday_sequence )?
+    | holiday_sequence ~ space ~ weekday_sequence
+}
+
+weekday_sequence = { weekday_range ~ ( "," ~ weekday_range )* }
+
+weekday_range = {
+      wday ~ "[" ~ nth_entry ~ ( "," ~ nth_entry )* ~ "]" ~ day_offset?
+    | wday ~ "-" ~ wday
+    | wday
+}
+
+holiday_sequence = { holiday ~ ( "," ~ holiday )* }
+
+holiday = {
+      public_holiday ~ day_offset?
+    | school_holiday
+}
+
+public_holiday = @{ "PH" }
+
+school_holiday = @{ "SH" }
+
+nth_entry = {
+      nth ~ "-" ~ nth
+    | nth_minus ~ nth         // TODO: "nth last day of the month"
+    | nth
+}
+
+nth = { '1'..'5' }
+
+nth_minus = { "-" }
+
+day_offset = { space ~ plus_or_minus ~ positive_number ~ space ~ "day" ~ "s"? }
+
+// Week selector
+
+week_selector = { "week" ~ week ~ ( "," ~ week )* }
+
+week = { weeknum ~ ( "-" ~ weeknum ~  ( "/" ~ positive_number )? )? }
+
+// Month selector
+
+monthday_selector = { monthday_range ~ ( "," ~ monthday_range )* }
+
+monthday_range = {
+      date_from ~ date_offset? ~ "-" ~ date_to ~ date_offset?
+    | date_from ~ date_offset ~ monthday_range_plus?
+    | date_from               ~ monthday_range_plus?
+    | year? ~ month ~ ( "-" ~ month )?
+}
+
+monthday_range_plus = @{ "+" }
+
+date_offset = {
+      (plus_or_minus ~ wday) ~ day_offset
+    | (plus_or_minus ~ wday)
+    | day_offset
+}
+
+// NOTE: In specification space separators are not allowed.
+date_from = {
+      (year ~ " "?)? ~ month ~ " "? ~ daynum
+    | year? ~ variable_date
+}
+
+date_to = {
+      date_from
+    | daynum
+}
+
+variable_date = { "easter" }
+
+
+// Year selector
+
+year_selector = { year_range ~ ( "," ~ year_range )* }
+
+year_range = {
+    year ~ year_range_plus
+  | year ~ ( "-" ~ year ~ ( "/" ~ positive_number )? )?
+}
+
+year_range_plus = @{ "+" }
+
+// Basic elements
+
+plus_or_minus = { plus | minus }
+
+plus = @{ "+" }
+
+minus = @{ "-" }
+
+hour = @{
+      '0'..'1' ~ '0'..'9'  // 00 -> 19
+    |      "2" ~ '0'..'4'  // 20 -> 24
+}
+
+extended_hour = @{
+     '0'..'3' ~ '0'..'9'  // 00 -> 39
+    |     "4" ~ '0'..'8'  // 40 -> 48
+}
+
+minute = @{ '0'..'5' ~ '0'..'9' }
+
+hour_minutes = { hour ~ ":" ~ minute }
+
+extended_hour_minutes = { extended_hour ~ ":" ~ minute }
+
+wday = { sunday | monday | tuesday | wednesday | thursday | friday | saturday }
+
+sunday = @{ "Su" }
+monday = @{ "Mo" }
+tuesday = @{ "Tu" }
+wednesday = @{ "We" }
+thursday = @{ "Th" }
+friday = @{ "Fr" }
+saturday = @{ "Sa" }
+
+// NOTE: In specification, single digit numbers are not allowed, but it seems
+//       pretty common.
+daynum = @{
+      '0'..'2' ~ '0'..'9'  // 00 -> 29
+    |      "3" ~ '0'..'1'  // 30 -> 31
+    |            '0'..'9'  //  0 -> 9
+}
+
+weeknum = @{
+           "0" ~ '1'..'9'  // 01 -> 09
+    | '1'..'4' ~ '0'..'9'  // 10 -> 49
+    |      "5" ~ '0'..'3'  // 50 -> 53
+}
+
+month = {
+    january | february | march | april | may | june | july | august | september
+    | october | november | december
+}
+
+january = @{ "Jan" }
+february = @{ "Feb" }
+march = @{ "Mar" }
+april = @{ "Apr" }
+may = @{ "May" }
+june = @{ "Jun" }
+july = @{ "Jul" }
+august = @{ "Aug" }
+september = @{ "Sep" }
+october = @{ "Oct" }
+november = @{ "Nov" }
+december = @{ "Dec" }
+
+year = @{
+          ( "19" ~ ASCII_DIGIT{2} )  // 1900 -> 1999
+    | ( '2'..'9' ~ ASCII_DIGIT{3} )  // 2000 -> 9999
+}
+
+positive_number = @{ "0"* ~ ASCII_NONZERO_DIGIT ~ ASCII_DIGIT* }
+
+comment = { comment_delimiter ~ comment_inner ~ comment_delimiter }
+
+comment_delimiter = _{ "\"" }
+
+comment_inner = @{ comment_character+ }
+
+comment_character = @{ !comment_delimiter ~ ANY }
+
+space = _{ " " }

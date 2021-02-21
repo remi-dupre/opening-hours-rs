@@ -4,7 +4,6 @@ extern crate pest_derive;
 extern crate chrono;
 
 pub mod day_selector;
-pub mod extended_time;
 pub mod parser;
 #[macro_use]
 pub mod schedule;

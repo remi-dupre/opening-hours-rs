@@ -1,0 +1,10 @@
+[package]
+name = "opening-hours-syntax"
+version = "0.1.0"
+authors = ["Rémi Dupré <r.dupre@qwant.com>"]
+edition = "2018"
+
+[dependencies]
+chrono = { version = "0.4", default_features = false }
+pest = "2.0"
+pest_derive = "2.0"

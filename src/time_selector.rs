@@ -2,8 +2,8 @@ use std::ops::Range;
 
 use chrono::{Duration, NaiveDate};
 
-use crate::extended_time::ExtendedTime;
 use crate::utils::{range_intersection, time_ranges_union};
+use opening_hours_syntax::extended_time::ExtendedTime;
 
 #[derive(Clone, Debug)]
 pub struct TimeSelector {

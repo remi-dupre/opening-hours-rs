@@ -2,7 +2,7 @@ use std::cmp::{max, min, Ordering};
 use std::ops::Range;
 use std::ops::RangeInclusive;
 
-use crate::extended_time::ExtendedTime;
+use opening_hours_syntax::extended_time::ExtendedTime;
 
 pub fn wrapping_range_contains<T: PartialOrd>(range: &RangeInclusive<T>, elt: &T) -> bool {
     if range.start() <= range.end() {

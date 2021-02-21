@@ -10,13 +10,13 @@ homepage = "https://github.com/remi-dupre/opening-hours-rs"
 description = "A parser and toolkit for the opening_hours fields in OpenStreetMap written in Rust."
 edition = "2018"
 
-[profile.release]
-codegen-units = 1
-lto = "fat"
+[workspace]
+members = ["opening-hours-syntax"]
 
 [dependencies]
 chrono = "0.4"
 once_cell = "1.5.2"
+opening-hours-syntax = { path = "opening-hours-syntax" }
 pest = "2.0"
 pest_derive = "2.0"
 
