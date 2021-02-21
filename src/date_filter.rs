@@ -1,15 +1,11 @@
 use std::convert::TryInto;
-use std::ops::RangeInclusive;
 
 use chrono::prelude::Datelike;
 use chrono::{Duration, NaiveDate};
 
 use crate::opening_hours::DATE_LIMIT;
 use crate::utils::wrapping_range_contains;
-
-// DateFilter
-
-pub type Weekday = chrono::Weekday;
+use opening_hours_syntax::rules::day as ds;
 
 /// Generic trait to specify the behavior of a selector over dates.
 pub trait DateFilter {
@@ -25,31 +21,16 @@ impl<T: DateFilter> DateFilter for [T] {
     fn filter(&self, date: NaiveDate, holidays: &[NaiveDate]) -> bool {
         self.is_empty() || self.iter().any(|x| x.filter(date, holidays))
     }
+
+    fn next_change_hint(&self, date: NaiveDate, holidays: &[NaiveDate]) -> Option<NaiveDate> {
+        self.iter()
+            .map(|selector| selector.next_change_hint(date, holidays))
+            .min()
+            .unwrap_or_else(|| Some(DATE_LIMIT.date()))
+    }
 }
 
-// DaySelector
-
-#[derive(Clone, Debug, Default)]
-pub struct DaySelector {
-    pub year: Vec<YearRange>,
-    pub monthday: Vec<MonthdayRange>,
-    pub week: Vec<WeekRange>,
-    pub weekday: Vec<WeekDayRange>,
-}
-
-fn slice_next_change_hint(
-    slice: &[impl DateFilter],
-    date: NaiveDate,
-    holidays: &[NaiveDate],
-) -> Option<NaiveDate> {
-    slice
-        .iter()
-        .map(|selector| selector.next_change_hint(date, holidays))
-        .min()
-        .unwrap_or_else(|| Some(DATE_LIMIT.date()))
-}
-
-impl DateFilter for DaySelector {
+impl DateFilter for ds::DaySelector {
     fn filter(&self, date: NaiveDate, holidays: &[NaiveDate]) -> bool {
         self.year.filter(date, holidays)
             && self.monthday.filter(date, holidays)
@@ -59,10 +40,10 @@ impl DateFilter for DaySelector {
 
     fn next_change_hint(&self, date: NaiveDate, holidays: &[NaiveDate]) -> Option<NaiveDate> {
         *[
-            slice_next_change_hint(&self.year, date, holidays),
-            slice_next_change_hint(&self.monthday, date, holidays),
-            slice_next_change_hint(&self.week, date, holidays),
-            slice_next_change_hint(&self.weekday, date, holidays),
+            self.year.next_change_hint(date, holidays),
+            self.monthday.next_change_hint(date, holidays),
+            self.week.next_change_hint(date, holidays),
+            self.weekday.next_change_hint(date, holidays),
         ]
         .iter()
         .min()
@@ -70,19 +51,7 @@ impl DateFilter for DaySelector {
     }
 }
 
-// ---
-// --- Year selector
-// ---
-
-// YearRange
-
-#[derive(Clone, Debug)]
-pub struct YearRange {
-    pub range: RangeInclusive<u16>,
-    pub step: u16,
-}
-
-impl DateFilter for YearRange {
+impl DateFilter for ds::YearRange {
     fn filter(&self, date: NaiveDate, _holidays: &[NaiveDate]) -> bool {
         let year: u16 = date.year().try_into().unwrap();
         self.range.contains(&year) && (year - self.range.start()) % self.step == 0
@@ -115,42 +84,26 @@ impl DateFilter for YearRange {
     }
 }
 
-// ---
-// --- Monthday selector
-// ---
-
-#[derive(Clone, Debug)]
-pub enum MonthdayRange {
-    Month {
-        range: RangeInclusive<Month>,
-        year: Option<u16>,
-    },
-    Date {
-        start: (Date, DateOffset),
-        end: (Date, DateOffset),
-    },
-}
-
-impl DateFilter for MonthdayRange {
+impl DateFilter for ds::MonthdayRange {
     fn filter(&self, date: NaiveDate, _holidays: &[NaiveDate]) -> bool {
         let in_year = date.year() as u16;
-        let in_month = Month::from_u8(date.month() as u8).expect("invalid month value");
+        let in_month = ds::Month::from_u8(date.month() as u8).expect("invalid month value");
 
         match self {
-            MonthdayRange::Month { year, range } => {
+            ds::MonthdayRange::Month { year, range } => {
                 year.unwrap_or(in_year) == in_year && wrapping_range_contains(range, &in_month)
             }
-            MonthdayRange::Date {
+            ds::MonthdayRange::Date {
                 start: (start, start_offset),
                 end: (end, end_offset),
             } => match (&start, end) {
                 (
-                    Date::Fixed {
+                    ds::Date::Fixed {
                         year: year_1,
                         month: month_1,
                         day: day_1,
                     },
-                    Date::Fixed {
+                    ds::Date::Fixed {
                         year: year_2,
                         month: month_2,
                         day: day_2,
@@ -199,110 +152,22 @@ impl DateFilter for MonthdayRange {
     }
 }
 
-// Date
-
-#[derive(Clone, Copy, Debug)]
-pub enum Date {
-    Fixed {
-        year: Option<u16>,
-        month: Month,
-        day: u8,
-    },
-    Easter {
-        year: Option<u16>,
-    },
-}
-
-impl Date {
-    pub fn day(day: u8, month: Month, year: u16) -> Self {
-        Self::Fixed {
-            day,
-            month,
-            year: Some(year),
-        }
-    }
-}
-
-// DateOffset
-
-#[derive(Clone, Debug, Default)]
-pub struct DateOffset {
-    pub wday_offset: WeekDayOffset,
-    pub day_offset: i64,
-}
-
-impl DateOffset {
-    pub fn apply(&self, mut date: NaiveDate) -> NaiveDate {
-        date += Duration::days(self.day_offset);
-
-        match self.wday_offset {
-            WeekDayOffset::None => {}
-            WeekDayOffset::Prev(target) => {
-                while date.weekday() != target {
-                    date -= Duration::days(1);
-                }
-            }
-            WeekDayOffset::Next(target) => {
-                while date.weekday() != target {
-                    date += Duration::days(1);
-                }
-            }
-        }
-
-        date
-    }
-}
-
-// WeekDayOffset
-
-#[derive(Clone, Copy, Debug)]
-pub enum WeekDayOffset {
-    None,
-    Next(Weekday),
-    Prev(Weekday),
-}
-
-impl Default for WeekDayOffset {
-    fn default() -> Self {
-        Self::None
-    }
-}
-
-// ---
-// --- WeekDay selector
-// ---
-
-// WeekDayRange
-
-#[derive(Clone, Debug)]
-pub enum WeekDayRange {
-    Fixed {
-        range: RangeInclusive<Weekday>,
-        offset: i64,
-        nth: [bool; 5],
-    },
-    Holiday {
-        kind: HolidayKind,
-        offset: i64,
-    },
-}
-
-impl DateFilter for WeekDayRange {
+impl DateFilter for ds::WeekDayRange {
     fn filter(&self, date: NaiveDate, holidays: &[NaiveDate]) -> bool {
         match self {
-            WeekDayRange::Fixed { range, nth, offset } => {
+            ds::WeekDayRange::Fixed { range, nth, offset } => {
                 let date = date - Duration::days(*offset);
                 let date_nth = (date.day() as u8 - 1) / 7;
                 let range_u8 = (*range.start() as u8)..=(*range.end() as u8);
                 wrapping_range_contains(&range_u8, &(date.weekday() as u8))
                     && nth[usize::from(date_nth)]
             }
-            WeekDayRange::Holiday { kind, offset } => match kind {
-                HolidayKind::Public => {
+            ds::WeekDayRange::Holiday { kind, offset } => match kind {
+                ds::HolidayKind::Public => {
                     let date = date - Duration::days(*offset);
                     holidays.binary_search(&date).is_ok()
                 }
-                HolidayKind::School => {
+                ds::HolidayKind::School => {
                     eprintln!("[WARN] school holidays are not supported, thus ignored");
                     false
                 }
@@ -312,8 +177,8 @@ impl DateFilter for WeekDayRange {
 
     fn next_change_hint(&self, date: NaiveDate, holidays: &[NaiveDate]) -> Option<NaiveDate> {
         match self {
-            WeekDayRange::Holiday {
-                kind: HolidayKind::Public,
+            ds::WeekDayRange::Holiday {
+                kind: ds::HolidayKind::Public,
                 offset,
             } => Some({
                 match holidays.binary_search(&(date - Duration::days(*offset))) {
@@ -334,79 +199,9 @@ impl DateFilter for WeekDayRange {
     }
 }
 
-// HolidayKind
-
-#[derive(Clone, Copy, Debug)]
-pub enum HolidayKind {
-    Public,
-    School,
-}
-
-// ---
-// --- Week selector
-// ---
-
-// Week selector
-
-#[derive(Clone, Debug)]
-pub struct WeekRange {
-    pub range: RangeInclusive<u8>,
-    pub step: u8,
-}
-
-impl DateFilter for WeekRange {
+impl DateFilter for ds::WeekRange {
     fn filter(&self, date: NaiveDate, _holidays: &[NaiveDate]) -> bool {
         let week = date.iso_week().week() as u8;
         wrapping_range_contains(&self.range, &week) && (week - self.range.start()) % self.step == 0
-    }
-}
-
-// ---
-// --- Day selector
-// ---
-
-// Month
-
-#[derive(Copy, Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
-pub enum Month {
-    January = 1,
-    February = 2,
-    March = 3,
-    April = 4,
-    May = 5,
-    June = 6,
-    July = 7,
-    August = 8,
-    September = 9,
-    October = 10,
-    November = 11,
-    December = 12,
-}
-
-#[derive(Debug)]
-pub struct InvalidMonth;
-
-impl Month {
-    pub fn from_u8(x: u8) -> Result<Self, InvalidMonth> {
-        Ok(match x {
-            1 => Self::January,
-            2 => Self::February,
-            3 => Self::March,
-            4 => Self::April,
-            5 => Self::May,
-            6 => Self::June,
-            7 => Self::July,
-            8 => Self::August,
-            9 => Self::September,
-            10 => Self::October,
-            11 => Self::November,
-            12 => Self::December,
-            _ => return Err(InvalidMonth),
-        })
-    }
-
-    pub fn next(self) -> Self {
-        let num = self as u8;
-        Self::from_u8((num % 12) + 1).unwrap()
     }
 }

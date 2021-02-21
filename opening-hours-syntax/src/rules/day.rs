@@ -1,5 +1,8 @@
 use std::ops::RangeInclusive;
 
+use chrono::prelude::Datelike;
+use chrono::{Duration, NaiveDate};
+
 // Reexport Weekday from chrono as part of the public type.
 pub use chrono::Weekday;
 
@@ -70,6 +73,28 @@ impl Date {
 pub struct DateOffset {
     pub wday_offset: WeekDayOffset,
     pub day_offset: i64,
+}
+
+impl DateOffset {
+    pub fn apply(&self, mut date: NaiveDate) -> NaiveDate {
+        date += Duration::days(self.day_offset);
+
+        match self.wday_offset {
+            WeekDayOffset::None => {}
+            WeekDayOffset::Prev(target) => {
+                while date.weekday() != target {
+                    date -= Duration::days(1);
+                }
+            }
+            WeekDayOffset::Next(target) => {
+                while date.weekday() != target {
+                    date += Duration::days(1);
+                }
+            }
+        }
+
+        date
+    }
 }
 
 // WeekDayOffset

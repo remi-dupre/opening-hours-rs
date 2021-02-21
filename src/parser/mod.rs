@@ -14,9 +14,9 @@ use pest::Parser;
 
 use opening_hours_syntax::extended_time::ExtendedTime;
 
-use crate::day_selector as ds;
 use crate::opening_hours as oh;
-use crate::time_selector as ts;
+use opening_hours_syntax::rules::day as ds;
+use opening_hours_syntax::rules::time as ts;
 
 pub use error::{Error, Result};
 
