@@ -211,10 +211,10 @@ macro_rules! schedule {
         $( ; )?
     ) => {{
         #[allow(unused_imports)]
-        use crate::{
-            schedule::{Schedule, TimeRange},
-            extended_time::ExtendedTime,
-        };
+        use crate::{schedule::{Schedule, TimeRange}};
+
+        #[allow(unused_imports)]
+        use opening_hours_syntax::extended_time::ExtendedTime;
 
         #[allow(unused_mut)]
         let mut inner = Vec::new();
