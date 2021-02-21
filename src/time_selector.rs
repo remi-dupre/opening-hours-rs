@@ -19,7 +19,7 @@ impl TimeSelector {
         }
     }
 
-    pub fn intervals_at(&self, date: NaiveDate) -> Vec<Range<ExtendedTime>> {
+    pub fn intervals_at(&self, date: NaiveDate) -> impl Iterator<Item = Range<ExtendedTime>> + '_ {
         time_ranges_union(self.as_naive_time(date).filter_map(|range| {
             let dstart = ExtendedTime::new(0, 0);
             let dend = ExtendedTime::new(24, 0);
@@ -27,7 +27,10 @@ impl TimeSelector {
         }))
     }
 
-    pub fn intervals_at_next_day(&self, date: NaiveDate) -> Vec<Range<ExtendedTime>> {
+    pub fn intervals_at_next_day(
+        &self,
+        date: NaiveDate,
+    ) -> impl Iterator<Item = Range<ExtendedTime>> + '_ {
         time_ranges_union(
             self.as_naive_time(date)
                 .filter_map(|range| {

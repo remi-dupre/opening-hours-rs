@@ -12,34 +12,35 @@ pub fn wrapping_range_contains<T: PartialOrd>(range: &RangeInclusive<T>, elt: &T
     }
 }
 
-// TODO: can we gain performances by returning an iterator (requires custom implem).
 pub fn time_ranges_union(
     ranges: impl Iterator<Item = Range<ExtendedTime>>,
-) -> Vec<Range<ExtendedTime>> {
+) -> impl Iterator<Item = Range<ExtendedTime>> {
+    // TODO: we could gain performance by ensuring that range iterators are
+    //       always sorted.
     let mut ranges: Vec<_> = ranges.collect();
-    let mut output = Vec::new();
+    ranges.sort_unstable_by_key(|range| range.start);
 
     // Get ranges by increasing start
-    ranges.sort_unstable_by_key(|range| range.start);
     let mut ranges = ranges.into_iter();
+    let mut current_opt = ranges.next();
 
-    if let Some(mut current) = ranges.next() {
-        for item in ranges {
-            assert!(item.start >= current.start);
-
-            if current.end >= item.start {
-                // The two intervals intersect with each other
-                current.end = max(current.end, item.end);
-            } else {
-                output.push(current);
-                current = item;
+    std::iter::from_fn(move || {
+        if let Some(ref mut current) = current_opt {
+            #[allow(clippy::clippy::while_let_on_iterator)]
+            while let Some(item) = ranges.next() {
+                if current.end >= item.start {
+                    // The two intervals intersect with each other
+                    current.end = max(current.end, item.end);
+                } else {
+                    return Some(current_opt.replace(item).unwrap());
+                }
             }
+
+            Some(current_opt.take().unwrap())
+        } else {
+            None
         }
-
-        output.push(current);
-    }
-
-    output
+    })
 }
 
 pub fn range_intersection<T: Ord>(range_1: Range<T>, range_2: Range<T>) -> Option<Range<T>> {
