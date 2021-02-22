@@ -2,6 +2,7 @@
 use arbitrary::Arbitrary;
 use chrono::NaiveDateTime;
 use libfuzzer_sys::fuzz_target;
+use opening_hours::OpeningHours;
 
 #[derive(Arbitrary, Clone, Debug)]
 pub struct Data {
@@ -12,7 +13,7 @@ pub struct Data {
 
 fuzz_target!(|data: Data| {
     if let Some(date) = NaiveDateTime::from_timestamp_opt(data.date_secs, data.date_nsecs) {
-        if let Ok(oh) = opening_hours::parse(&data.oh) {
+        if let Ok(oh) = OpeningHours::parse(&data.oh) {
             eprintln!(
                 "oh: {:?} -- date: {}",
                 data.oh,

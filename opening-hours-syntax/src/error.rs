@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::Rule;
+use crate::parser::Rule;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
