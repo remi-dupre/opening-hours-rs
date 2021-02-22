@@ -7,8 +7,20 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  # ---
+  # --- Run tests and lints
+  # ---
+  test:
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        crate: [".", "opening-hours-syntax"]
+
+    defaults:
+      run:
+        working-directory: ${{ matrix.crate }}
+
     steps:
       - uses: actions/checkout@v2
 
@@ -18,17 +30,23 @@ jobs:
           cargo clippy -- --version
           cargo fmt -- --version
 
-      - name: Build
-        run: cargo build
-
       - name: Lint
         run: cargo clippy --all-targets -- -D warnings
+
+      - name: Format
+        run: cargo fmt -- --check
 
       - name: Tests
         run: cargo test
 
-      - name: Format
-        run: cargo fmt -- --check
+  # ---
+  # --- Compute coverage and upload to codecov.io
+  # ---
+  coverage:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
 
       - name: Coverage
         uses: actions-rs/tarpaulin@v0.1

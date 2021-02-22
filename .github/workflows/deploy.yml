@@ -7,8 +7,16 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  # ---
+  # --- Check that all versions are consistency accross packages
+  # ---
+  check-version:
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: scripts
+
     steps:
       - uses: actions/checkout@v2
 
@@ -21,31 +29,36 @@ jobs:
           python -m pip install --upgrade pip
           pip install poetry
 
-      - name: Install python dependancies
+      - name: Install dependancies
         run: poetry install
-        working-directory: python
-
-      - name: Install scripts dependancies
-        run: poetry install
-        working-directory: scripts
-
-      - name: Check packaging for crates.io
-        run: cargo publish --dry-run
-
-      - name: Check packaging for pypi.org
-        run: poetry run maturin develop --release
-        working-directory: python
-
-      - name: Build python documentation
-        run: poetry run pdoc -o docs -d numpy opening_hours
-        working-directory: python
 
       - name: Check version consistency
         run: poetry run ./check-version.py
-        working-directory: scripts
+
+  # ---
+  # --- Build an deploy Rust packages
+  # ---
+  deploy-rust:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        crate: [".", "opening-hours-syntax"]
+
+    defaults:
+      run:
+        working-directory: ${{ matrix.crate }}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Check packaging for crates.io
+        run: cargo publish --dry-run
+        if: github.ref != 'refs/heads/master'
 
       - name: Login to crates.io
         run: cargo login $TOKEN
+        if: github.ref == 'refs/heads/master'
         env:
           TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
 
@@ -53,9 +66,39 @@ jobs:
         run: cargo publish
         if: github.ref == 'refs/heads/master'
 
+  # ---
+  # --- Build and deploy Python bindings
+  # ---
+  deploy-python:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: python
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+
+      - name: Install poetry
+        run: |
+          python -m pip install --upgrade pip
+          pip install poetry
+
+      - name: Install dependancies
+        run: poetry install
+
+      - name: Check packaging for pypi.org
+        run: poetry run maturin develop
+
+      - name: Build python documentation
+        run: poetry run pdoc -o docs -d numpy opening_hours
+
       - name: Publish to pypi.org
         run: poetry run maturin publish --username $USER --password $PASS
-        working-directory: python
         if: github.ref == 'refs/heads/master'
         env:
           USER: remi-dupre

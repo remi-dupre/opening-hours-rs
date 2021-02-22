@@ -1,13 +1,14 @@
-use crate::parser::Error;
-use crate::time_domain::RuleKind::*;
-use crate::{datetime, parse, schedule_at};
+use opening_hours_syntax::error::Error;
+use opening_hours_syntax::rules::RuleKind::*;
+
+use crate::{datetime, schedule_at, OpeningHours};
 
 #[test]
 fn s000_idunn_interval_stops_next_day() -> Result<(), Error> {
-    use crate::time_domain::DateTimeRange;
+    use crate::DateTimeRange;
     use chrono::Duration;
 
-    let oh = parse("Tu-Su 09:30-18:00; Th 09:30-21:45")?;
+    let oh = OpeningHours::parse("Tu-Su 09:30-18:00; Th 09:30-21:45")?;
     let start = datetime!("2018-06-11 00:00");
     let end = start + Duration::days(1);
 
@@ -45,7 +46,7 @@ fn s002_idunn_override_weekday_keep_unmatched() -> Result<(), Error> {
 
 #[test]
 fn s003_idunn_space_separator() {
-    assert!(parse("Jan-Feb 10:00-20:00").is_ok());
+    assert!(OpeningHours::parse("Jan-Feb 10:00-20:00").is_ok());
 }
 
 #[test]
@@ -86,7 +87,7 @@ fn s005_idunn_days_cycle() -> Result<(), Error> {
 #[test]
 fn s006_idunn_month_cycle() -> Result<(), Error> {
     assert_eq!(
-        parse("Oct-Mar 07:30-19:30; Apr-Sep 07:00-21:00")?
+        OpeningHours::parse("Oct-Mar 07:30-19:30; Apr-Sep 07:00-21:00")?
             .next_change(datetime!("2019-02-10 11:00"))
             .unwrap(),
         datetime!("2019-02-10 19:30")
@@ -97,8 +98,8 @@ fn s006_idunn_month_cycle() -> Result<(), Error> {
 
 #[test]
 fn s007_idunn_date_separator() {
-    assert!(
-        parse("Mo,Th,Sa,Su 09:00-18:00; We,Fr 09:00-21:45; Tu off; Jan 1,May 1,Dec 25: off")
-            .is_ok()
-    );
+    assert!(OpeningHours::parse(
+        "Mo,Th,Sa,Su 09:00-18:00; We,Fr 09:00-21:45; Tu off; Jan 1,May 1,Dec 25: off"
+    )
+    .is_ok());
 }

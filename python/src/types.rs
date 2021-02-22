@@ -8,8 +8,8 @@ use pyo3::prelude::*;
 use pyo3::types::{PyDateAccess, PyDateTime, PyTimeAccess};
 use pyo3::PyIterProtocol;
 
-use opening_hours::time_domain;
-use opening_hours::time_domain::{DateTimeRange, RuleKind};
+use opening_hours::DateTimeRange;
+use opening_hours_syntax::rules::RuleKind;
 
 // ---
 // --- State
@@ -110,17 +110,17 @@ impl<'p> IntoPy<Py<PyAny>> for NaiveDateTimeWrapper {
 // --- RangeIterator
 // ---
 
-/// Iterator that owns a pointer to a [`time_domain::TimeDomain`] together with a
+/// Iterator that owns a pointer to a [`OpeningHours`] together with a
 /// self reference to it.
 #[pyclass(unsendable)]
 pub struct RangeIterator {
-    _td: Pin<Arc<time_domain::TimeDomain>>,
+    _td: Pin<Arc<opening_hours::OpeningHours>>,
     iter: Box<dyn Iterator<Item = DateTimeRange<'static>>>,
 }
 
 impl RangeIterator {
     pub fn new(
-        td: Pin<Arc<time_domain::TimeDomain>>,
+        td: Pin<Arc<opening_hours::OpeningHours>>,
         start: NaiveDateTime,
         end: Option<NaiveDateTime>,
     ) -> Self {
@@ -170,7 +170,7 @@ impl PyIterProtocol for RangeIterator {
             dt_range.range.start.into(),
             dt_range.range.end.into(),
             dt_range.kind.into(),
-            dt_range.comments,
+            dt_range.into_comments(),
         ))
     }
 }

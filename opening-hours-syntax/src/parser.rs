@@ -1,5 +1,3 @@
-mod error;
-
 use std::boxed::Box;
 use std::cmp::Ord;
 use std::convert::TryInto;
@@ -12,24 +10,23 @@ use chrono::Duration;
 use pest::iterators::Pair;
 use pest::Parser;
 
-use crate::day_selector as ds;
+use crate::error::{Error, Result};
 use crate::extended_time::ExtendedTime;
-use crate::time_domain as td;
-use crate::time_selector as ts;
-
-pub use error::{Error, Result};
+use crate::rules as rl;
+use crate::rules::day as ds;
+use crate::rules::time as ts;
 
 #[derive(Parser)]
-#[grammar = "parser/grammar.pest"]
-struct CSVParser;
+#[grammar = "grammar.pest"]
+struct OHParser;
 
-pub fn parse(data: &str) -> Result<td::TimeDomain> {
-    let time_domain_pair = CSVParser::parse(Rule::input_time_domain, data)
+pub fn parse(data: &str) -> Result<Vec<rl::RuleSequence>> {
+    let opening_hours_pair = OHParser::parse(Rule::input_opening_hours, data)
         .map_err(Error::from)?
         .next()
-        .expect("grammar error: no time_domain found");
+        .expect("grammar error: no opening_hours found");
 
-    build_time_domain(time_domain_pair)
+    build_opening_hours(opening_hours_pair)
 }
 
 // ---
@@ -43,26 +40,26 @@ fn unexpected_token<T>(token: Rule, parent: Rule) -> T {
     )
 }
 
-fn build_time_domain(pair: Pair<Rule>) -> Result<td::TimeDomain> {
-    assert_eq!(pair.as_rule(), Rule::time_domain);
+fn build_opening_hours(pair: Pair<Rule>) -> Result<Vec<rl::RuleSequence>> {
+    assert_eq!(pair.as_rule(), Rule::opening_hours);
     let mut pairs = pair.into_inner();
     let mut rules = Vec::new();
 
     while let Some(pair) = pairs.next() {
         rules.push(match pair.as_rule() {
-            Rule::rule_sequence => build_rule_sequence(pair, td::RuleOperator::Normal),
+            Rule::rule_sequence => build_rule_sequence(pair, rl::RuleOperator::Normal),
             Rule::any_rule_separator => build_rule_sequence(
                 pairs.next().expect("separator not followed by any rule"),
                 build_any_rule_separator(pair),
             ),
-            other => unexpected_token(other, Rule::time_domain),
+            other => unexpected_token(other, Rule::opening_hours),
         }?)
     }
 
-    Ok(td::TimeDomain::new(rules))
+    Ok(rules)
 }
 
-fn build_rule_sequence(pair: Pair<Rule>, operator: td::RuleOperator) -> Result<td::RuleSequence> {
+fn build_rule_sequence(pair: Pair<Rule>, operator: rl::RuleOperator) -> Result<rl::RuleSequence> {
     assert_eq!(pair.as_rule(), Rule::rule_sequence);
     let mut pairs = pair.into_inner();
 
@@ -72,14 +69,14 @@ fn build_rule_sequence(pair: Pair<Rule>, operator: td::RuleOperator) -> Result<t
     let (kind, comment) = pairs
         .next()
         .map(build_rules_modifier)
-        .unwrap_or((td::RuleKind::Open, None));
+        .unwrap_or((rl::RuleKind::Open, None));
 
     let comments = comment
         .into_iter()
         .chain(extra_comment.into_iter())
         .collect();
 
-    Ok(td::RuleSequence::new(
+    Ok(rl::RuleSequence::new(
         day_selector,
         time_selector,
         kind,
@@ -88,7 +85,7 @@ fn build_rule_sequence(pair: Pair<Rule>, operator: td::RuleOperator) -> Result<t
     ))
 }
 
-fn build_any_rule_separator(pair: Pair<Rule>) -> td::RuleOperator {
+fn build_any_rule_separator(pair: Pair<Rule>) -> rl::RuleOperator {
     assert_eq!(pair.as_rule(), Rule::any_rule_separator);
 
     match pair
@@ -97,9 +94,9 @@ fn build_any_rule_separator(pair: Pair<Rule>) -> td::RuleOperator {
         .expect("empty rule separator")
         .as_rule()
     {
-        Rule::normal_rule_separator => td::RuleOperator::Normal,
-        Rule::additional_rule_separator => td::RuleOperator::Additional,
-        Rule::fallback_rule_separator => td::RuleOperator::Fallback,
+        Rule::normal_rule_separator => rl::RuleOperator::Normal,
+        Rule::additional_rule_separator => rl::RuleOperator::Additional,
+        Rule::fallback_rule_separator => rl::RuleOperator::Fallback,
         other => unexpected_token(other, Rule::any_rule_separator),
     }
 }
@@ -108,7 +105,7 @@ fn build_any_rule_separator(pair: Pair<Rule>) -> td::RuleOperator {
 // --- Rule modifier
 // ---
 
-fn build_rules_modifier(pair: Pair<Rule>) -> (td::RuleKind, Option<String>) {
+fn build_rules_modifier(pair: Pair<Rule>) -> (rl::RuleKind, Option<String>) {
     assert_eq!(pair.as_rule(), Rule::rules_modifier);
     let mut pairs = pair.into_inner();
 
@@ -116,7 +113,7 @@ fn build_rules_modifier(pair: Pair<Rule>) -> (td::RuleKind, Option<String>) {
         if pairs.peek().expect("empty rules_modifier").as_rule() == Rule::rules_modifier_enum {
             build_rules_modifier_enum(pairs.next().unwrap())
         } else {
-            td::RuleKind::Open
+            rl::RuleKind::Open
         }
     };
 
@@ -125,7 +122,7 @@ fn build_rules_modifier(pair: Pair<Rule>) -> (td::RuleKind, Option<String>) {
     (kind, comment)
 }
 
-fn build_rules_modifier_enum(pair: Pair<Rule>) -> td::RuleKind {
+fn build_rules_modifier_enum(pair: Pair<Rule>) -> rl::RuleKind {
     assert_eq!(pair.as_rule(), Rule::rules_modifier_enum);
 
     let pair = pair
@@ -134,9 +131,9 @@ fn build_rules_modifier_enum(pair: Pair<Rule>) -> td::RuleKind {
         .expect("grammar error: empty rules modifier enum");
 
     match pair.as_rule() {
-        Rule::rules_modifier_enum_closed => td::RuleKind::Closed,
-        Rule::rules_modifier_enum_open => td::RuleKind::Open,
-        Rule::rules_modifier_enum_unknown => td::RuleKind::Unknown,
+        Rule::rules_modifier_enum_closed => rl::RuleKind::Closed,
+        Rule::rules_modifier_enum_open => rl::RuleKind::Open,
+        Rule::rules_modifier_enum_unknown => rl::RuleKind::Unknown,
         other => unexpected_token(other, Rule::rules_modifier_enum),
     }
 }
@@ -829,7 +826,7 @@ fn build_comment_inner(pair: Pair<Rule>) -> String {
 
 // Mics
 
-pub enum PlusOrMinus {
+enum PlusOrMinus {
     Plus,
     Minus,
 }

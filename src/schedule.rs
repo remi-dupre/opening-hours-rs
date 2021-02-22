@@ -5,9 +5,9 @@ use std::fmt;
 use std::iter::once;
 use std::ops::Range;
 
-use crate::extended_time::ExtendedTime;
-use crate::time_domain::RuleKind;
 use crate::utils::{is_sorted, union_sorted};
+use opening_hours_syntax::extended_time::ExtendedTime;
+use opening_hours_syntax::rules::RuleKind;
 
 #[non_exhaustive]
 #[derive(Clone, Eq, PartialEq)]
@@ -211,10 +211,10 @@ macro_rules! schedule {
         $( ; )?
     ) => {{
         #[allow(unused_imports)]
-        use crate::{
-            schedule::{Schedule, TimeRange},
-            extended_time::ExtendedTime,
-        };
+        use crate::{schedule::{Schedule, TimeRange}};
+
+        #[allow(unused_imports)]
+        use opening_hours_syntax::extended_time::ExtendedTime;
 
         #[allow(unused_mut)]
         let mut inner = Vec::new();
