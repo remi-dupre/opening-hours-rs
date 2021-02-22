@@ -17,5 +17,5 @@ mod tests;
 
 // Public re-exports
 // TODO: make opening_hours.rs lighter and less spaghetty
-pub use opening_hours::OpeningHours;
+pub use crate::opening_hours::OpeningHours;
 pub use parser::parse;

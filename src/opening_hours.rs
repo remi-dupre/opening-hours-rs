@@ -11,7 +11,7 @@ use once_cell::sync::Lazy;
 
 use crate::date_filter::DateFilter;
 use crate::schedule::{Schedule, TimeRange};
-use crate::time_filter::time_selector_as_naive;
+use crate::time_filter::{time_selector_intervals_at, time_selector_intervals_at_next_day};
 use opening_hours_syntax::extended_time::ExtendedTime;
 use opening_hours_syntax::rules::day::DaySelector;
 use opening_hours_syntax::rules::time::TimeSelector;
@@ -434,7 +434,7 @@ impl RuleSequence {
     ) -> Option<Schedule<'s>> {
         let today = {
             if self.day_selector.filter(date, holiday) {
-                let ranges = time_selector_as_naive(&self.time_selector, date);
+                let ranges = time_selector_intervals_at(&self.time_selector, date);
                 Some(Schedule::from_ranges_with_sorted_comments(
                     ranges,
                     self.kind,
@@ -449,7 +449,7 @@ impl RuleSequence {
             let date = date - Duration::days(1);
 
             if self.day_selector.filter(date, holiday) {
-                let ranges = time_selector_as_naive(&self.time_selector, date);
+                let ranges = time_selector_intervals_at_next_day(&self.time_selector, date);
                 Some(Schedule::from_ranges_with_sorted_comments(
                     ranges,
                     self.kind,

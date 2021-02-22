@@ -5,7 +5,41 @@ use chrono::NaiveDate;
 use opening_hours_syntax::extended_time::ExtendedTime;
 use opening_hours_syntax::rules::time as ts;
 
-pub fn time_selector_as_naive(
+use crate::utils::{range_intersection, time_ranges_union};
+
+pub(crate) fn time_selector_intervals_at(
+    time_selector: &ts::TimeSelector,
+    date: NaiveDate,
+) -> impl Iterator<Item = Range<ExtendedTime>> + '_ {
+    time_ranges_union(
+        time_selector_as_naive(time_selector, date).filter_map(|range| {
+            let dstart = ExtendedTime::new(0, 0);
+            let dend = ExtendedTime::new(24, 0);
+            range_intersection(range, dstart..dend)
+        }),
+    )
+}
+
+pub(crate) fn time_selector_intervals_at_next_day(
+    time_selector: &ts::TimeSelector,
+    date: NaiveDate,
+) -> impl Iterator<Item = Range<ExtendedTime>> + '_ {
+    time_ranges_union(
+        time_selector_as_naive(time_selector, date)
+            .filter_map(|range| {
+                let dstart = ExtendedTime::new(24, 0);
+                let dend = ExtendedTime::new(48, 0);
+                range_intersection(range, dstart..dend)
+            })
+            .map(|range| {
+                let start = range.start.add_hours(-24).unwrap();
+                let end = range.end.add_hours(-24).unwrap();
+                start..end
+            }),
+    )
+}
+
+fn time_selector_as_naive(
     time_selector: &ts::TimeSelector,
     date: NaiveDate,
 ) -> impl Iterator<Item = Range<ExtendedTime>> + '_ {
@@ -17,7 +51,7 @@ pub fn time_selector_as_naive(
 
 /// Trait used to project a time representation to its naive representation at
 /// a given date.
-pub trait AsNaive {
+pub(crate) trait AsNaive {
     type Output;
     fn as_naive(&self, date: NaiveDate) -> Self::Output;
 }
