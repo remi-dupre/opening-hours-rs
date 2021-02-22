@@ -14,13 +14,10 @@ edition = "2018"
 name = "opening_hours"
 crate-type = ["cdylib"]
 
-[profile.release]
-codegen-units = 1
-lto = "fat"
-
 [dependencies]
 chrono = "0.4"
 opening-hours = { path = ".." }
+opening-hours-syntax = { path = "../opening-hours-syntax" }
 
 [dependencies.pyo3]
 version = "0.12.4"

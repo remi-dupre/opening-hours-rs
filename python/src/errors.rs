@@ -8,7 +8,7 @@ use pyo3::prelude::*;
 // --
 
 #[derive(Debug)]
-pub struct ParserError(opening_hours::parser::Error);
+pub struct ParserError(opening_hours::ParserError);
 
 impl std::error::Error for ParserError {}
 
@@ -18,8 +18,8 @@ impl fmt::Display for ParserError {
     }
 }
 
-impl From<opening_hours::parser::Error> for ParserError {
-    fn from(parser_error: opening_hours::parser::Error) -> Self {
+impl From<opening_hours::ParserError> for ParserError {
+    fn from(parser_error: opening_hours::ParserError) -> Self {
         Self(parser_error)
     }
 }

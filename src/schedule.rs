@@ -5,9 +5,9 @@ use std::fmt;
 use std::iter::once;
 use std::ops::Range;
 
-use crate::opening_hours::RuleKind;
 use crate::utils::{is_sorted, union_sorted};
 use opening_hours_syntax::extended_time::ExtendedTime;
+use opening_hours_syntax::rules::RuleKind;
 
 #[non_exhaustive]
 #[derive(Clone, Eq, PartialEq)]

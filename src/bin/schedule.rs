@@ -2,14 +2,14 @@ use std::env;
 
 use chrono::{Duration, Local};
 
-use opening_hours::parse;
+use opening_hours::OpeningHours;
 
 fn main() {
     let expression = env::args().nth(1).expect("Usage: ./schedule <EXPRESSION>");
     let start_datetime = Local::now().naive_local();
     let start_date = start_datetime.date();
 
-    let oh = match parse(&expression) {
+    let oh = match OpeningHours::parse(&expression) {
         Ok(val) => val.with_region("FR"),
         Err(err) => {
             println!("{}", err);

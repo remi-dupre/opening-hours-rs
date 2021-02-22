@@ -28,15 +28,13 @@ macro_rules! datetime {
 #[macro_export]
 macro_rules! schedule_at {
     ( $expression: expr, $date: expr ) => {{
-        use crate::date;
-        use crate::parser::parse;
-        parse($expression)?.schedule_at(date!($date))
+        use crate::{date, OpeningHours};
+        OpeningHours::parse($expression)?.schedule_at(date!($date))
     }};
     ( $expression: expr, $date: expr, $region: expr ) => {{
-        use crate::date;
-        use crate::parser::parse;
+        use crate::{date, OpeningHours};
 
-        parse($expression)?
+        OpeningHours::parse($expression)?
             .with_region($region)
             .schedule_at(date!($date))
     }};

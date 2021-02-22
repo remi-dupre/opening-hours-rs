@@ -8,7 +8,8 @@ use pyo3::prelude::*;
 use pyo3::types::{PyDateAccess, PyDateTime, PyTimeAccess};
 use pyo3::PyIterProtocol;
 
-use opening_hours::opening_hours::{DateTimeRange, RuleKind};
+use opening_hours::DateTimeRange;
+use opening_hours_syntax::rules::RuleKind;
 
 // ---
 // --- State
@@ -169,7 +170,7 @@ impl PyIterProtocol for RangeIterator {
             dt_range.range.start.into(),
             dt_range.range.end.into(),
             dt_range.kind.into(),
-            dt_range.comments,
+            dt_range.into_comments(),
         ))
     }
 }

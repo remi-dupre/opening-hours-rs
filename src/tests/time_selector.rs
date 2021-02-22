@@ -1,5 +1,6 @@
-use crate::opening_hours::RuleKind::*;
-use crate::parser::Error;
+use opening_hours_syntax::error::Error;
+use opening_hours_syntax::rules::RuleKind::*;
+
 use crate::schedule_at;
 
 #[test]

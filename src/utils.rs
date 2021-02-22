@@ -1,5 +1,53 @@
 use std::cmp::{max, min, Ordering};
+use std::fmt;
 use std::ops::{Range, RangeInclusive};
+
+use chrono::NaiveDateTime;
+use opening_hours_syntax::rules::RuleKind;
+
+// DateTimeRange
+
+#[non_exhaustive]
+#[derive(Clone, Eq, PartialEq)]
+pub struct DateTimeRange<'c> {
+    pub range: Range<NaiveDateTime>,
+    pub kind: RuleKind,
+    pub(crate) comments: Vec<&'c str>,
+}
+
+impl fmt::Debug for DateTimeRange<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("DateTimeRange")
+            .field("range", &self.range)
+            .field("kind", &self.kind)
+            .field("comments", &self.comments)
+            .finish()
+    }
+}
+
+impl<'c> DateTimeRange<'c> {
+    pub(crate) fn new_with_sorted_comments(
+        range: Range<NaiveDateTime>,
+        kind: RuleKind,
+        comments: Vec<&'c str>,
+    ) -> Self {
+        Self {
+            range,
+            kind,
+            comments,
+        }
+    }
+
+    pub fn comments(&self) -> &[&'c str] {
+        &self.comments
+    }
+
+    pub fn into_comments(self) -> Vec<&'c str> {
+        self.comments
+    }
+}
+
+// Range operations
 
 pub(crate) fn wrapping_range_contains<T: PartialOrd>(range: &RangeInclusive<T>, elt: &T) -> bool {
     if range.start() <= range.end() {

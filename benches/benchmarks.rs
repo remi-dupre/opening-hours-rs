@@ -1,4 +1,4 @@
-use opening_hours::parser::parse;
+use opening_hours::OpeningHours;
 
 use chrono::NaiveDateTime;
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
@@ -10,18 +10,20 @@ const SCH_HOLIDAY: &str = "PH";
 fn bench_parse(c: &mut Criterion) {
     let mut group = c.benchmark_group("parse");
 
-    group.bench_function("24_7", |b| b.iter(|| parse(black_box(SCH_24_7)).unwrap()));
+    group.bench_function("24_7", |b| {
+        b.iter(|| OpeningHours::parse(black_box(SCH_24_7)).unwrap())
+    });
 
     group.bench_function("addition", |b| {
-        b.iter(|| parse(black_box(SCH_ADDITION)).unwrap())
+        b.iter(|| OpeningHours::parse(black_box(SCH_ADDITION)).unwrap())
     });
 }
 
 fn bench_eval(c: &mut Criterion) {
     let date_time = NaiveDateTime::parse_from_str("2021-02-01 12:03", "%Y-%m-%d %H:%M").unwrap();
-    let sch_24_7 = parse(SCH_24_7).unwrap();
-    let sch_addition = parse(SCH_ADDITION).unwrap();
-    let sch_holiday = parse(SCH_HOLIDAY).unwrap().with_region("FR");
+    let sch_24_7 = OpeningHours::parse(SCH_24_7).unwrap();
+    let sch_addition = OpeningHours::parse(SCH_ADDITION).unwrap();
+    let sch_holiday = OpeningHours::parse(SCH_HOLIDAY).unwrap().with_region("FR");
 
     {
         let mut group = c.benchmark_group("is_open");
