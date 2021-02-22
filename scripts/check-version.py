@@ -17,6 +17,7 @@ from semantic_version import Version
 
 PYPI_META_URL = "https://pypi.org/pypi/opening-hours-py/json"
 CRATE_META_URL = "https://crates.io/api/v1/crates/opening-hours"
+SYNTAX_META_URL = "https://crates.io/api/v1/crates/opening-hours-syntax"
 
 
 async def get_pypi_version():
@@ -27,9 +28,9 @@ async def get_pypi_version():
     return Version(res.json()["info"]["version"])
 
 
-async def get_crate_version():
+async def get_crate_version(url=CRATE_META_URL):
     async with httpx.AsyncClient() as http:
-        res = await http.get(CRATE_META_URL)
+        res = await http.get(url)
 
     res.raise_for_status()
     return Version(res.json()["crate"]["newest_version"])
@@ -38,17 +39,19 @@ async def get_crate_version():
 async def main():
     return_status = 0
 
-    root = Path(__file__).parent.parent
-    rs_version = toml.load(root / "Cargo.toml")["package"]["version"]
-    py_version = toml.load(root / "python/Cargo.toml")["package"]["version"]
-    pt_version = toml.load(root / "python/pyproject.toml")["tool"]["poetry"]["version"]
+    rt = Path(__file__).parent.parent
+    rs_version = toml.load(rt / "Cargo.toml")["package"]["version"]
+    sy_version = toml.load(rt / "opening-hours-syntax/Cargo.toml")["package"]["version"]
+    py_version = toml.load(rt / "python/Cargo.toml")["package"]["version"]
+    pt_version = toml.load(rt / "python/pyproject.toml")["tool"]["poetry"]["version"]
 
     print("Checking local packages:")
     print(" - Rust crate:", rs_version)
+    print(" - Syntax crate", sy_version)
     print(" - Python crate:", py_version)
     print(" - Python package:", pt_version)
 
-    if not rs_version == py_version == pt_version:
+    if not rs_version == sy_version == py_version == pt_version:
         print(r"/!\ Packages versions don't match")
         return_status = 1
 
@@ -58,12 +61,13 @@ async def main():
 
     if branch != "master":
         local_version = Version(rs_version)
-        pypi_version, crate_version = await asyncio.gather(
-            get_pypi_version(), get_crate_version()
+        pypi_version, crate_version, syntax_version = await asyncio.gather(
+            get_pypi_version(), get_crate_version(), get_crate_version(SYNTAX_META_URL)
         )
 
         print(f"Current branch is {branch}, checking remote packages:")
-        print(" - crates.io version:", crate_version)
+        print(" - opening-hours version:", crate_version)
+        print(" - opening-hours-syntax version:", syntax_version)
         print(" - PyPI version:", pypi_version)
 
         if pypi_version >= local_version:
