@@ -12,6 +12,11 @@ pub struct Data {
 }
 
 fuzz_target!(|data: Data| {
+    if data.oh.contains('=') {
+        // The fuzzer spends way too much time building comments.
+        return;
+    }
+
     if let Some(date) = NaiveDateTime::from_timestamp_opt(data.date_secs, data.date_nsecs) {
         if let Ok(oh) = OpeningHours::parse(&data.oh) {
             eprintln!(

@@ -23,7 +23,7 @@ use opening_hours_syntax::parse;
 const OH: &str = "Mo-Fr 10:00-18:00; Sa-Su 10:00-12:00";
 
 fn main() {
-    let oh = parse(&expression).unwrap();
+    let oh = parse(&OH).unwrap();
     eprintln!("{:?}", oh);
 }
 ```
