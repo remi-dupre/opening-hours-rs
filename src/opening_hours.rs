@@ -259,21 +259,13 @@ fn rule_sequence_schedule_at<'s>(
     date: NaiveDate,
     holiday: &[NaiveDate],
 ) -> Option<Schedule<'s>> {
-    let comments = || {
-        rule_sequence
-            .comments()
-            .iter()
-            .map(String::as_str)
-            .collect()
-    };
-
     let today = {
         if rule_sequence.day_selector.filter(date, holiday) {
             let ranges = time_selector_intervals_at(&rule_sequence.time_selector, date);
-            Some(Schedule::from_ranges_with_sorted_comments(
+            Some(Schedule::from_ranges(
                 ranges,
                 rule_sequence.kind,
-                comments(),
+                rule_sequence.comments.to_ref(),
             ))
         } else {
             None
@@ -285,10 +277,10 @@ fn rule_sequence_schedule_at<'s>(
 
         if rule_sequence.day_selector.filter(date, holiday) {
             let ranges = time_selector_intervals_at_next_day(&rule_sequence.time_selector, date);
-            Some(Schedule::from_ranges_with_sorted_comments(
+            Some(Schedule::from_ranges(
                 ranges,
                 rule_sequence.kind,
-                comments(),
+                rule_sequence.comments.to_ref(),
             ))
         } else {
             None

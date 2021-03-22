@@ -1,6 +1,8 @@
 pub mod day;
 pub mod time;
 
+use crate::sorted_vec::UniqueSortedVec;
+
 // RuleSequence
 
 #[derive(Clone, Debug)]
@@ -9,32 +11,7 @@ pub struct RuleSequence {
     pub time_selector: time::TimeSelector,
     pub kind: RuleKind,
     pub operator: RuleOperator,
-    comments: Vec<String>,
-}
-
-impl RuleSequence {
-    pub fn new(
-        day_selector: day::DaySelector,
-        time_selector: time::TimeSelector,
-        kind: RuleKind,
-        operator: RuleOperator,
-        mut comments: Vec<String>,
-    ) -> Self {
-        comments.sort_unstable();
-
-        Self {
-            day_selector,
-            time_selector,
-            kind,
-            operator,
-            comments,
-        }
-    }
-
-    /// Return the sorted list of comments attached to this RuleSequence.
-    pub fn comments(&self) -> &[String] {
-        self.comments.as_slice()
-    }
+    pub comments: UniqueSortedVec<String>,
 }
 
 // RuleKind
@@ -45,6 +22,8 @@ pub enum RuleKind {
     Closed,
     Unknown,
 }
+
+// RuleOperator
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum RuleOperator {

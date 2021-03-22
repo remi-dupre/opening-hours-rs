@@ -5,7 +5,7 @@ use chrono::NaiveDate;
 use opening_hours_syntax::extended_time::ExtendedTime;
 use opening_hours_syntax::rules::time as ts;
 
-use crate::utils::{range_intersection, time_ranges_union};
+use crate::utils::range::{range_intersection, time_ranges_union};
 
 pub(crate) fn time_selector_intervals_at(
     time_selector: &ts::TimeSelector,
