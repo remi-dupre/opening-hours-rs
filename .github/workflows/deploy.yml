@@ -43,7 +43,7 @@ jobs:
 
     strategy:
       matrix:
-        crate: [".", "opening-hours-syntax"]
+        crate: ["opening-hours-syntax", "."]
 
     defaults:
       run:
