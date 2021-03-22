@@ -85,42 +85,39 @@ impl<'c> Schedule<'c> {
 
     // NOTE: It is most likely that implementing a custom struct for this
     //       iterator could give some performances: it would avoid Boxing,
-    //       Vtable, cloning inner array and allow to implement `peek()`
+    //       resulting trait object and allows to implement `peek()`
     //       without any wrapper.
     pub fn into_iter_filled(self) -> Box<dyn Iterator<Item = TimeRange<'c>> + 'c> {
-        let time_points = self
-            .inner
-            .into_iter()
-            .map(|tr| {
-                let a = (tr.range.start, tr.kind, tr.comments);
-                let b = (tr.range.end, RuleKind::Closed, UniqueSortedVec::new());
-                once(a).chain(once(b))
-            })
-            .flatten();
-
-        let start = once((
-            ExtendedTime::new(0, 0),
-            RuleKind::Closed,
-            UniqueSortedVec::new(),
-        ));
-
-        let end = once((
-            ExtendedTime::new(24, 0),
-            RuleKind::Closed,
-            UniqueSortedVec::new(),
-        ));
-
-        let time_points = start.chain(time_points).chain(end);
-        let feasibles = time_points.clone().zip(time_points.skip(1));
-        let result = feasibles.filter_map(|((start, kind, comments), (end, _, _))| {
-            if start < end {
-                Some(TimeRange::new(start..end, kind, comments))
-            } else {
-                None
-            }
+        let time_points = self.inner.into_iter().flat_map(|tr| {
+            let a = (tr.range.start, tr.kind, tr.comments);
+            let b = (tr.range.end, RuleKind::Closed, UniqueSortedVec::new());
+            // When std::array::IntoIter is stabilized this will be replacable with:
+            // std::array::IntoIter::new([a, b])
+            once(a).chain(once(b))
         });
 
-        Box::new(result)
+        // Add dummy time points to extend intervals to day bounds
+        let bound = |hour| {
+            (
+                ExtendedTime::new(hour, 0),
+                RuleKind::Closed,
+                UniqueSortedVec::new(),
+            )
+        };
+
+        let start = once(bound(0));
+        let end = once(bound(24));
+        let mut time_points = start.chain(time_points).chain(end).peekable();
+
+        // Zip consecutive time points
+        Box::new(
+            std::iter::from_fn(move || {
+                let (start, kind, comment) = time_points.next()?;
+                let (end, _, _) = time_points.peek()?;
+                Some(TimeRange::new(start..*end, kind, comment))
+            })
+            .filter(|tr| tr.range.start != tr.range.end),
+        )
     }
 
     // TODO: this is implemented with quadratic time where it could probably be
