@@ -170,7 +170,7 @@ impl PyIterProtocol for RangeIterator {
             dt_range.range.start.into(),
             dt_range.range.end.into(),
             dt_range.kind.into(),
-            dt_range.into_comments(),
+            dt_range.into_comments().into(),
         ))
     }
 }

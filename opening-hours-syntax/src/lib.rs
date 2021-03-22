@@ -36,6 +36,7 @@ extern crate pest_derive;
 pub mod error;
 pub mod extended_time;
 pub mod rules;
+pub mod sorted_vec;
 
 mod parser;
 

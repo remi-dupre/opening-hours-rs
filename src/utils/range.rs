@@ -1,9 +1,10 @@
-use std::cmp::{max, min, Ordering};
+use std::cmp::{max, min};
 use std::fmt;
 use std::ops::{Range, RangeInclusive};
 
 use chrono::NaiveDateTime;
 use opening_hours_syntax::rules::RuleKind;
+use opening_hours_syntax::sorted_vec::UniqueSortedVec;
 
 // DateTimeRange
 
@@ -12,7 +13,7 @@ use opening_hours_syntax::rules::RuleKind;
 pub struct DateTimeRange<'c> {
     pub range: Range<NaiveDateTime>,
     pub kind: RuleKind,
-    pub(crate) comments: Vec<&'c str>,
+    pub comments: UniqueSortedVec<&'c str>,
 }
 
 impl fmt::Debug for DateTimeRange<'_> {
@@ -29,7 +30,7 @@ impl<'c> DateTimeRange<'c> {
     pub(crate) fn new_with_sorted_comments(
         range: Range<NaiveDateTime>,
         kind: RuleKind,
-        comments: Vec<&'c str>,
+        comments: UniqueSortedVec<&'c str>,
     ) -> Self {
         Self {
             range,
@@ -42,7 +43,7 @@ impl<'c> DateTimeRange<'c> {
         &self.comments
     }
 
-    pub fn into_comments(self) -> Vec<&'c str> {
+    pub fn into_comments(self) -> UniqueSortedVec<&'c str> {
         self.comments
     }
 }
@@ -55,20 +56,6 @@ pub(crate) fn wrapping_range_contains<T: PartialOrd>(range: &RangeInclusive<T>, 
     } else {
         range.start() <= elt || elt <= range.end()
     }
-}
-
-pub fn is_sorted<T: PartialOrd>(slice: &[T]) -> bool {
-    if let Some(mut curr) = slice.first() {
-        for x in &slice[1..] {
-            if x >= curr {
-                curr = x;
-            } else {
-                return false;
-            }
-        }
-    }
-
-    true
 }
 
 pub(crate) fn time_ranges_union<T: Ord>(
@@ -111,27 +98,5 @@ pub(crate) fn range_intersection<T: Ord>(range_1: Range<T>, range_2: Range<T>) -
         Some(result)
     } else {
         None
-    }
-}
-
-pub(crate) fn union_sorted<T: Clone + Ord>(vec_1: &[T], vec_2: &[T]) -> Vec<T> {
-    debug_assert!(is_sorted(vec_1));
-    debug_assert!(is_sorted(vec_2));
-
-    match (vec_1, vec_2) {
-        ([], vec) | (vec, []) => vec.to_vec(),
-        ([head_1 @ .., tail_1], [head_2 @ .., tail_2]) => {
-            let build_with = |for_head_1, for_head_2, tail| {
-                let mut res = union_sorted(for_head_1, for_head_2);
-                res.push(tail);
-                res
-            };
-
-            match tail_1.cmp(tail_2) {
-                Ordering::Equal => build_with(head_1, head_2, tail_1.clone()),
-                Ordering::Less => build_with(vec_1, head_2, tail_2.clone()),
-                Ordering::Greater => build_with(head_1, vec_2, tail_1.clone()),
-            }
-        }
     }
 }

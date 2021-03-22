@@ -4,7 +4,7 @@ use chrono::prelude::Datelike;
 use chrono::{Duration, NaiveDate};
 
 use crate::opening_hours::DATE_LIMIT;
-use crate::utils::wrapping_range_contains;
+use crate::utils::range::wrapping_range_contains;
 use opening_hours_syntax::rules::day as ds;
 
 /// Generic trait to specify the behavior of a selector over dates.

@@ -17,7 +17,7 @@ fn s000_idunn_interval_stops_next_day() -> Result<(), Error> {
         vec![DateTimeRange {
             range: start..end,
             kind: Closed,
-            comments: vec![],
+            comments: vec![].into(),
         }],
     );
 

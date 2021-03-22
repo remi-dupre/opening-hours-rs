@@ -74,15 +74,16 @@ fn build_rule_sequence(pair: Pair<Rule>, operator: rl::RuleOperator) -> Result<r
     let comments = comment
         .into_iter()
         .chain(extra_comment.into_iter())
-        .collect();
+        .collect::<Vec<_>>()
+        .into();
 
-    Ok(rl::RuleSequence::new(
+    Ok(rl::RuleSequence {
         day_selector,
         time_selector,
         kind,
         operator,
         comments,
-    ))
+    })
 }
 
 fn build_any_rule_separator(pair: Pair<Rule>) -> rl::RuleOperator {

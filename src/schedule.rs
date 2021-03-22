@@ -3,28 +3,27 @@ use std::cmp::{max, min};
 use std::collections::VecDeque;
 use std::fmt;
 use std::iter::once;
+use std::mem::take;
 use std::ops::Range;
 
-use crate::utils::{is_sorted, union_sorted};
 use opening_hours_syntax::extended_time::ExtendedTime;
 use opening_hours_syntax::rules::RuleKind;
+use opening_hours_syntax::sorted_vec::UniqueSortedVec;
 
 #[non_exhaustive]
 #[derive(Clone, Eq, PartialEq)]
 pub struct TimeRange<'c> {
     pub range: Range<ExtendedTime>,
     pub kind: RuleKind,
-    pub comments: Vec<&'c str>,
+    pub comments: UniqueSortedVec<&'c str>,
 }
 
 impl<'c> TimeRange<'c> {
-    pub(crate) fn new_with_sorted_comments(
+    pub(crate) fn new(
         range: Range<ExtendedTime>,
         kind: RuleKind,
-        comments: Vec<&'c str>,
+        comments: UniqueSortedVec<&'c str>,
     ) -> Self {
-        debug_assert!(is_sorted(&comments));
-
         TimeRange {
             range,
             kind,
@@ -67,18 +66,16 @@ impl<'c> Schedule<'c> {
         Self { inner: Vec::new() }
     }
 
-    pub fn from_ranges_with_sorted_comments(
+    pub fn from_ranges(
         ranges: impl IntoIterator<Item = Range<ExtendedTime>>,
         kind: RuleKind,
-        comments: Vec<&'c str>,
+        comments: UniqueSortedVec<&'c str>,
     ) -> Self {
-        debug_assert!(is_sorted(&comments));
-
         Schedule {
             inner: ranges
                 .into_iter()
                 .inspect(|range| assert!(range.start < range.end))
-                .map(|range| TimeRange::new_with_sorted_comments(range, kind, comments.clone()))
+                .map(|range| TimeRange::new(range, kind, comments.clone()))
                 .collect(),
         }
     }
@@ -97,23 +94,28 @@ impl<'c> Schedule<'c> {
             .into_iter()
             .map(|tr| {
                 let a = (tr.range.start, tr.kind, tr.comments);
-                let b = (tr.range.end, RuleKind::Closed, Vec::new());
+                let b = (tr.range.end, RuleKind::Closed, UniqueSortedVec::new());
                 once(a).chain(once(b))
             })
             .flatten();
 
-        let start = once((ExtendedTime::new(0, 0), RuleKind::Closed, Vec::new()));
-        let end = once((ExtendedTime::new(24, 0), RuleKind::Closed, Vec::new()));
-        let time_points = start.chain(time_points).chain(end);
+        let start = once((
+            ExtendedTime::new(0, 0),
+            RuleKind::Closed,
+            UniqueSortedVec::new(),
+        ));
 
+        let end = once((
+            ExtendedTime::new(24, 0),
+            RuleKind::Closed,
+            UniqueSortedVec::new(),
+        ));
+
+        let time_points = start.chain(time_points).chain(end);
         let feasibles = time_points.clone().zip(time_points.skip(1));
         let result = feasibles.filter_map(|((start, kind, comments), (end, _, _))| {
             if start < end {
-                Some(TimeRange::new_with_sorted_comments(
-                    start..end,
-                    kind,
-                    comments,
-                ))
+                Some(TimeRange::new(start..end, kind, comments))
             } else {
                 None
             }
@@ -148,7 +150,7 @@ impl<'c> Schedule<'c> {
                 if tr.range.start < tr.range.end {
                     Some(tr)
                 } else {
-                    ins_tr.comments = union_sorted(&ins_tr.comments, &tr.comments);
+                    ins_tr.comments = take(&mut ins_tr.comments).union(tr.comments);
                     None
                 }
             })
@@ -164,7 +166,7 @@ impl<'c> Schedule<'c> {
                 if tr.range.start < tr.range.end {
                     Some(tr)
                 } else {
-                    ins_tr.comments = union_sorted(&ins_tr.comments, &tr.comments);
+                    ins_tr.comments = take(&mut ins_tr.comments).union(tr.comments);
                     None
                 }
             })
@@ -180,7 +182,7 @@ impl<'c> Schedule<'c> {
         {
             let tr = before.pop().unwrap();
             ins_tr.range.start = tr.range.start;
-            ins_tr.comments = union_sorted(&tr.comments, &ins_tr.comments);
+            ins_tr.comments = tr.comments.union(ins_tr.comments);
         }
 
         #[allow(clippy::suspicious_operation_groupings)]
@@ -191,7 +193,7 @@ impl<'c> Schedule<'c> {
         {
             let tr = after.pop_front().unwrap();
             ins_tr.range.end = tr.range.end;
-            ins_tr.comments = union_sorted(&tr.comments, &ins_tr.comments);
+            ins_tr.comments = tr.comments.union(ins_tr.comments);
         }
 
         // Build final set of intervals
@@ -224,12 +226,8 @@ macro_rules! schedule {
 
             $(
                 let curr = ExtendedTime::new($hh2, $mm2);
-
-                let mut comments = Vec::new();
-                $( comments.push($comment); )*
-                comments.sort_unstable();
-
-                inner.push(TimeRange::new_with_sorted_comments(prev..curr, $kind, comments));
+                let comments = vec![$($comment),*].into();
+                inner.push(TimeRange::new(prev..curr, $kind, comments));
 
                 #[allow(unused_assignments)]
                 { prev = curr }
