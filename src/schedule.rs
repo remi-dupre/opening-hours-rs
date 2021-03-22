@@ -1,6 +1,5 @@
 use std::boxed::Box;
 use std::cmp::{max, min};
-use std::collections::VecDeque;
 use std::fmt;
 use std::iter::once;
 use std::mem::take;
@@ -156,7 +155,7 @@ impl<'c> Schedule<'c> {
             })
             .collect();
 
-        let mut after: VecDeque<_> = self
+        let mut after = self
             .inner
             .into_iter()
             .filter(|tr| tr.range.end > ins_start)
@@ -170,7 +169,9 @@ impl<'c> Schedule<'c> {
                     None
                 }
             })
-            .collect();
+            .collect::<Vec<_>>()
+            .into_iter()
+            .peekable();
 
         // Extend the inserted interval if it has adjacent intervals with same value
 
@@ -187,11 +188,11 @@ impl<'c> Schedule<'c> {
 
         #[allow(clippy::suspicious_operation_groupings)]
         while after
-            .front()
+            .peek()
             .map(|tr| ins_tr.range.end == tr.range.start && tr.kind == ins_tr.kind)
             .unwrap_or(false)
         {
-            let tr = after.pop_front().unwrap();
+            let tr = after.next().unwrap();
             ins_tr.range.end = tr.range.end;
             ins_tr.comments = tr.comments.union(ins_tr.comments);
         }
@@ -200,8 +201,7 @@ impl<'c> Schedule<'c> {
 
         let mut inner = before;
         inner.push(ins_tr);
-        inner.extend(after.into_iter());
-
+        inner.extend(after);
         Schedule { inner }
     }
 }
