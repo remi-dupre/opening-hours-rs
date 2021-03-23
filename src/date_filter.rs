@@ -6,13 +6,18 @@ use chrono::{Duration, NaiveDate};
 use crate::opening_hours::DATE_LIMIT;
 use crate::utils::range::wrapping_range_contains;
 use opening_hours_syntax::rules::day as ds;
+use opening_hours_syntax::sorted_vec::UniqueSortedVec;
 
 /// Generic trait to specify the behavior of a selector over dates.
 pub trait DateFilter {
     fn filter(&self, date: NaiveDate, holidays: &[NaiveDate]) -> bool;
 
     /// Provide a lower bound to the next date with a different result to `filter`.
-    fn next_change_hint(&self, _date: NaiveDate, _holidays: &[NaiveDate]) -> Option<NaiveDate> {
+    fn next_change_hint(
+        &self,
+        _date: NaiveDate,
+        _holidays: &UniqueSortedVec<NaiveDate>,
+    ) -> Option<NaiveDate> {
         None
     }
 }
@@ -22,7 +27,11 @@ impl<T: DateFilter> DateFilter for [T] {
         self.is_empty() || self.iter().any(|x| x.filter(date, holidays))
     }
 
-    fn next_change_hint(&self, date: NaiveDate, holidays: &[NaiveDate]) -> Option<NaiveDate> {
+    fn next_change_hint(
+        &self,
+        date: NaiveDate,
+        holidays: &UniqueSortedVec<NaiveDate>,
+    ) -> Option<NaiveDate> {
         self.iter()
             .map(|selector| selector.next_change_hint(date, holidays))
             .min()
@@ -38,7 +47,11 @@ impl DateFilter for ds::DaySelector {
             && self.weekday.filter(date, holidays)
     }
 
-    fn next_change_hint(&self, date: NaiveDate, holidays: &[NaiveDate]) -> Option<NaiveDate> {
+    fn next_change_hint(
+        &self,
+        date: NaiveDate,
+        holidays: &UniqueSortedVec<NaiveDate>,
+    ) -> Option<NaiveDate> {
         *[
             self.year.next_change_hint(date, holidays),
             self.monthday.next_change_hint(date, holidays),
@@ -57,7 +70,11 @@ impl DateFilter for ds::YearRange {
         self.range.contains(&year) && (year - self.range.start()) % self.step == 0
     }
 
-    fn next_change_hint(&self, date: NaiveDate, _holidays: &[NaiveDate]) -> Option<NaiveDate> {
+    fn next_change_hint(
+        &self,
+        date: NaiveDate,
+        _holidays: &UniqueSortedVec<NaiveDate>,
+    ) -> Option<NaiveDate> {
         let curr_year: u16 = date.year().try_into().unwrap();
 
         let next_year = {
@@ -175,23 +192,25 @@ impl DateFilter for ds::WeekDayRange {
         }
     }
 
-    fn next_change_hint(&self, date: NaiveDate, holidays: &[NaiveDate]) -> Option<NaiveDate> {
+    fn next_change_hint(
+        &self,
+        date: NaiveDate,
+        holidays: &UniqueSortedVec<NaiveDate>,
+    ) -> Option<NaiveDate> {
         match self {
             ds::WeekDayRange::Holiday {
                 kind: ds::HolidayKind::Public,
                 offset,
             } => Some({
-                match holidays.binary_search(&(date - Duration::days(*offset))) {
-                    Ok(_) => date + Duration::days(1),
-                    Err(i) => {
-                        if i < holidays.len() {
-                            // return the next comming holiday
-                            holidays[i]
-                        } else {
-                            // there is no next comming holiday
-                            DATE_LIMIT.date()
-                        }
-                    }
+                let date_with_offset = date - Duration::days(*offset);
+
+                if holidays.contains(&date_with_offset) {
+                    date + Duration::days(1)
+                } else {
+                    holidays
+                        .find_first_following(&date_with_offset)
+                        .map(|following| *following + Duration::days(*offset))
+                        .unwrap_or_else(|| DATE_LIMIT.date())
                 }
             }),
             _ => None,
