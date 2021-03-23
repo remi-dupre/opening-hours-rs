@@ -15,15 +15,17 @@ use std::ops::Deref;
 /// ```
 #[repr(transparent)]
 #[derive(Default)]
-pub struct UniqueSortedVec<T: Ord>(Vec<T>);
+pub struct UniqueSortedVec<T>(Vec<T>);
 
-impl<T: Ord> UniqueSortedVec<T> {
+impl<T> UniqueSortedVec<T> {
     /// Create a new empty instance.
     #[inline]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self(Vec::new())
     }
+}
 
+impl<T: Ord> UniqueSortedVec<T> {
     /// Build a new [`UniqueSortedVec`] with borrowed content. The order is
     /// assumed to be equivalent for borrowed content.
     ///
@@ -70,6 +72,38 @@ impl<T: Ord> UniqueSortedVec<T> {
                 new_head.0.push(last);
                 new_head
             }
+        }
+    }
+
+    /// Returns true if the slice contains an element with the given value.
+    ///
+    /// ```
+    /// use opening_hours_syntax::sorted_vec::UniqueSortedVec;
+    ///
+    /// let sorted: UniqueSortedVec<_> = vec![10, 40, 30].into();
+    /// assert!(sorted.contains(&30));
+    /// assert!(!sorted.contains(&50));
+    /// ```
+    #[inline]
+    pub fn contains(&self, x: &T) -> bool {
+        self.0.binary_search(x).is_ok()
+    }
+
+    /// Search for the given value in the slice return a reference to it or the
+    /// next greater value if it is not found.
+    ///
+    /// ```
+    /// use opening_hours_syntax::sorted_vec::UniqueSortedVec;
+    ///
+    /// let sorted: UniqueSortedVec<_> = vec![10, 40, 30].into();
+    /// assert_eq!(sorted.find_first_following(&30), Some(&30));
+    /// assert_eq!(sorted.find_first_following(&31), Some(&40));
+    /// assert_eq!(sorted.find_first_following(&50), None);
+    /// ```
+    #[inline]
+    pub fn find_first_following(&self, x: &T) -> Option<&T> {
+        match self.0.binary_search(x) {
+            Ok(i) | Err(i) => self.0.get(i),
         }
     }
 }
