@@ -12,6 +12,7 @@ pub struct TimeSelector {
 }
 
 impl TimeSelector {
+    #[inline]
     pub fn new(time: Vec<TimeSpan>) -> Self {
         if time.is_empty() {
             Self::default()
@@ -22,6 +23,7 @@ impl TimeSelector {
 }
 
 impl Default for TimeSelector {
+    #[inline]
     fn default() -> Self {
         Self {
             time: vec![TimeSpan::fixed_range(
@@ -42,6 +44,7 @@ pub struct TimeSpan {
 }
 
 impl TimeSpan {
+    #[inline]
     pub fn fixed_range(start: ExtendedTime, end: ExtendedTime) -> Self {
         Self {
             range: Time::Fixed(start)..Time::Fixed(end),

@@ -58,6 +58,7 @@ pub enum Date {
 }
 
 impl Date {
+    #[inline]
     pub fn day(day: u8, month: Month, year: u16) -> Self {
         Self::Fixed {
             day,
@@ -76,6 +77,7 @@ pub struct DateOffset {
 }
 
 impl DateOffset {
+    #[inline]
     pub fn apply(&self, mut date: NaiveDate) -> NaiveDate {
         date += Duration::days(self.day_offset);
 
@@ -107,6 +109,7 @@ pub enum WeekDayOffset {
 }
 
 impl Default for WeekDayOffset {
+    #[inline]
     fn default() -> Self {
         Self::None
     }
@@ -162,6 +165,7 @@ pub enum Month {
 }
 
 impl Month {
+    #[inline]
     pub fn from_u8(x: u8) -> Result<Self, InvalidMonth> {
         Ok(match x {
             1 => Self::January,
@@ -180,6 +184,7 @@ impl Month {
         })
     }
 
+    #[inline]
     pub fn next(self) -> Self {
         let num = self as u8;
         Self::from_u8((num % 12) + 1).unwrap()
