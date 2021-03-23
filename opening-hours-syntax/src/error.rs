@@ -12,6 +12,7 @@ pub enum Error {
 }
 
 impl From<pest::error::Error<Rule>> for Error {
+    #[inline]
     fn from(pest_err: pest::error::Error<Rule>) -> Self {
         Self::Parser(pest_err)
     }

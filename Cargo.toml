@@ -27,3 +27,7 @@ criterion = "0.3"
 [[bench]]
 name = "benchmarks"
 harness = false
+
+[profile.bench]
+codegen-units = 1
+lto = "fat"

@@ -19,6 +19,7 @@ pub struct UniqueSortedVec<T: Ord>(Vec<T>);
 
 impl<T: Ord> UniqueSortedVec<T> {
     /// Create a new empty instance.
+    #[inline]
     pub fn new() -> Self {
         Self(Vec::new())
     }
@@ -33,6 +34,7 @@ impl<T: Ord> UniqueSortedVec<T> {
     /// let sorted_ref: UniqueSortedVec<&str> = sorted.to_ref();
     /// assert_eq!(sorted_ref.as_slice(), &["Anaïs", "Hello"]);
     /// ```
+    #[inline]
     pub fn to_ref<U: Ord + ?Sized>(&self) -> UniqueSortedVec<&U>
     where
         T: Borrow<U>,
@@ -49,6 +51,7 @@ impl<T: Ord> UniqueSortedVec<T> {
     /// let sorted_2: UniqueSortedVec<_> = vec![0, 3, 4].into();
     /// assert_eq!(sorted_1.union(sorted_2).as_slice(), &[0, 1, 2, 3, 4]);
     /// ```
+    #[inline]
     pub fn union(mut self, mut other: Self) -> Self {
         match (self.as_slice(), other.as_slice()) {
             (_, []) => self,
@@ -72,6 +75,7 @@ impl<T: Ord> UniqueSortedVec<T> {
 }
 
 impl<T: Ord> From<Vec<T>> for UniqueSortedVec<T> {
+    #[inline]
     fn from(mut vec: Vec<T>) -> Self {
         vec.sort_unstable();
         vec.dedup();
@@ -80,6 +84,7 @@ impl<T: Ord> From<Vec<T>> for UniqueSortedVec<T> {
 }
 
 impl<T: Ord> Into<Vec<T>> for UniqueSortedVec<T> {
+    #[inline]
     fn into(self) -> Vec<T> {
         self.0
     }
@@ -89,15 +94,8 @@ impl<T: Ord> Into<Vec<T>> for UniqueSortedVec<T> {
 // --- Dummy trait implementations.
 // ---
 
-impl<T: Ord> Deref for UniqueSortedVec<T> {
-    type Target = Vec<T>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
 impl<T: Ord + Clone> Clone for UniqueSortedVec<T> {
+    #[inline]
     fn clone(&self) -> Self {
         Self(self.0.clone())
     }
@@ -109,10 +107,20 @@ impl<T: Ord + fmt::Debug> fmt::Debug for UniqueSortedVec<T> {
     }
 }
 
-impl<T: Ord + PartialEq> PartialEq for UniqueSortedVec<T> {
-    fn eq(&self, other: &Self) -> bool {
-        self.0.eq(&other.0)
+impl<T: Ord> Deref for UniqueSortedVec<T> {
+    type Target = Vec<T>;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
 impl<T: Ord + Eq> Eq for UniqueSortedVec<T> {}
+
+impl<T: Ord + PartialEq> PartialEq for UniqueSortedVec<T> {
+    #[inline]
+    fn eq(&self, other: &Self) -> bool {
+        self.0.eq(&other.0)
+    }
+}
