@@ -117,10 +117,10 @@ impl<T: Ord> From<Vec<T>> for UniqueSortedVec<T> {
     }
 }
 
-impl<T: Ord> Into<Vec<T>> for UniqueSortedVec<T> {
+impl<T: Ord> From<UniqueSortedVec<T>> for Vec<T> {
     #[inline]
-    fn into(self) -> Vec<T> {
-        self.0
+    fn from(val: UniqueSortedVec<T>) -> Self {
+        val.0
     }
 }
 

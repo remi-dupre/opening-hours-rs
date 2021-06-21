@@ -72,7 +72,7 @@ pub(crate) fn time_ranges_union<T: Ord>(
 
     std::iter::from_fn(move || {
         if let Some(ref mut current) = current_opt {
-            #[allow(clippy::clippy::while_let_on_iterator)]
+            #[allow(clippy::while_let_on_iterator)]
             while let Some(item) = ranges.next() {
                 if current.end >= item.start {
                     // The two intervals intersect with each other
