@@ -259,37 +259,19 @@ impl OpeningHours {
 fn rule_sequence_schedule_at<'s>(
     rule_sequence: &'s RuleSequence,
     date: NaiveDate,
-    holiday: &[NaiveDate],
+    holiday: &UniqueSortedVec<NaiveDate>,
 ) -> Option<Schedule<'s>> {
-    let today = {
-        if rule_sequence.day_selector.filter(date, holiday) {
-            let ranges = time_selector_intervals_at(&rule_sequence.time_selector, date);
-            Some(Schedule::from_ranges(
-                ranges,
-                rule_sequence.kind,
-                rule_sequence.comments.to_ref(),
-            ))
-        } else {
-            None
-        }
-    };
+    let from_today = Some(date)
+        .filter(|date| rule_sequence.day_selector.filter(*date, holiday))
+        .map(|date| time_selector_intervals_at(&rule_sequence.time_selector, date))
+        .map(|rgs| Schedule::from_ranges(rgs, rule_sequence.kind, rule_sequence.comments.to_ref()));
 
-    let yesterday = {
-        let date = date - Duration::days(1);
+    let from_yesterday = (date.pred_opt())
+        .filter(|prev| rule_sequence.day_selector.filter(*prev, holiday))
+        .map(|prev| time_selector_intervals_at_next_day(&rule_sequence.time_selector, prev))
+        .map(|rgs| Schedule::from_ranges(rgs, rule_sequence.kind, rule_sequence.comments.to_ref()));
 
-        if rule_sequence.day_selector.filter(date, holiday) {
-            let ranges = time_selector_intervals_at_next_day(&rule_sequence.time_selector, date);
-            Some(Schedule::from_ranges(
-                ranges,
-                rule_sequence.kind,
-                rule_sequence.comments.to_ref(),
-            ))
-        } else {
-            None
-        }
-    };
-
-    match (today, yesterday) {
+    match (from_today, from_yesterday) {
         (Some(sched_1), Some(sched_2)) => Some(sched_1.addition(sched_2)),
         (today, yesterday) => today.or(yesterday),
     }
@@ -346,7 +328,7 @@ impl<'d> TimeDomainIterator<'d> {
                 self.curr_date = self
                     .opening_hours
                     .next_change_hint(self.curr_date)
-                    .unwrap_or_else(|| self.curr_date + Duration::days(1));
+                    .unwrap_or_else(|| self.curr_date.succ());
 
                 if self.curr_date < self.end_datetime.date() {
                     self.curr_schedule = self

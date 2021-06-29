@@ -47,9 +47,9 @@ impl<'p> IntoPy<Py<PyAny>> for State {
 
 pub struct NaiveDateTimeWrapper(NaiveDateTime);
 
-impl Into<NaiveDateTime> for NaiveDateTimeWrapper {
-    fn into(self) -> NaiveDateTime {
-        self.0
+impl From<NaiveDateTimeWrapper> for NaiveDateTime {
+    fn from(val: NaiveDateTimeWrapper) -> Self {
+        val.0
     }
 }
 
@@ -153,7 +153,7 @@ impl RangeIterator {
 
 #[pyproto]
 impl PyIterProtocol for RangeIterator {
-    fn __iter__(slf: PyRef<Self>) -> Py<RangeIterator> {
+    fn __iter__(slf: PyRef<Self>) -> Py<Self> {
         slf.into()
     }
 

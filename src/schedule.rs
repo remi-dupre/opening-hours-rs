@@ -89,11 +89,10 @@ impl<'c> Schedule<'c> {
     //       without any wrapper.
     pub fn into_iter_filled(self) -> Box<dyn Iterator<Item = TimeRange<'c>> + 'c> {
         let time_points = self.inner.into_iter().flat_map(|tr| {
-            let a = (tr.range.start, tr.kind, tr.comments);
-            let b = (tr.range.end, RuleKind::Closed, UniqueSortedVec::new());
-            // When std::array::IntoIter is stabilized this will be replacable with:
-            // std::array::IntoIter::new([a, b])
-            once(a).chain(once(b))
+            [
+                (tr.range.start, tr.kind, tr.comments),
+                (tr.range.end, RuleKind::Closed, UniqueSortedVec::new()),
+            ]
         });
 
         // Add dummy time points to extend intervals to day bounds

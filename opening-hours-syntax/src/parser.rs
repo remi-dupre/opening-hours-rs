@@ -16,6 +16,7 @@ use crate::rules as rl;
 use crate::rules::day as ds;
 use crate::rules::time as ts;
 
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Parser)]
 #[grammar = "grammar.pest"]
 struct OHParser;
