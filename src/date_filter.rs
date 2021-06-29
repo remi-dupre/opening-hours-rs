@@ -10,7 +10,7 @@ use opening_hours_syntax::sorted_vec::UniqueSortedVec;
 
 /// Generic trait to specify the behavior of a selector over dates.
 pub trait DateFilter {
-    fn filter(&self, date: NaiveDate, holidays: &[NaiveDate]) -> bool;
+    fn filter(&self, date: NaiveDate, holidays: &UniqueSortedVec<NaiveDate>) -> bool;
 
     /// Provide a lower bound to the next date with a different result to `filter`.
     fn next_change_hint(
@@ -23,7 +23,7 @@ pub trait DateFilter {
 }
 
 impl<T: DateFilter> DateFilter for [T] {
-    fn filter(&self, date: NaiveDate, holidays: &[NaiveDate]) -> bool {
+    fn filter(&self, date: NaiveDate, holidays: &UniqueSortedVec<NaiveDate>) -> bool {
         self.is_empty() || self.iter().any(|x| x.filter(date, holidays))
     }
 
@@ -40,7 +40,7 @@ impl<T: DateFilter> DateFilter for [T] {
 }
 
 impl DateFilter for ds::DaySelector {
-    fn filter(&self, date: NaiveDate, holidays: &[NaiveDate]) -> bool {
+    fn filter(&self, date: NaiveDate, holidays: &UniqueSortedVec<NaiveDate>) -> bool {
         self.year.filter(date, holidays)
             && self.monthday.filter(date, holidays)
             && self.week.filter(date, holidays)
@@ -65,7 +65,7 @@ impl DateFilter for ds::DaySelector {
 }
 
 impl DateFilter for ds::YearRange {
-    fn filter(&self, date: NaiveDate, _holidays: &[NaiveDate]) -> bool {
+    fn filter(&self, date: NaiveDate, _holidays: &UniqueSortedVec<NaiveDate>) -> bool {
         let year: u16 = date.year().try_into().unwrap();
         self.range.contains(&year) && (year - self.range.start()) % self.step == 0
     }
@@ -102,7 +102,7 @@ impl DateFilter for ds::YearRange {
 }
 
 impl DateFilter for ds::MonthdayRange {
-    fn filter(&self, date: NaiveDate, _holidays: &[NaiveDate]) -> bool {
+    fn filter(&self, date: NaiveDate, _holidays: &UniqueSortedVec<NaiveDate>) -> bool {
         let in_year = date.year() as u16;
         let in_month = ds::Month::from_u8(date.month() as u8).expect("invalid month value");
 
@@ -170,7 +170,7 @@ impl DateFilter for ds::MonthdayRange {
 }
 
 impl DateFilter for ds::WeekDayRange {
-    fn filter(&self, date: NaiveDate, holidays: &[NaiveDate]) -> bool {
+    fn filter(&self, date: NaiveDate, holidays: &UniqueSortedVec<NaiveDate>) -> bool {
         match self {
             ds::WeekDayRange::Fixed { range, nth, offset } => {
                 let date = date - Duration::days(*offset);
@@ -182,7 +182,7 @@ impl DateFilter for ds::WeekDayRange {
             ds::WeekDayRange::Holiday { kind, offset } => match kind {
                 ds::HolidayKind::Public => {
                     let date = date - Duration::days(*offset);
-                    holidays.binary_search(&date).is_ok()
+                    holidays.contains(&date)
                 }
                 ds::HolidayKind::School => {
                     eprintln!("[WARN] school holidays are not supported, thus ignored");
@@ -205,7 +205,7 @@ impl DateFilter for ds::WeekDayRange {
                 let date_with_offset = date - Duration::days(*offset);
 
                 if holidays.contains(&date_with_offset) {
-                    date + Duration::days(1)
+                    date.succ_opt()?
                 } else {
                     holidays
                         .find_first_following(&date_with_offset)
@@ -219,7 +219,7 @@ impl DateFilter for ds::WeekDayRange {
 }
 
 impl DateFilter for ds::WeekRange {
-    fn filter(&self, date: NaiveDate, _holidays: &[NaiveDate]) -> bool {
+    fn filter(&self, date: NaiveDate, _holidays: &UniqueSortedVec<NaiveDate>) -> bool {
         let week = date.iso_week().week() as u8;
         wrapping_range_contains(&self.range, &week) && (week - self.range.start()) % self.step == 0
     }
