@@ -16,6 +16,7 @@ jobs:
     strategy:
       matrix:
         crate: ["opening-hours-syntax", "."]
+        toolchain: ["stable", "beta", "nightly"]
 
     defaults:
       run:
@@ -23,6 +24,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.toolchain }}
+          default: true
+          profile: minimal
+          components: rustfmt, clippy
 
       - name: Display rust version
         run: |
@@ -48,6 +56,12 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          default: true
+          profile: minimal
+
       - name: Coverage
         uses: actions-rs/tarpaulin@v0.1
         with:
@@ -55,6 +69,6 @@ jobs:
           args: '--ignore-panics --ignore-tests'
 
       - name: Upload to codecov.io
-        uses: codecov/codecov-action@v1.0.2
+        uses: codecov/codecov-action@v1
         with:
           token: ${{secrets.CODECOV_TOKEN}}

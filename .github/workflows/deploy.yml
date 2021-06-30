@@ -42,9 +42,9 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
+      max-parallel: 1
       matrix:
         crate: ["opening-hours-syntax", "."]
-        max-parallel: 1
 
     defaults:
       run:
@@ -52,6 +52,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          default: true
+          profile: minimal
 
       - name: Login to crates.io
         run: cargo login $TOKEN
@@ -75,6 +81,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          default: true
+          profile: minimal
 
       - uses: actions/setup-python@v2
         with:
