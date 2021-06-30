@@ -194,7 +194,7 @@ impl OpeningHours {
         if from >= *DATE_LIMIT || to > *DATE_LIMIT {
             Err(DateLimitExceeded)
         } else {
-            Ok(TimeDomainIterator::new(&self, from, to)
+            Ok(TimeDomainIterator::new(self, from, to)
                 .take_while(move |dtr| dtr.range.start < to)
                 .map(move |dtr| {
                     let start = max(dtr.range.start, from);
