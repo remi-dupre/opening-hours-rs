@@ -103,3 +103,8 @@ fn s007_idunn_date_separator() {
     )
     .is_ok());
 }
+
+#[test]
+fn s008_pj_no_open_before_separator() {
+    assert!(OpeningHours::parse("Mo-Su 00:00-01:00, 07:30-24:00 ; PH off").is_ok());
+}
