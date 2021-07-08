@@ -7,9 +7,9 @@ input_opening_hours = _{ SOI ~ opening_hours ~ EOI }
 
 opening_hours = { rule_sequence ~ ( any_rule_separator ~ rule_sequence )* }
 
-// NOTE: the specification makes the space mendatory here but it would enforce
+// NOTE: the specification makes the space mandatory here but it would enforce
 //       a double space in some cases.
-// NOTE: the specification makes `rules_modifier` mendatory but possibly empty,
+// NOTE: the specification makes `rules_modifier` mandatory but possibly empty,
 //       it is simpler to deal with by simply making it optional.
 rule_sequence = { selector_sequence ~ space? ~ rules_modifier? }
 
@@ -25,13 +25,15 @@ normal_rule_separator = @{ ";" ~ space }
 
 additional_rule_separator = @{ "," ~ space }
 
-fallback_rule_separator = @{ space ~ "||" ~ space }
+// NOTE: the specification actually enforces to prefix this with a space,
+//        however it could have been already consumed by `rule_sequence`.
+fallback_rule_separator = @{ space? ~ "||" ~ space }
 
 // Rule modifier
 
 rules_modifier = {
       comment
-    | rules_modifier_enum ~ ( space ~ comment )?
+    | rules_modifier_enum ~ space? ~ comment?
 }
 
 rules_modifier_enum = {
