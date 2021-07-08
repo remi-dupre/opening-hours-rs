@@ -119,7 +119,6 @@ fn build_rules_modifier(pair: Pair<Rule>) -> (rl::RuleKind, Option<String>) {
     };
 
     let comment = pairs.next().map(build_comment);
-
     (kind, comment)
 }
 

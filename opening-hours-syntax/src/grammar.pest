@@ -7,9 +7,11 @@ input_opening_hours = _{ SOI ~ opening_hours ~ EOI }
 
 opening_hours = { rule_sequence ~ ( any_rule_separator ~ rule_sequence )* }
 
-// NOTE: the space is made optional, overwise the syntax `RULE || "comment"`
-//       requires two spaces before the comment.
-rule_sequence = { selector_sequence ~ (space? ~ rules_modifier)? }
+// NOTE: the specification makes the space mendatory here but it would enforce
+//       a double space in some cases.
+// NOTE: the specification makes `rules_modifier` mendatory but possibly empty,
+//       it is simpler to deal with by simply making it optional.
+rule_sequence = { selector_sequence ~ space? ~ rules_modifier? }
 
 // Rule separators
 
