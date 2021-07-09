@@ -101,8 +101,8 @@ impl<'p> IntoPy<Py<PyAny>> for NaiveDateTimeWrapper {
     fn into_py(self, py: Python<'_>) -> Py<PyAny> {
         let result: PyResult<_> = self.into_py(py);
         result
-            .expect("failed at converting Rust date to Python")
-            .into_py(py)
+            .map(|date| date.into_py(py))
+            .unwrap_or_else(|_| Python::None(py))
     }
 }
 
