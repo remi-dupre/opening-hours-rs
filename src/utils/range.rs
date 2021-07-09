@@ -1,4 +1,4 @@
-use std::cmp::{max, min};
+use std::cmp::{max, min, Ordering};
 use std::fmt;
 use std::ops::{Range, RangeInclusive};
 
@@ -44,15 +44,57 @@ impl<'c> DateTimeRange<'c> {
     }
 }
 
-// Range operations
+// WrappingRange
 
-pub(crate) fn wrapping_range_contains<T: PartialOrd>(range: &RangeInclusive<T>, elt: &T) -> bool {
-    if range.start() <= range.end() {
-        range.contains(elt)
-    } else {
-        range.start() <= elt || elt <= range.end()
+pub(crate) trait WrappingRange<T> {
+    fn wrapping_contains(&self, elt: &T) -> bool;
+}
+
+impl<T: PartialOrd> WrappingRange<T> for RangeInclusive<T> {
+    fn wrapping_contains(&self, elt: &T) -> bool {
+        if self.start() <= self.end() {
+            self.contains(elt)
+        } else {
+            self.start() <= elt || elt <= self.end()
+        }
     }
 }
+
+// RangeCompare
+
+pub(crate) trait RangeCompare<T> {
+    fn compare(&self, elt: &T) -> Ordering;
+}
+
+impl<T: PartialOrd> RangeCompare<T> for RangeInclusive<T> {
+    fn compare(&self, elt: &T) -> Ordering {
+        debug_assert!(self.start() <= self.end());
+
+        if elt < self.start() {
+            Ordering::Less
+        } else if elt > self.end() {
+            Ordering::Greater
+        } else {
+            Ordering::Equal
+        }
+    }
+}
+
+impl<T: PartialOrd> RangeCompare<T> for Range<T> {
+    fn compare(&self, elt: &T) -> Ordering {
+        debug_assert!(self.start <= self.end);
+
+        if elt < &self.start {
+            Ordering::Less
+        } else if elt >= &self.end {
+            Ordering::Greater
+        } else {
+            Ordering::Equal
+        }
+    }
+}
+
+// Range operations
 
 pub(crate) fn time_ranges_union<T: Ord>(
     ranges: impl Iterator<Item = Range<T>>,
