@@ -9,6 +9,54 @@ mod week_selector;
 mod weekday_selector;
 mod year_selector;
 
+use criterion::black_box;
+use std::sync::{Arc, Condvar, Mutex};
+use std::thread;
+use std::time::{Duration, Instant};
+
+fn exec_with_timeout(f: impl FnOnce() + Send + 'static, timeout: Duration) -> bool {
+    let result = Arc::new(Mutex::new(None));
+    let finished = Arc::new(Condvar::new());
+
+    let _runner = {
+        let f = black_box(f);
+        let result = result.clone();
+        let finished = finished.clone();
+
+        thread::spawn(move || {
+            let elapsed = {
+                let start = Instant::now();
+                f();
+                start.elapsed()
+            };
+
+            *result.lock().expect("failed to write result") = Some(elapsed);
+            finished.notify_all();
+        })
+    };
+
+    let (result, _) = finished
+        .wait_timeout(result.lock().expect("failed to fetch result"), timeout)
+        .expect("poisoned lock");
+
+    result.map(|elapsed| elapsed < timeout).unwrap_or(false)
+}
+
+#[macro_export]
+macro_rules! assert_speed {
+    ( $expr: expr ; $time: literal ms ) => {{
+        use crate::tests::exec_with_timeout;
+        use std::time::Duration;
+
+        assert!(exec_with_timeout(
+            || {
+                $expr;
+            },
+            Duration::from_millis(100),
+        ));
+    }};
+}
+
 #[macro_export]
 macro_rules! date {
     ( $date: expr ) => {{

@@ -134,6 +134,7 @@ impl OpeningHours {
     }
 
     /// Get the date for next change of state.
+    /// If the date exceed the limit date, returns None.
     ///
     /// Parameters
     /// ----------
@@ -143,6 +144,7 @@ impl OpeningHours {
     ///
     /// Examples
     /// --------
+    /// >>> OpeningHours("24/7").next_change() # None
     /// >>> OpeningHours("2099Mo-Su 12:30-17:00").next_change()
     /// datetime.datetime(2099, 1, 1, 12, 30)
     #[text_signature = "(self, time=None, /)"]

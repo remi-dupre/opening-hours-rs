@@ -1,7 +1,7 @@
 use opening_hours_syntax::error::Error;
 use opening_hours_syntax::rules::RuleKind::*;
 
-use crate::{datetime, schedule_at, OpeningHours};
+use crate::{assert_speed, datetime, schedule_at, OpeningHours};
 
 #[test]
 fn s000_idunn_interval_stops_next_day() -> Result<(), Error> {
@@ -115,4 +115,23 @@ fn s009_pj_no_open_before_separator() {
         "Mo-Su 00:00-01:00, 07:30-24:00 ; PH off ; 2021 Mar 28 00:00-01:00"
     )
     .is_ok());
+}
+
+#[test]
+fn s010_pj_slow_after_24_7() {
+    assert_speed!(
+        OpeningHours::parse("24/7 open ; 2021Jan-Feb off")
+            .unwrap()
+            .next_change(datetime!("2021-07-09 19:30"))
+            .unwrap();
+        100 ms
+    );
+
+    assert_speed!(
+        OpeningHours::parse("24/7 open ; 2021 Jan 01-Feb 10 off")
+            .unwrap()
+            .next_change(datetime!("2021-07-09 19:30"))
+            .unwrap();
+        100 ms
+    );
 }
