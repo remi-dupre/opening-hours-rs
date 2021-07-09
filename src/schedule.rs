@@ -23,11 +23,7 @@ impl<'c> TimeRange<'c> {
         kind: RuleKind,
         comments: UniqueSortedVec<&'c str>,
     ) -> Self {
-        TimeRange {
-            range,
-            kind,
-            comments,
-        }
+        TimeRange { range, kind, comments }
     }
 }
 

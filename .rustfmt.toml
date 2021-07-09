@@ -1,0 +1,2 @@
+edition = "2018"
+struct_lit_width = 50

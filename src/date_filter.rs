@@ -113,58 +113,52 @@ impl DateFilter for ds::MonthdayRange {
             ds::MonthdayRange::Date {
                 start: (start, start_offset),
                 end: (end, end_offset),
-            } => match (&start, end) {
-                (
-                    ds::Date::Fixed {
-                        year: year_1,
-                        month: month_1,
-                        day: day_1,
-                    },
-                    ds::Date::Fixed {
-                        year: year_2,
-                        month: month_2,
-                        day: day_2,
-                    },
-                ) => {
-                    let start = NaiveDate::from_ymd(
-                        year_1.map(|x| x as i32).unwrap_or_else(|| date.year()),
-                        *month_1 as u32,
-                        *day_1 as u32,
-                    );
+            } => {
+                match (&start, end) {
+                    (
+                        ds::Date::Fixed { year: year_1, month: month_1, day: day_1 },
+                        ds::Date::Fixed { year: year_2, month: month_2, day: day_2 },
+                    ) => {
+                        let start = NaiveDate::from_ymd(
+                            year_1.map(|x| x as i32).unwrap_or_else(|| date.year()),
+                            *month_1 as u32,
+                            *day_1 as u32,
+                        );
 
-                    let mut start = start_offset.apply(start);
+                        let mut start = start_offset.apply(start);
 
-                    // If no year is specified we can shift of as many years as needed.
-                    if year_1.is_none() {
-                        start = start.with_year(date.year()).unwrap();
+                        // If no year is specified we can shift of as many years as needed.
+                        if year_1.is_none() {
+                            start = start.with_year(date.year()).unwrap();
 
-                        if start > date {
-                            start = start.with_year(start.year() - 1).expect("year overflow");
+                            if start > date {
+                                start = start.with_year(start.year() - 1).expect("year overflow");
+                            }
                         }
-                    }
 
-                    let end = NaiveDate::from_ymd(
-                        year_2.map(|x| x as i32).unwrap_or_else(|| start.year()),
-                        *month_2 as u32,
-                        *day_2 as u32,
-                    );
+                        let end = NaiveDate::from_ymd(
+                            year_2.map(|x| x as i32).unwrap_or_else(|| start.year()),
+                            *month_2 as u32,
+                            *day_2 as u32,
+                        );
 
-                    let mut end = end_offset.apply(end);
+                        let mut end = end_offset.apply(end);
 
-                    // If no year is specified we can shift of as many years as needed.
-                    if year_2.is_none() {
-                        end = end.with_year(start.year()).unwrap();
+                        // If no year is specified we can shift of as many years as needed.
+                        if year_2.is_none() {
+                            end = end.with_year(start.year()).unwrap();
 
-                        // If end's month is prior that start's month, end must be next year.
-                        if end < start {
-                            end = end.with_year(end.year() + 1).expect("year overflow")
+                            // If end's month is prior that start's month, end must be next year.
+                            if end < start {
+                                end = end.with_year(end.year() + 1).expect("year overflow")
+                            }
                         }
-                    }
 
-                    (start..=end).contains(&date)
+                        (start..=end).contains(&date)
+                    }
+                    _ => todo!("Easter not implemented yet"),
                 }
-                _ => todo!("Easter not implemented yet"),
-            },
+            }
         }
     }
 
@@ -174,12 +168,10 @@ impl DateFilter for ds::MonthdayRange {
         _holidays: &UniqueSortedVec<NaiveDate>,
     ) -> Option<NaiveDate> {
         match self {
-            #[rustfmt::skip]
             ds::MonthdayRange::Month { range: _, year: None } => {
                 // TODO: this is less critical as the output change is at most one year away.
                 None
             }
-            #[rustfmt::skip]
             ds::MonthdayRange::Month { range, year: Some(year) } => {
                 let year: i32 = (*year).into();
                 let start_month: u32 = *range.start() as _;
@@ -209,12 +201,10 @@ impl DateFilter for ds::MonthdayRange {
                 end: (end, end_offset),
             } => {
                 let start = start_offset.apply({
-                    match start {
-                        #[rustfmt::skip]
+                    match *start {
                         ds::Date::Fixed { year: Some(year), month, day } => {
-                            NaiveDate::from_ymd((*year).into(), *month as _, (*day).into())
-                        },
-                        #[rustfmt::skip]
+                            NaiveDate::from_ymd(year.into(), month as _, day.into())
+                        }
                         ds::Date::Fixed { year: None, month: _, day: _ } => {
                             // TODO: this is less critical as the output change is at most one year
                             //       away.
@@ -225,15 +215,12 @@ impl DateFilter for ds::MonthdayRange {
                 });
 
                 let end = end_offset.apply({
-                    match end {
-                        #[rustfmt::skip]
+                    match *end {
                         ds::Date::Fixed { year: Some(year), month, day } => {
-                            NaiveDate::from_ymd((*year).into(), *month as _, (*day).into())
-                        },
-                        #[rustfmt::skip]
+                            NaiveDate::from_ymd(year.into(), month as _, day.into())
+                        }
                         ds::Date::Fixed { year: None, month, day } => {
-                            let date =
-                                NaiveDate::from_ymd(start.year(), *month as _, (*day).into());
+                            let date = NaiveDate::from_ymd(start.year(), month as _, day.into());
 
                             if date >= start {
                                 date
@@ -288,10 +275,7 @@ impl DateFilter for ds::WeekDayRange {
         holidays: &UniqueSortedVec<NaiveDate>,
     ) -> Option<NaiveDate> {
         match self {
-            ds::WeekDayRange::Holiday {
-                kind: ds::HolidayKind::Public,
-                offset,
-            } => Some({
+            ds::WeekDayRange::Holiday { kind: ds::HolidayKind::Public, offset } => Some({
                 let date_with_offset = date - Duration::days(*offset);
 
                 if holidays.contains(&date_with_offset) {
