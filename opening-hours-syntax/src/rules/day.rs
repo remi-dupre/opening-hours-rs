@@ -60,11 +60,7 @@ pub enum Date {
 impl Date {
     #[inline]
     pub fn day(day: u8, month: Month, year: u16) -> Self {
-        Self::Fixed {
-            day,
-            month,
-            year: Some(year),
-        }
+        Self::Fixed { day, month, year: Some(year) }
     }
 }
 

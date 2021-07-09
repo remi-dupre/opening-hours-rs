@@ -14,11 +14,7 @@ fn s000_idunn_interval_stops_next_day() -> Result<(), Error> {
 
     assert_eq!(
         oh.iter_range(start, end).unwrap().collect::<Vec<_>>(),
-        vec![DateTimeRange {
-            range: start..end,
-            kind: Closed,
-            comments: vec![].into(),
-        }],
+        vec![DateTimeRange { range: start..end, kind: Closed, comments: vec![].into() }],
     );
 
     Ok(())

@@ -32,11 +32,7 @@ impl<'c> DateTimeRange<'c> {
         kind: RuleKind,
         comments: UniqueSortedVec<&'c str>,
     ) -> Self {
-        Self {
-            range,
-            kind,
-            comments,
-        }
+        Self { range, kind, comments }
     }
 
     pub fn comments(&self) -> &[&'c str] {

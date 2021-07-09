@@ -77,13 +77,7 @@ fn build_rule_sequence(pair: Pair<Rule>, operator: rl::RuleOperator) -> Result<r
         .collect::<Vec<_>>()
         .into();
 
-    Ok(rl::RuleSequence {
-        day_selector,
-        time_selector,
-        kind,
-        operator,
-        comments,
-    })
+    Ok(rl::RuleSequence { day_selector, time_selector, kind, operator, comments })
 }
 
 fn build_any_rule_separator(pair: Pair<Rule>) -> rl::RuleOperator {
@@ -169,12 +163,7 @@ fn build_selector_sequence(
     };
 
     Ok((
-        ds::DaySelector {
-            year,
-            monthday,
-            week,
-            weekday,
-        },
+        ds::DaySelector { year, monthday, week, weekday },
         ts::TimeSelector::new(time),
         comment,
     ))
@@ -262,11 +251,7 @@ fn build_timespan(pair: Pair<Rule>) -> Result<ts::TimeSpan> {
         Some(other) => unexpected_token(other, Rule::timespan),
     };
 
-    Ok(ts::TimeSpan {
-        range: start..end,
-        repeats,
-        open_end,
-    })
+    Ok(ts::TimeSpan { range: start..end, repeats, open_end })
 }
 
 fn build_time(pair: Pair<Rule>) -> ts::Time {
@@ -384,11 +369,7 @@ fn build_weekday_range(pair: Pair<Rule>) -> Result<ds::WeekDayRange> {
         }
     };
 
-    Ok(ds::WeekDayRange::Fixed {
-        range: start..=end,
-        nth,
-        offset,
-    })
+    Ok(ds::WeekDayRange::Fixed { range: start..=end, nth, offset })
 }
 
 fn build_holiday(pair: Pair<Rule>) -> Result<ds::WeekDayRange> {
@@ -467,10 +448,7 @@ fn build_week(pair: Pair<Rule>) -> Result<ds::WeekRange> {
         expected: "an integer in [0, 255]".to_string(),
     })?;
 
-    Ok(ds::WeekRange {
-        range: start..=end.unwrap_or(start),
-        step,
-    })
+    Ok(ds::WeekRange { range: start..=end.unwrap_or(start), step })
 }
 
 // ---
@@ -499,10 +477,7 @@ fn build_monthday_range(pair: Pair<Rule>) -> Result<ds::MonthdayRange> {
             let start = build_month(pairs.next().unwrap());
             let end = pairs.next().map(build_month).unwrap_or(start);
 
-            Ok(ds::MonthdayRange::Month {
-                year,
-                range: start..=end,
-            })
+            Ok(ds::MonthdayRange::Month { year, range: start..=end })
         }
         Rule::date_from => {
             let start = build_date_from(pairs.next().unwrap());
@@ -530,10 +505,7 @@ fn build_monthday_range(pair: Pair<Rule>) -> Result<ds::MonthdayRange> {
                 .map(build_date_offset)
                 .unwrap_or_else(|| Ok(Default::default()))?;
 
-            Ok(ds::MonthdayRange::Date {
-                start: (start, start_offset),
-                end: (end, end_offset),
-            })
+            Ok(ds::MonthdayRange::Date { start: (start, start_offset), end: (end, end_offset) })
         }
         other => unexpected_token(other, Rule::monthday_range),
     }
@@ -559,10 +531,7 @@ fn build_date_offset(pair: Pair<Rule>) -> Result<ds::DateOffset> {
 
     let day_offset = pairs.next().map(build_day_offset).unwrap_or(Ok(0))?;
 
-    Ok(ds::DateOffset {
-        wday_offset,
-        day_offset,
-    })
+    Ok(ds::DateOffset { wday_offset, day_offset })
 }
 
 fn build_date_from(pair: Pair<Rule>) -> ds::Date {
@@ -603,11 +572,7 @@ fn build_date_to(pair: Pair<Rule>, from: ds::Date) -> Result<ds::Date> {
                     //       that this is allowed
                     return Err(Error::Unsupported("Easter followed by a day number"));
                 }
-                ds::Date::Fixed {
-                    mut year,
-                    mut month,
-                    day,
-                } => {
+                ds::Date::Fixed { mut year, mut month, day } => {
                     if day > daynum {
                         month = month.next();
 
@@ -618,11 +583,7 @@ fn build_date_to(pair: Pair<Rule>, from: ds::Date) -> Result<ds::Date> {
                         }
                     }
 
-                    ds::Date::Fixed {
-                        year,
-                        month,
-                        day: daynum,
-                    }
+                    ds::Date::Fixed { year, month, day: daynum }
                 }
             }
         }
@@ -656,10 +617,7 @@ fn build_year_range(pair: Pair<Rule>) -> Result<ds::YearRange> {
         expected: "an integer in [0, 2**16[".to_string(),
     })?;
 
-    Ok(ds::YearRange {
-        range: start..=end.unwrap_or(start),
-        step,
-    })
+    Ok(ds::YearRange { range: start..=end.unwrap_or(start), step })
 }
 
 // ---
