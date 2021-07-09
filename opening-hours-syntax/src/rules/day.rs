@@ -1,3 +1,4 @@
+use std::convert::{TryFrom, TryInto};
 use std::ops::RangeInclusive;
 
 use chrono::prelude::Datelike;
@@ -160,27 +161,43 @@ pub enum Month {
 
 impl Month {
     #[inline]
-    pub fn from_u8(x: u8) -> Result<Self, InvalidMonth> {
-        Ok(match x {
-            1 => Self::January,
-            2 => Self::February,
-            3 => Self::March,
-            4 => Self::April,
-            5 => Self::May,
-            6 => Self::June,
-            7 => Self::July,
-            8 => Self::August,
-            9 => Self::September,
-            10 => Self::October,
-            11 => Self::November,
-            12 => Self::December,
-            _ => return Err(InvalidMonth),
-        })
-    }
-
-    #[inline]
     pub fn next(self) -> Self {
         let num = self as u8;
-        Self::from_u8((num % 12) + 1).unwrap()
+        ((num % 12) + 1).try_into().unwrap()
     }
 }
+
+macro_rules! impl_try_into_for_month {
+    ( $from_type: ty ) => {
+        impl TryFrom<$from_type> for Month {
+            type Error = InvalidMonth;
+
+            #[inline]
+            fn try_from(value: $from_type) -> Result<Self, Self::Error> {
+                let value: u8 = value.try_into().map_err(|_| InvalidMonth)?;
+
+                Ok(match value {
+                    1 => Self::January,
+                    2 => Self::February,
+                    3 => Self::March,
+                    4 => Self::April,
+                    5 => Self::May,
+                    6 => Self::June,
+                    7 => Self::July,
+                    8 => Self::August,
+                    9 => Self::September,
+                    10 => Self::October,
+                    11 => Self::November,
+                    12 => Self::December,
+                    _ => return Err(InvalidMonth),
+                })
+            }
+        }
+    };
+    ( $from_type: ty, $( $tail: tt )+ ) => {
+        impl_try_into_for_month!($from_type);
+        impl_try_into_for_month!($($tail)+);
+    };
+}
+
+impl_try_into_for_month!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, isize);
