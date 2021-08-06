@@ -8,6 +8,7 @@ use std::path::PathBuf;
 use chrono::{Datelike, NaiveDate};
 
 const HOLIDAYS_PATH: &str = "data/holidays.txt";
+const WATCH_PATHS: &[&str] = &["build.rs", "data/holidays.txt"];
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let out_dir = PathBuf::from(env::var_os("OUT_DIR").unwrap()).join("holidays");
@@ -40,7 +41,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
+    for path in WATCH_PATHS {
+        println!("cargo:rerun-if-changed={}", path);
+    }
+
     println!("cargo:rustc-env=HOLIDAYS_DIR={}", out_dir.display());
-    println!("cargo:rerun-if-changed=build.rs");
     Ok(())
 }

@@ -1,6 +1,7 @@
 mod holiday_selector;
 mod month_selector;
 mod next_change;
+mod next_change_hint;
 mod parser;
 mod rules;
 mod selective;
@@ -13,6 +14,10 @@ use criterion::black_box;
 use std::sync::{Arc, Condvar, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
+
+fn sample() -> impl Iterator<Item = &'static str> {
+    include_str!("data/sample.txt").lines().map(str::trim)
+}
 
 fn exec_with_timeout(f: impl FnOnce() + Send + 'static, timeout: Duration) -> bool {
     let result = Arc::new(Mutex::new(None));
