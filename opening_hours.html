@@ -270,7 +270,8 @@ not specified.</li>
     </div>
 
         
-            <div class="docstring"><p>Get the date for next change of state.</p>
+            <div class="docstring"><p>Get the date for next change of state.
+If the date exceed the limit date, returns None.</p>
 
 <h6 id="parameters">Parameters</h6>
 
@@ -282,7 +283,8 @@ not specified.</li>
 
 <h6 id="examples">Examples</h6>
 
-<div class="codehilite"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">OpeningHours</span><span class="p">(</span><span class="s2">&quot;2099Mo-Su 12:30-17:00&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">next_change</span><span class="p">()</span>
+<div class="codehilite"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">OpeningHours</span><span class="p">(</span><span class="s2">&quot;24/7&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">next_change</span><span class="p">()</span> <span class="c1"># None</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">OpeningHours</span><span class="p">(</span><span class="s2">&quot;2099Mo-Su 12:30-17:00&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">next_change</span><span class="p">()</span>
 <span class="go">datetime.datetime(2099, 1, 1, 12, 30)</span>
 </code></pre></div>
 </div>
