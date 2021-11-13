@@ -8,7 +8,7 @@ repository = "https://github.com/remi-dupre/opening-hours-rs"
 documentation = "https://remi-dupre.github.io/opening-hours-rs/opening_hours.html"
 homepage = "https://github.com/remi-dupre/opening-hours-rs/tree/master/python"
 description = "A parser and toolkit for the opening_hours in OpenStreetMap written in Rust."
-edition = "2018"
+edition = "2021"
 
 [lib]
 name = "opening_hours"
