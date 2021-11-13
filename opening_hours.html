@@ -73,7 +73,18 @@
                     <h1 class="modulename">
 opening_hours    </h1>
 
-                        <div class="docstring"><p>TODO: documentation</p>
+                        <div class="docstring"><p>A library for parsing and working with OSM's opening hours field. You can
+find its specification <a href="https://wiki.openstreetmap.org/wiki/Key:opening_hours/specification">here</a>
+and the reference JS library <a href="https://github.com/opening-hours/opening_hours.js">here</a>.</p>
+
+<p>Note that the specification is quite messy and that the JS library takes
+liberty to extend it quite a lot. This means that most of the real world data
+don't actually comply to the very restrictive grammar detailed in the official
+specification. This library tries to fit with the real world data while
+remaining as close as possible to the core specification.</p>
+
+<p>The main structure you will have to interact with is OpeningHours, which
+represents a parsed definition of opening hours.</p>
 </div>
 
                 
@@ -81,7 +92,7 @@ opening_hours    </h1>
                 <section id="__doc__">
                                 <div class="attr variable"><a class="headerlink" href="#__doc__">#&nbsp;&nbsp</a>
 
-        <span class="name">__doc__</span><span class="default_value"> = &#39;TODO: documentation&#39;</span>
+        <span class="name">__doc__</span><span class="default_value"> = &#34;A library for parsing and working with OSM&#39;s opening hours field. You can\nfind its specification [here](https://wiki.openstreetmap.org/wiki/Key:opening_hours/specification)\nand the reference JS library [here](https://github.com/opening-hours/opening_hours.js).\n\nNote that the specification is quite messy and that the JS library takes\nliberty to extend it quite a lot. This means that most of the real world data\ndon&#39;t actually comply to the very restrictive grammar detailed in the official\nspecification. This library tries to fit with the real world data while\nremaining as close as possible to the core specification.\n\nThe main structure you will have to interact with is OpeningHours, which\nrepresents a parsed definition of opening hours.&#34;</span>
     </div>
 
     
@@ -102,9 +113,7 @@ opening_hours    </h1>
 
 <div class="codehilite"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">opening_hours</span><span class="o">.</span><span class="n">validate</span><span class="p">(</span><span class="s2">&quot;24/7&quot;</span><span class="p">)</span>
 <span class="go">True</span>
-</code></pre></div>
-
-<div class="codehilite"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">opening_hours</span><span class="o">.</span><span class="n">validate</span><span class="p">(</span><span class="s2">&quot;24/24&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">opening_hours</span><span class="o">.</span><span class="n">validate</span><span class="p">(</span><span class="s2">&quot;24/24&quot;</span><span class="p">)</span>
 <span class="go">False</span>
 </code></pre></div>
 </div>
@@ -171,7 +180,7 @@ not specified.</li>
 <h6 id="examples">Examples</h6>
 
 <div class="codehilite"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">OpeningHours</span><span class="p">(</span><span class="s2">&quot;24/7 off&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">state</span><span class="p">()</span>
-<span class="go">&quot;closed&quot;</span>
+<span class="go">&#39;closed&#39;</span>
 </code></pre></div>
 </div>
 
@@ -316,7 +325,12 @@ year 9999 if it no max is specified.</li>
 
 <h6 id="examples">Examples</h6>
 
-<p>TODO</p>
+<div class="codehilite"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">intervals</span> <span class="o">=</span> <span class="n">OpeningHours</span><span class="p">(</span><span class="s2">&quot;2099Mo-Su 12:30-17:00&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">intervals</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">next</span><span class="p">(</span><span class="n">intervals</span><span class="p">)</span>
+<span class="go">(..., datetime.datetime(2099, 1, 1, 12, 30), &#39;closed&#39;, [])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">next</span><span class="p">(</span><span class="n">intervals</span><span class="p">)</span>
+<span class="go">(datetime.datetime(2099, 1, 1, 12, 30), datetime.datetime(2099, 1, 1, 17, 0), &#39;open&#39;, [])</span>
+</code></pre></div>
 </div>
 
 
