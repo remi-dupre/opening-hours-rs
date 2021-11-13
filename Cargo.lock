@@ -507,7 +507,7 @@ checksum = "2839e79665f131bdb5782e51f2c6c9599c133c6098982a54c794358bf432529c"
 
 [[package]]
 name = "opening-hours"
-version = "0.5.3"
+version = "0.5.4"
 dependencies = [
  "chrono",
  "criterion",
@@ -517,7 +517,7 @@ dependencies = [
 
 [[package]]
 name = "opening-hours-py"
-version = "0.5.3"
+version = "0.5.4"
 dependencies = [
  "chrono",
  "opening-hours",
@@ -527,7 +527,7 @@ dependencies = [
 
 [[package]]
 name = "opening-hours-syntax"
-version = "0.5.3"
+version = "0.5.4"
 dependencies = [
  "chrono",
  "pest",

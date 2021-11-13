@@ -1,6 +1,6 @@
 [package]
 name = "opening-hours"
-version = "0.5.3"
+version = "0.5.4"
 authors = ["Rémi Dupré <remi@dupre.io>"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
@@ -31,4 +31,3 @@ harness = false
 [profile.bench]
 codegen-units = 1
 lto = "fat"
-debug = true
