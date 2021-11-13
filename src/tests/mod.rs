@@ -16,7 +16,10 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 fn sample() -> impl Iterator<Item = &'static str> {
-    include_str!("data/sample.txt").lines().map(str::trim)
+    include_str!("data/sample.txt")
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
 }
 
 fn exec_with_timeout(f: impl FnOnce() + Send + 'static, timeout: Duration) -> bool {
