@@ -5,7 +5,7 @@ use chrono::prelude::Datelike;
 use chrono::{Duration, NaiveDate};
 
 use crate::opening_hours::DATE_LIMIT;
-use crate::utils::range::{RangeCompare, WrappingRange};
+use crate::utils::range::{RangeExt, WrappingRange};
 use opening_hours_syntax::rules::day as ds;
 use opening_hours_syntax::sorted_vec::UniqueSortedVec;
 

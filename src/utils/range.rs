@@ -62,11 +62,11 @@ impl<T: PartialOrd> WrappingRange<T> for RangeInclusive<T> {
 
 // RangeCompare
 
-pub(crate) trait RangeCompare<T> {
+pub(crate) trait RangeExt<T> {
     fn compare(&self, elt: &T) -> Ordering;
 }
 
-impl<T: PartialOrd> RangeCompare<T> for RangeInclusive<T> {
+impl<T: PartialOrd> RangeExt<T> for RangeInclusive<T> {
     fn compare(&self, elt: &T) -> Ordering {
         debug_assert!(self.start() <= self.end());
 
@@ -80,7 +80,7 @@ impl<T: PartialOrd> RangeCompare<T> for RangeInclusive<T> {
     }
 }
 
-impl<T: PartialOrd> RangeCompare<T> for Range<T> {
+impl<T: PartialOrd> RangeExt<T> for Range<T> {
     fn compare(&self, elt: &T) -> Ordering {
         debug_assert!(self.start <= self.end);
 
@@ -96,12 +96,12 @@ impl<T: PartialOrd> RangeCompare<T> for Range<T> {
 
 // Range operations
 
-pub(crate) fn time_ranges_union<T: Ord>(
-    ranges: impl Iterator<Item = Range<T>>,
+pub(crate) fn ranges_union<T: Ord>(
+    ranges: impl IntoIterator<Item = Range<T>>,
 ) -> impl Iterator<Item = Range<T>> {
     // TODO: we could gain performance by ensuring that range iterators are
     //       always sorted.
-    let mut ranges: Vec<_> = ranges.collect();
+    let mut ranges: Vec<_> = ranges.into_iter().collect();
     ranges.sort_unstable_by(|r1, r2| r1.start.cmp(&r2.start));
 
     // Get ranges by increasing start
@@ -136,5 +136,25 @@ pub(crate) fn range_intersection<T: Ord>(range_1: Range<T>, range_2: Range<T>) -
         Some(result)
     } else {
         None
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::{range_intersection, ranges_union};
+
+    #[test]
+    fn test_unions() {
+        assert_eq!(
+            &ranges_union([1..5, 0..1, 3..7, 8..9]).collect::<Vec<_>>(),
+            &[0..7, 8..9]
+        );
+    }
+
+    #[test]
+    fn test_intersection() {
+        assert!(range_intersection(0..1, 1..2).is_none());
+        assert_eq!(range_intersection(0..3, 1..2).unwrap(), 1..2);
+        assert_eq!(range_intersection(0..3, 2..4).unwrap(), 2..3);
     }
 }
