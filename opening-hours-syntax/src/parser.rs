@@ -77,7 +77,13 @@ fn build_rule_sequence(pair: Pair<Rule>, operator: rl::RuleOperator) -> Result<r
         .collect::<Vec<_>>()
         .into();
 
-    Ok(rl::RuleSequence { day_selector, time_selector, kind, operator, comments })
+    Ok(rl::RuleSequence {
+        day_selector,
+        time_selector,
+        kind,
+        operator,
+        comments,
+    })
 }
 
 fn build_any_rule_separator(pair: Pair<Rule>) -> rl::RuleOperator {
@@ -505,7 +511,10 @@ fn build_monthday_range(pair: Pair<Rule>) -> Result<ds::MonthdayRange> {
                 .map(build_date_offset)
                 .unwrap_or_else(|| Ok(Default::default()))?;
 
-            Ok(ds::MonthdayRange::Date { start: (start, start_offset), end: (end, end_offset) })
+            Ok(ds::MonthdayRange::Date {
+                start: (start, start_offset),
+                end: (end, end_offset),
+            })
         }
         other => unexpected_token(other, Rule::monthday_range),
     }
