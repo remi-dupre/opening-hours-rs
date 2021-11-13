@@ -153,3 +153,6 @@ Tu-We 19:00-22:30 ; Th-Sa 12:00-14:15, 19:00-22:30 ; PH off
 We-Fr 12:00-24:00 ; Sa 11:00-24:00 ; Su 11:00-22:30 ; PH off ; 2021 Mar 26-Apr 16 off
 We-Sa 10:00-23:00 ; Su 10:00-21:00 ; PH off
 We-Su 11:00-23:55 ; PH off
+
+# This is a tough one, according to the grammar weekday should not be part of an interval.
+# "check website http://www.senat.fr/visite/jardin/horaires.html"; Mar Su[-1]-Sep 30 07:30-19:15+ open "check closing time on website http://www.senat.fr/visite/jardin/horaires.html"; (sunset-00:10)-(sunrise-00:50) closed; 21:30-07:30 closed
