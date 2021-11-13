@@ -25,7 +25,6 @@ fn get_time(datetime: Option<NaiveDateTime>) -> NaiveDateTime {
 /// --------
 /// >>> opening_hours.validate("24/7")
 /// True
-///
 /// >>> opening_hours.validate("24/24")
 /// False
 #[pyfunction]
@@ -73,7 +72,7 @@ impl OpeningHours {
     /// Examples
     /// --------
     /// >>> OpeningHours("24/7 off").state()
-    /// "closed"
+    /// 'closed'
     #[text_signature = "(self, time=None, /)"]
     fn state(&self, time: Option<NaiveDateTimeWrapper>) -> State {
         self.inner
@@ -169,7 +168,11 @@ impl OpeningHours {
     ///
     /// Examples
     /// --------
-    /// TODO
+    /// >>> intervals = OpeningHours("2099Mo-Su 12:30-17:00").intervals()
+    /// >>> next(intervals)
+    /// (..., datetime.datetime(2099, 1, 1, 12, 30), 'closed', [])
+    /// >>> next(intervals)
+    /// (datetime.datetime(2099, 1, 1, 12, 30), datetime.datetime(2099, 1, 1, 17, 0), 'open', [])
     #[text_signature = "(self, start=None, end=None, /)"]
     fn intervals(
         &self,
@@ -184,8 +187,19 @@ impl OpeningHours {
     }
 }
 
+/// A library for parsing and working with OSM's opening hours field. You can
+/// find its specification [here](https://wiki.openstreetmap.org/wiki/Key:opening_hours/specification)
+/// and the reference JS library [here](https://github.com/opening-hours/opening_hours.js).
+///
+/// Note that the specification is quite messy and that the JS library takes
+/// liberty to extend it quite a lot. This means that most of the real world data
+/// don't actually comply to the very restrictive grammar detailed in the official
+/// specification. This library tries to fit with the real world data while
+/// remaining as close as possible to the core specification.
+///
+/// The main structure you will have to interact with is OpeningHours, which
+/// represents a parsed definition of opening hours.
 #[pymodule]
-/// TODO: documentation
 fn opening_hours(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(validate, m)?).unwrap();
     m.add_class::<OpeningHours>()?;
