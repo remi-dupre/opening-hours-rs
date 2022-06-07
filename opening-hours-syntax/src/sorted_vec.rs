@@ -1,7 +1,6 @@
 use std::borrow::Borrow;
 use std::cmp::Ordering;
 use std::convert::From;
-use std::fmt;
 use std::ops::Deref;
 
 /// A wrapper arround a [`Vec`] that is always sorted and with values repeating
@@ -14,7 +13,7 @@ use std::ops::Deref;
 /// assert_eq!(sorted.as_slice(), &[1, 2, 3, 5]);
 /// ```
 #[repr(transparent)]
-#[derive(Default)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct UniqueSortedVec<T>(Vec<T>);
 
 impl<T> UniqueSortedVec<T> {
@@ -128,33 +127,11 @@ impl<T: Ord> From<UniqueSortedVec<T>> for Vec<T> {
 // --- Dummy trait implementations.
 // ---
 
-impl<T: Ord + Clone> Clone for UniqueSortedVec<T> {
-    #[inline]
-    fn clone(&self) -> Self {
-        Self(self.0.clone())
-    }
-}
-
-impl<T: Ord + fmt::Debug> fmt::Debug for UniqueSortedVec<T> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "UniqueSortedVec({:?})", self.0)
-    }
-}
-
 impl<T: Ord> Deref for UniqueSortedVec<T> {
     type Target = Vec<T>;
 
     #[inline]
     fn deref(&self) -> &Self::Target {
         &self.0
-    }
-}
-
-impl<T: Ord + Eq> Eq for UniqueSortedVec<T> {}
-
-impl<T: Ord + PartialEq> PartialEq for UniqueSortedVec<T> {
-    #[inline]
-    fn eq(&self, other: &Self) -> bool {
-        self.0.eq(&other.0)
     }
 }
