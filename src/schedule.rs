@@ -1,6 +1,5 @@
 use std::boxed::Box;
 use std::cmp::{max, min};
-use std::fmt;
 use std::iter::once;
 use std::mem::take;
 use std::ops::Range;
@@ -10,7 +9,7 @@ use opening_hours_syntax::rules::RuleKind;
 use opening_hours_syntax::sorted_vec::UniqueSortedVec;
 
 #[non_exhaustive]
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TimeRange<'c> {
     pub range: Range<ExtendedTime>,
     pub kind: RuleKind,
@@ -24,16 +23,6 @@ impl<'c> TimeRange<'c> {
         comments: UniqueSortedVec<&'c str>,
     ) -> Self {
         TimeRange { range, kind, comments }
-    }
-}
-
-impl fmt::Debug for TimeRange<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("TimeRange")
-            .field("range", &self.range)
-            .field("kind", &self.kind)
-            .field("comments", &self.comments)
-            .finish()
     }
 }
 
@@ -205,7 +194,7 @@ macro_rules! schedule {
         $( ; )?
     ) => {{
         #[allow(unused_imports)]
-        use crate::{schedule::{Schedule, TimeRange}};
+        use $crate::{schedule::{Schedule, TimeRange}};
 
         #[allow(unused_imports)]
         use opening_hours_syntax::extended_time::ExtendedTime;

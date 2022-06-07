@@ -1,5 +1,4 @@
 use std::cmp::{max, min, Ordering};
-use std::fmt;
 use std::ops::{Range, RangeInclusive};
 
 use chrono::NaiveDateTime;
@@ -9,21 +8,11 @@ use opening_hours_syntax::sorted_vec::UniqueSortedVec;
 // DateTimeRange
 
 #[non_exhaustive]
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct DateTimeRange<'c> {
     pub range: Range<NaiveDateTime>,
     pub kind: RuleKind,
     pub comments: UniqueSortedVec<&'c str>,
-}
-
-impl fmt::Debug for DateTimeRange<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("DateTimeRange")
-            .field("range", &self.range)
-            .field("kind", &self.kind)
-            .field("comments", &self.comments)
-            .finish()
-    }
 }
 
 impl<'c> DateTimeRange<'c> {
