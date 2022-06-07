@@ -1,6 +1,6 @@
 [package]
 name = "opening-hours-py"
-version = "0.5.4"
+version = "0.5.5"
 authors = ["Rémi Dupré <remi@dupre.io>"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
