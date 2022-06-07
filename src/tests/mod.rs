@@ -53,8 +53,8 @@ fn exec_with_timeout(f: impl FnOnce() + Send + 'static, timeout: Duration) -> bo
 #[macro_export]
 macro_rules! assert_speed {
     ( $expr: expr ; $time: literal ms ) => {{
-        use crate::tests::exec_with_timeout;
         use std::time::Duration;
+        use $crate::tests::exec_with_timeout;
 
         assert!(exec_with_timeout(
             || {
@@ -84,11 +84,11 @@ macro_rules! datetime {
 #[macro_export]
 macro_rules! schedule_at {
     ( $expression: expr, $date: expr ) => {{
-        use crate::{date, OpeningHours};
+        use $crate::{date, OpeningHours};
         OpeningHours::parse($expression)?.schedule_at(date!($date))
     }};
     ( $expression: expr, $date: expr, $region: expr ) => {{
-        use crate::{date, OpeningHours};
+        use $crate::{date, OpeningHours};
 
         OpeningHours::parse($expression)?
             .with_region($region)
