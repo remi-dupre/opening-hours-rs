@@ -104,7 +104,7 @@ jobs:
       - name: Coverage
         uses: actions-rs/tarpaulin@v0.1
         with:
-          version: 0.16.0
+          version: 0.20.1
           args: '--ignore-panics --ignore-tests'
 
       - name: Upload to codecov.io
