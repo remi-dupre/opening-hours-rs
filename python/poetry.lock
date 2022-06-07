@@ -33,7 +33,7 @@ toml = ">=0.10.0,<0.11.0"
 
 [[package]]
 name = "pdoc"
-version = "6.6.0"
+version = "12.0.1"
 description = "API Documentation for Python Projects"
 category = "dev"
 optional = false
@@ -42,10 +42,10 @@ python-versions = ">=3.7"
 [package.dependencies]
 Jinja2 = ">=2.11.0"
 MarkupSafe = "*"
-pygments = "*"
+pygments = ">=2.12.0"
 
 [package.extras]
-dev = ["flake8", "hypothesis", "mypy", "pytest", "pytest-cov", "pytest-timeout", "tox", "twine", "wheel"]
+dev = ["flake8", "hypothesis", "mypy", "pytest", "pytest-cov", "pytest-timeout", "tox"]
 
 [[package]]
 name = "pygments"
@@ -66,7 +66,7 @@ python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "8e003936f8f740fe99ec9a8b4883578d8b2e645e92e9c31b33cb3bd631a02b6e"
+content-hash = "41437d9fce6d729def72d95b718989a2a40102c1e292d4bb0da89db9818359fa"
 
 [metadata.files]
 jinja2 = [
@@ -125,7 +125,8 @@ maturin = [
     {file = "maturin-0.9.4.tar.gz", hash = "sha256:2e0b0c3eb233e7b776c004ee4b980907beaf2babbe21da05a60ac55c1dff46c3"},
 ]
 pdoc = [
-    {file = "pdoc-6.6.0-py3-none-any.whl", hash = "sha256:d0b8cfe21fbdd243feaad133a40c1af3e98c2333f5fc2f221144961ec2d2c491"},
+    {file = "pdoc-12.0.1-py3-none-any.whl", hash = "sha256:b27467651e5d8afa3cfc67ced2d978fb97e04ce91506579bba4d05b902fad096"},
+    {file = "pdoc-12.0.1.tar.gz", hash = "sha256:39f58c187f668e46485a51e7d4a3410484d054567e21937a5c28471dc03fc6de"},
 ]
 pygments = [
     {file = "Pygments-2.12.0-py3-none-any.whl", hash = "sha256:dc9c10fb40944260f6ed4c688ece0cd2048414940f1cea51b8b226318411c519"},
