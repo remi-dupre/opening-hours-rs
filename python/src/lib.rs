@@ -28,7 +28,7 @@ fn get_time(datetime: Option<NaiveDateTime>) -> NaiveDateTime {
 /// >>> opening_hours.validate("24/24")
 /// False
 #[pyfunction]
-#[text_signature = "(oh, /)"]
+#[pyo3(text_signature = "(oh, /)")]
 fn validate(oh: &str) -> bool {
     opening_hours::OpeningHours::parse(oh).is_ok()
 }
@@ -46,7 +46,7 @@ fn validate(oh: &str) -> bool {
 /// >>> oh.is_open()
 /// True
 #[pyclass]
-#[text_signature = "(oh, /)"]
+#[pyo3(text_signature = "(oh, /)")]
 struct OpeningHours {
     inner: Pin<Arc<opening_hours::OpeningHours>>,
 }
@@ -73,7 +73,7 @@ impl OpeningHours {
     /// --------
     /// >>> OpeningHours("24/7 off").state()
     /// 'closed'
-    #[text_signature = "(self, time=None, /)"]
+    #[pyo3(text_signature = "(self, time=None, /)")]
     fn state(&self, time: Option<NaiveDateTimeWrapper>) -> State {
         self.inner
             .state(get_time(time.map(Into::into)))
@@ -93,7 +93,7 @@ impl OpeningHours {
     /// --------
     /// >>> OpeningHours("24/7").is_open()
     /// True
-    #[text_signature = "(self, time=None, /)"]
+    #[pyo3(text_signature = "(self, time=None, /)")]
     fn is_open(&self, time: Option<NaiveDateTimeWrapper>) -> bool {
         self.inner.is_open(get_time(time.map(Into::into)))
     }
@@ -110,7 +110,7 @@ impl OpeningHours {
     /// --------
     /// >>> OpeningHours("24/7 off").is_closed()
     /// True
-    #[text_signature = "(self, time=None, /)"]
+    #[pyo3(text_signature = "(self, time=None, /)")]
     fn is_closed(&self, time: Option<NaiveDateTimeWrapper>) -> bool {
         self.inner.is_closed(get_time(time.map(Into::into)))
     }
@@ -127,7 +127,7 @@ impl OpeningHours {
     /// --------
     /// >>> OpeningHours("24/7 unknown").is_unknown()
     /// True
-    #[text_signature = "(self, time=None, /)"]
+    #[pyo3(text_signature = "(self, time=None, /)")]
     fn is_unknown(&self, time: Option<NaiveDateTimeWrapper>) -> bool {
         self.inner.is_unknown(get_time(time.map(Into::into)))
     }
@@ -146,7 +146,7 @@ impl OpeningHours {
     /// >>> OpeningHours("24/7").next_change() # None
     /// >>> OpeningHours("2099Mo-Su 12:30-17:00").next_change()
     /// datetime.datetime(2099, 1, 1, 12, 30)
-    #[text_signature = "(self, time=None, /)"]
+    #[pyo3(text_signature = "(self, time=None, /)")]
     fn next_change(&self, time: Option<NaiveDateTimeWrapper>) -> NaiveDateTimeWrapper {
         self.inner
             .next_change(get_time(time.map(Into::into)))
@@ -173,7 +173,7 @@ impl OpeningHours {
     /// (..., datetime.datetime(2099, 1, 1, 12, 30), 'closed', [])
     /// >>> next(intervals)
     /// (datetime.datetime(2099, 1, 1, 12, 30), datetime.datetime(2099, 1, 1, 17, 0), 'open', [])
-    #[text_signature = "(self, start=None, end=None, /)"]
+    #[pyo3(text_signature = "(self, start=None, end=None, /)")]
     fn intervals(
         &self,
         start: Option<NaiveDateTimeWrapper>,

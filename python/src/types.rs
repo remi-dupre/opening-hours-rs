@@ -6,7 +6,6 @@ use chrono::prelude::*;
 use chrono::NaiveDateTime;
 use pyo3::prelude::*;
 use pyo3::types::{PyDateAccess, PyDateTime, PyTimeAccess};
-use pyo3::PyIterProtocol;
 
 use opening_hours::DateTimeRange;
 use opening_hours_syntax::rules::RuleKind;
@@ -151,8 +150,8 @@ impl RangeIterator {
     }
 }
 
-#[pyproto]
-impl PyIterProtocol for RangeIterator {
+#[pymethods]
+impl RangeIterator {
     fn __iter__(slf: PyRef<Self>) -> Py<Self> {
         slf.into()
     }
@@ -163,7 +162,7 @@ impl PyIterProtocol for RangeIterator {
         NaiveDateTimeWrapper,
         NaiveDateTimeWrapper,
         State,
-        Vec<&'p str>,
+        Vec<&'_ str>,
     )> {
         let dt_range = slf.iter.next()?;
         Some((
