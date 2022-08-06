@@ -1,4 +1,4 @@
 **/target
 fuzz/artifacts
 fuzz/corpus
-
+python/docs

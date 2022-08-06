@@ -163,7 +163,7 @@ week = { weeknum ~ ( "-" ~ weeknum ~  ( "/" ~ positive_number )? )? }
 monthday_selector = { monthday_range ~ ( "," ~ monthday_range )* }
 
 monthday_range = {
-      date_from ~ date_offset? ~ "-" ~ date_to ~ date_offset?
+      date_from ~ date_offset? ~ space? ~ "-" ~ space? ~ date_to ~ date_offset?
     | date_from ~ date_offset ~ monthday_range_plus?
     | date_from               ~ monthday_range_plus?
     | year? ~ month ~ ( "-" ~ month )?

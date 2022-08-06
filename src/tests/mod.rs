@@ -1,4 +1,5 @@
 mod holiday_selector;
+mod issues;
 mod month_selector;
 mod next_change;
 mod next_change_hint;
