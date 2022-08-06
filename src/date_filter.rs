@@ -241,7 +241,7 @@ impl DateFilter for ds::MonthdayRange {
 
                 Some(match (start..end).compare(&date) {
                     Ordering::Less => start,
-                    Ordering::Equal => end,
+                    Ordering::Equal => end + Duration::days(1),
                     Ordering::Greater => DATE_LIMIT.date(),
                 })
             }

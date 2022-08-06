@@ -240,11 +240,11 @@ impl OpeningHours {
         )
     }
 
-    pub fn intervals<'s>(
-        &'s self,
+    pub fn intervals(
+        &self,
         from: NaiveDateTime,
         to: NaiveDateTime,
-    ) -> Result<impl Iterator<Item = DateTimeRange> + 's, DateLimitExceeded> {
+    ) -> Result<impl Iterator<Item = DateTimeRange>, DateLimitExceeded> {
         Ok(self
             .iter_from(from)?
             .take_while(move |dtr| dtr.range.start < to)

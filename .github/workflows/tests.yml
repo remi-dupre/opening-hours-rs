@@ -40,9 +40,11 @@ jobs:
 
       - name: Lint
         run: cargo clippy --all-targets -- -D warnings
+        if: matrix.toolchain != 'nightly'
 
       - name: Format
         run: cargo fmt -- --check
+        if: matrix.toolchain != 'nightly'
 
       - name: Tests
         run: cargo test --all-targets
