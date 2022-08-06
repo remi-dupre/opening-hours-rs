@@ -30,7 +30,7 @@ impl From<RuleKind> for State {
     }
 }
 
-impl<'p> IntoPy<Py<PyAny>> for State {
+impl IntoPy<Py<PyAny>> for State {
     fn into_py(self, py: Python<'_>) -> Py<PyAny> {
         match self {
             Self::Open => "open".into_py(py),
@@ -79,7 +79,7 @@ impl<'source> FromPyObject<'source> for NaiveDateTimeWrapper {
     }
 }
 
-impl<'p> IntoPy<PyResult<Py<PyDateTime>>> for NaiveDateTimeWrapper {
+impl IntoPy<PyResult<Py<PyDateTime>>> for NaiveDateTimeWrapper {
     fn into_py(self, py: Python<'_>) -> PyResult<Py<PyDateTime>> {
         PyDateTime::new(
             py,
@@ -96,7 +96,7 @@ impl<'p> IntoPy<PyResult<Py<PyDateTime>>> for NaiveDateTimeWrapper {
     }
 }
 
-impl<'p> IntoPy<Py<PyAny>> for NaiveDateTimeWrapper {
+impl IntoPy<Py<PyAny>> for NaiveDateTimeWrapper {
     fn into_py(self, py: Python<'_>) -> Py<PyAny> {
         let result: PyResult<_> = self.into_py(py);
         result
