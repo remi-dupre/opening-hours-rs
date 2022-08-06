@@ -13,3 +13,12 @@ fn gh023_handling_of_spaces() -> Result<(), Error> {
     assert_eq!(oh.next_change(start).unwrap(), expected_end);
     Ok(())
 }
+
+#[test]
+fn gh024_no_date_range_end_in_intervals() -> Result<(), Error> {
+    let oh = OpeningHours::parse("2022 Jan 1-2023 Dec 31")?;
+    let start = datetime!("2022-01-01 00:00");
+    let expected_end = datetime!("2024-01-01 00:00");
+    assert_eq!(oh.next_change(start).unwrap(), expected_end);
+    Ok(())
+}
