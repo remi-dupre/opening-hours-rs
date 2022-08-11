@@ -30,5 +30,5 @@ for year in range(args.min_year, args.max_year + 1):
         try:
             for date, _name in cal().holidays(year):
                 print(country, date.isoformat())
-        except (CalendarError, KeyError):
+        except (CalendarError, KeyError, NotImplementedError, ValueError):
             pass

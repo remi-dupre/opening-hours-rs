@@ -39,7 +39,7 @@ jobs:
           cargo fmt -- --version
 
       - name: Lint
-        run: cargo clippy --all-targets -- -D warnings
+        run: cargo clippy -- -D warnings
         if: matrix.toolchain != 'nightly'
 
       - name: Format
@@ -47,7 +47,7 @@ jobs:
         if: matrix.toolchain != 'nightly'
 
       - name: Tests
-        run: cargo test --all-targets
+        run: cargo test
 
   # ---
   # --- Execute tests for python package
