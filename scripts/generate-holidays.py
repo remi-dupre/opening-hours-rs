@@ -11,8 +11,8 @@ from workalendar.exceptions import CalendarError
 
 
 class Arg(Tap):
-    min_year: int = 2020  # starting year
-    max_year: int = 2050  # ending year
+    min_year: int = 2000  # starting year
+    max_year: int = 2100  # ending year
     regions: List[str] = None  # list of regions to import events from
 
 
@@ -29,6 +29,8 @@ for year in range(args.min_year, args.max_year + 1):
     for country, cal in cals.items():
         try:
             for date, _name in cal().holidays(year):
-                print(country, date.isoformat())
+                # Sometime the lib gives an overlap
+                if args.min_year <= date.year <= args.max_year:
+                    print(country, date.isoformat())
         except (CalendarError, KeyError, NotImplementedError, ValueError):
             pass

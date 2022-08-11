@@ -11,8 +11,8 @@ use flate2::Compression;
 use compact_calendar::CompactCalendar;
 
 /// Supported year range
-const MIN_YEAR: i32 = 2020;
-const MAX_YEAR: i32 = 2050;
+const MIN_YEAR: i32 = 2000;
+const MAX_YEAR: i32 = 2100;
 
 /// Input path to read holidays from
 const HOLIDAYS_PATH: &str = "data/holidays.txt";
