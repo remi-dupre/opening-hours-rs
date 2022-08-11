@@ -6,8 +6,8 @@ authors = ["Rémi Dupré <remi@dupre.io>"]
 license = "MIT or Apache 2.0"
 
 [tool.poetry.dependencies]
-python = "^3.9"
-workalendar = "^15.0.0"
+python = "^3.10"
+workalendar = "^16.0.0"
 typed-argument-parser = "^1.6.1"
 toml = "^0.10.2"
 httpx = "^0.23.0"

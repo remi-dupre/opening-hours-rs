@@ -5,7 +5,6 @@ By default all known countries in `workalendar` will be exported.
 """
 from typing import List
 
-from skyfield.errors import EphemerisRangeError
 from tap import Tap
 from workalendar.registry import registry
 from workalendar.exceptions import CalendarError
@@ -31,5 +30,5 @@ for year in range(args.min_year, args.max_year + 1):
         try:
             for date, _name in cal().holidays(year):
                 print(country, date.isoformat())
-        except (CalendarError, EphemerisRangeError, KeyError):
+        except (CalendarError, KeyError):
             pass
