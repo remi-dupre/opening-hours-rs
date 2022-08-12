@@ -1,3 +1,9 @@
+Compact representation for a calendar
+=====================================
+
+[![](https://img.shields.io/crates/v/compact-calendar)][compact-calendar]
+[![](https://img.shields.io/docsrs/compact-calendar)][docs]
+
 This modules basically builds a data-structure for a set of days based on
 bit-maps. This is built to store a collection of regional holidays for the
 [opening-hours] crate.
@@ -24,5 +30,14 @@ with a Zlib encoder. This methods allowed to store all holidays from 2000 to
 2100 as described by [workalendar] in only 60kb of data.
 
 
-[opening-hours]: https://docs.rs/opening-hours/latest/opening_hours
+[opening-hours]: https://crates.io/crates/opening-hours
+    "Root Package"
+
+[compact-calendar]: https://crates.io/crates/compact-calendar
+    "Root Package"
+
+[docs]: https://docs.rs/compact-calendar
+    "Documentation"
+
 [workalendar]: https://github.com/workalendar/workalendar
+    "Workalendar Python Package"

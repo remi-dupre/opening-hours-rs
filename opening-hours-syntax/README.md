@@ -1,6 +1,9 @@
 Rust parser for OSM Opening Hours
 =================================
 
+[![](https://img.shields.io/crates/v/opening-hours-syntax)][opening-hours-syntax]
+[![](https://img.shields.io/docsrs/opening-hours-syntax)][docs]
+
 Parsing component of [opening-hours] crate.
 
 
@@ -29,6 +32,12 @@ fn main() {
 ```
 
 
-
 [opening-hours]: https://crates.io/crates/opening-hours
     "Root Package"
+
+[opening-hours-syntax]: https://crates.io/crates/opening-hours
+    "Package"
+
+[docs]: https://docs.rs/opening-hours-syntax
+    "Documentation"
+
