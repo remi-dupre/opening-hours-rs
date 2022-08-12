@@ -101,9 +101,8 @@ impl<T: Ord> UniqueSortedVec<T> {
     /// ```
     #[inline]
     pub fn find_first_following(&self, x: &T) -> Option<&T> {
-        match self.0.binary_search(x) {
-            Ok(i) | Err(i) => self.0.get(i),
-        }
+        let (Ok(i) | Err(i)) = self.0.binary_search(x);
+        self.0.get(i)
     }
 }
 
