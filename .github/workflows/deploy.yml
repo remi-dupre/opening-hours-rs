@@ -44,7 +44,10 @@ jobs:
     strategy:
       max-parallel: 1
       matrix:
-        crate: ["opening-hours-syntax", "."]
+        crate:
+          - compact-calendar
+          - opening-hours-syntax
+          - .
 
     defaults:
       run:
