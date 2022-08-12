@@ -1,10 +1,10 @@
-//! TODO: doc
+#![doc = include_str!("../README.md")]
 
 use std::{fmt, io};
 
 use chrono::{Datelike, NaiveDate};
 
-/// TODO: doc
+/// A compact representation of included days in a range of years, using u32-based bit arrays.
 #[derive(Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct CompactCalendar {
     first_year: i32,
@@ -159,7 +159,24 @@ impl CompactCalendar {
         }
     }
 
-    /// TODO: doc
+    /// Iterate over the days included in this calendar.
+    ///
+    /// ```
+    /// use compact_calendar::CompactCalendar;
+    /// use chrono::NaiveDate;
+    ///
+    /// let day1 = NaiveDate::from_ymd(2013, 11, 3);
+    /// let day2 = NaiveDate::from_ymd(2022, 3, 5);
+    /// let day3 = NaiveDate::from_ymd(2022, 8, 12);
+    ///
+    /// let mut cal = CompactCalendar::new(2000, 2050);
+    /// cal.insert(day3);
+    /// cal.insert(day1);
+    /// cal.insert(day2);
+    ///
+    /// let days: Vec<_> = cal.iter().collect();
+    /// assert_eq!(days, [day1, day2, day3])
+    /// ```
     pub fn iter(&self) -> impl Iterator<Item = NaiveDate> + '_ {
         (self.first_year..)
             .zip(self.calendar.iter())
@@ -226,8 +243,25 @@ impl CompactCalendar {
         self.calendar.iter().map(CompactYear::count).sum()
     }
 
-    /// TODO: doc
-    pub fn serialize(self, mut writer: impl io::Write) -> io::Result<()> {
+    /// Serialize this calendar into a writer.
+    ///
+    /// ```
+    /// use compact_calendar::CompactCalendar;
+    /// use chrono::NaiveDate;
+    ///
+    /// let mut cal = CompactCalendar::new(2000, 2050);
+    ///
+    /// let mut buf1 = Vec::new();
+    /// cal.insert(NaiveDate::from_ymd(2022, 8, 12));
+    /// cal.serialize(&mut buf1).unwrap();
+    ///
+    /// let mut buf2 = Vec::new();
+    /// cal.insert(NaiveDate::from_ymd(2022, 3, 5));
+    /// cal.serialize(&mut buf2).unwrap();
+    ///
+    /// assert_ne!(buf1, buf2);
+    /// ```
+    pub fn serialize(&self, mut writer: impl io::Write) -> io::Result<()> {
         writer.write_all(&self.first_year.to_ne_bytes())?;
         writer.write_all(&self.calendar.len().to_ne_bytes())?;
 
@@ -238,7 +272,22 @@ impl CompactCalendar {
         Ok(())
     }
 
-    /// TODO: doc
+    /// Deserialize a calendar from a reader.
+    ///
+    /// ```
+    /// use compact_calendar::CompactCalendar;
+    /// use chrono::NaiveDate;
+    ///
+    /// let mut cal1 = CompactCalendar::new(2000, 2050);
+    /// cal1.insert(NaiveDate::from_ymd(2022, 8, 12));
+    /// cal1.insert(NaiveDate::from_ymd(2022, 3, 5));
+    ///
+    /// let mut buf = Vec::new();
+    /// cal1.serialize(&mut buf).unwrap();
+    ///
+    /// let cal2 = CompactCalendar::deserialize(buf.as_slice()).unwrap();
+    /// assert_eq!(cal1, cal2);
+    /// ```
     pub fn deserialize(mut reader: impl io::Read) -> io::Result<Self> {
         let first_year = {
             let mut buf = [0; std::mem::size_of::<i32>()];
@@ -347,7 +396,18 @@ impl CompactYear {
         self.0[(month - 1) as usize].contains(day)
     }
 
-    /// TODO: doc
+    /// Iterate over the days included in this year.
+    ///
+    /// ```
+    /// use compact_calendar::CompactYear;
+    ///
+    /// let mut year = CompactYear::new();
+    /// year.insert(9, 5);
+    /// year.insert(3, 1);
+    ///
+    /// let days: Vec<_> = year.iter().collect();
+    /// assert_eq!(days, [(3, 1), (9, 5)])
+    /// ```
     pub fn iter(&self) -> impl Iterator<Item = (u32, u32)> + '_ {
         ((1..=12).zip(&self.0))
             .flat_map(|(month_i, month)| month.iter().map(move |day| (month_i, day)))
@@ -420,8 +480,24 @@ impl CompactYear {
         self.0.iter().copied().map(CompactMonth::count).sum()
     }
 
-    /// TODO: doc
-    pub fn serialize(self, mut writer: impl io::Write) -> io::Result<()> {
+    /// Serialize this year into a writer.
+    ///
+    /// ```
+    /// use compact_calendar::CompactYear;
+    ///
+    /// let mut year = CompactYear::new();
+    ///
+    /// let mut buf1 = Vec::new();
+    /// year.insert(11, 3);
+    /// year.serialize(&mut buf1).unwrap();
+    ///
+    /// let mut buf2 = Vec::new();
+    /// year.insert(4, 28);
+    /// year.serialize(&mut buf2).unwrap();
+    ///
+    /// assert_ne!(buf1, buf2);
+    /// ```
+    pub fn serialize(&self, mut writer: impl io::Write) -> io::Result<()> {
         for month in self.0 {
             month.serialize(&mut writer)?;
         }
@@ -429,8 +505,24 @@ impl CompactYear {
         Ok(())
     }
 
-    /// TODO: doc
+    /// Deserialize a year from a reader.
+    ///
+    /// ```
+    /// use compact_calendar::CompactYear;
+    ///
+    /// let mut year1 = CompactYear::new();
+    /// year1.insert(11, 3);
+    /// year1.insert(4, 28);
+    ///
+    /// let mut buf = Vec::new();
+    /// year1.serialize(&mut buf).unwrap();
+    ///
+    /// let year2 = CompactYear::deserialize(buf.as_slice()).unwrap();
+    /// assert_eq!(year1, year2);
+    /// ```
     pub fn deserialize(mut reader: impl io::Read) -> io::Result<Self> {
+        // NOTE: could use `try_from_fn` when stabilized:
+        //       https://doc.rust-lang.org/std/array/fn.try_from_fn.html
         let mut res = Self::new();
 
         for month in &mut res.0 {
@@ -519,7 +611,18 @@ impl CompactMonth {
         self.0 & (1 << (day - 1)) != 0
     }
 
-    /// TODO: doc
+    /// Iterate over the days included in this month.
+    ///
+    /// ```
+    /// use compact_calendar::CompactMonth;
+    ///
+    /// let mut month = CompactMonth::new();
+    /// month.insert(18);
+    /// month.insert(1);
+    ///
+    /// let days: Vec<u32> = month.iter().collect();
+    /// assert_eq!(days, [1, 18])
+    /// ```
     pub fn iter(self) -> impl Iterator<Item = u32> {
         let mut val = self.0;
 
@@ -615,7 +718,7 @@ impl CompactMonth {
         writer.write_all(&self.0.to_ne_bytes())
     }
 
-    /// Deserialize this month from a reader.
+    /// Deserialize a month from a reader.
     ///
     /// ```
     /// use compact_calendar::CompactMonth;
@@ -628,8 +731,7 @@ impl CompactMonth {
     /// month1.serialize(&mut buf).unwrap();
     ///
     /// let month2 = CompactMonth::deserialize(buf.as_slice()).unwrap();
-    /// assert!(month2.contains(2));
-    /// assert!(month2.contains(30));
+    /// assert_eq!(month1, month2);
     /// ```
     pub fn deserialize(mut reader: impl io::Read) -> io::Result<Self> {
         let mut buf = [0; std::mem::size_of::<u32>()];
