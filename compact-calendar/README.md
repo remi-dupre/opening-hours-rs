@@ -15,7 +15,7 @@ Here is how serialized data is represented:
 └──────┴──────┴───────────────┴───────────────┴────
 ```
 
-Each year is just an array of 12 [`u32`] where the least significant bits each
+Each year is just an array of 12 `u32` where the least significant bits each
 represent a day.
 
 While a bitset might not be the most efficient way to store a collection of
