@@ -15,7 +15,7 @@ jobs:
 
     strategy:
       matrix:
-        crate: ["opening-hours-syntax", "."]
+        crate: ["opening-hours-syntax", ".", "compact-calendar"]
         toolchain: ["stable", "beta", "nightly"]
 
     defaults:
