@@ -1,6 +1,6 @@
 [package]
 name = "opening-hours"
-version = "0.6.1"
+version = "0.6.2"
 authors = ["Rémi Dupré <remi@dupre.io>"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
@@ -15,10 +15,10 @@ members = ["compact-calendar", "fuzz", "opening-hours-syntax", "python"]
 
 [dependencies]
 chrono = "0.4"
-compact-calendar = { path = "compact-calendar", version = "*" }
+compact-calendar = { path = "compact-calendar", version = "0.6" }
 flate2 = "1.0"
 once_cell = "1.8"
-opening-hours-syntax = { path = "opening-hours-syntax", version = "*" }
+opening-hours-syntax = { path = "opening-hours-syntax", version = "0.6" }
 
 [build-dependencies]
 compact-calendar = { path = "compact-calendar" }
