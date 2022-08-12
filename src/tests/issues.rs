@@ -5,6 +5,7 @@ use opening_hours_syntax::error::Error;
 
 use crate::{datetime, OpeningHours};
 
+/// https://github.com/remi-dupre/opening-hours-rs/issues/23
 #[test]
 fn gh023_handling_of_spaces() -> Result<(), Error> {
     let oh = OpeningHours::parse("Apr 1 - Nov 3 00:00-24:00")?;
@@ -14,6 +15,7 @@ fn gh023_handling_of_spaces() -> Result<(), Error> {
     Ok(())
 }
 
+/// https://github.com/remi-dupre/opening-hours-rs/issues/24
 #[test]
 fn gh024_no_date_range_end_in_intervals() -> Result<(), Error> {
     let oh = OpeningHours::parse("2022 Jan 1-2023 Dec 31")?;

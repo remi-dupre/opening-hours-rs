@@ -19,6 +19,7 @@ fn main() {
 
     println!(" - expression: {:?}", expression);
     println!(" - date: {:?}", start_date);
+    println!(" - loaded holidays: {}", oh.holidays().count());
     println!(" - current status: {:?}", oh.state(start_datetime).unwrap());
     println!(
         " - next change: {:?}",
