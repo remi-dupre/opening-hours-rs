@@ -11,7 +11,7 @@ Usage
 Install `opening-hours-py` from PyPI, for example using pip:
 
 ```bash
-pip install --user opening-hours-rs
+pip install --user opening-hours-py
 ```
 
 Then, the main object that you will interact with will be `OpeningHours`:
