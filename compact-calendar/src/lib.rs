@@ -19,9 +19,9 @@ impl CompactCalendar {
     /// use compact_calendar::CompactCalendar;
     /// use chrono::NaiveDate;
     ///
-    /// let day1 = NaiveDate::from_ymd(2013, 11, 3);
-    /// let day2 = NaiveDate::from_ymd(2022, 3, 5);
-    /// let day3 = NaiveDate::from_ymd(2055, 7, 5);
+    /// let day1 = NaiveDate::from_ymd_opt(2013, 11, 3).unwrap();
+    /// let day2 = NaiveDate::from_ymd_opt(2022, 3, 5).unwrap();
+    /// let day3 = NaiveDate::from_ymd_opt(2055, 7, 5).unwrap();
     ///
     /// let mut cal = CompactCalendar::new(2020, 2050);
     /// assert!(!cal.insert(day1));
@@ -53,7 +53,7 @@ impl CompactCalendar {
     /// use chrono::NaiveDate;
     ///
     /// let mut cal = CompactCalendar::empty();
-    /// assert!(!cal.insert(NaiveDate::from_ymd(2013, 11, 3)));
+    /// assert!(!cal.insert(NaiveDate::from_ymd_opt(2013, 11, 3))).unwrap();
     /// assert_eq!(cal.count(), 0);
     /// ```
     pub const fn empty() -> Self {
@@ -66,8 +66,8 @@ impl CompactCalendar {
     /// use compact_calendar::CompactCalendar;
     /// use chrono::NaiveDate;
     ///
-    /// let day1 = NaiveDate::from_ymd(2013, 11, 3);
-    /// let day2 = NaiveDate::from_ymd(2055, 3, 5);
+    /// let day1 = NaiveDate::from_ymd_opt(2013, 11, 3).unwrap();
+    /// let day2 = NaiveDate::from_ymd_opt(2055, 3, 5).unwrap();
     ///
     /// let mut cal = CompactCalendar::new(2000, 2050);
     /// cal.insert(day1);
@@ -86,9 +86,9 @@ impl CompactCalendar {
     /// use compact_calendar::CompactCalendar;
     /// use chrono::NaiveDate;
     ///
-    /// let day1 = NaiveDate::from_ymd(2013, 11, 3);
-    /// let day2 = NaiveDate::from_ymd(2022, 3, 5);
-    /// let day3 = NaiveDate::from_ymd(2055, 7, 5);
+    /// let day1 = NaiveDate::from_ymd_opt(2013, 11, 3).unwrap();
+    /// let day2 = NaiveDate::from_ymd_opt(2022, 3, 5).unwrap();
+    /// let day3 = NaiveDate::from_ymd_opt(2055, 7, 5).unwrap();
     ///
     /// let mut cal = CompactCalendar::new(2000, 2050);
     /// assert!(cal.year_for_mut(day3).is_none());
@@ -111,9 +111,9 @@ impl CompactCalendar {
     /// use compact_calendar::CompactCalendar;
     /// use chrono::NaiveDate;
     ///
-    /// let day1 = NaiveDate::from_ymd(2013, 11, 3);
-    /// let day2 = NaiveDate::from_ymd(2022, 3, 5);
-    /// let day3 = NaiveDate::from_ymd(2055, 9, 7);
+    /// let day1 = NaiveDate::from_ymd_opt(2013, 11, 3).unwrap();
+    /// let day2 = NaiveDate::from_ymd_opt(2022, 3, 5).unwrap();
+    /// let day3 = NaiveDate::from_ymd_opt(2055, 9, 7).unwrap();
     ///
     /// let mut cal = CompactCalendar::new(2000, 2050);
     /// assert!(cal.insert(day1));
@@ -139,9 +139,9 @@ impl CompactCalendar {
     /// use compact_calendar::CompactCalendar;
     /// use chrono::NaiveDate;
     ///
-    /// let day1 = NaiveDate::from_ymd(2013, 11, 3);
-    /// let day2 = NaiveDate::from_ymd(2022, 3, 5);
-    /// let day3 = NaiveDate::from_ymd(2022, 8, 12);
+    /// let day1 = NaiveDate::from_ymd_opt(2013, 11, 3).unwrap();
+    /// let day2 = NaiveDate::from_ymd_opt(2022, 3, 5).unwrap();
+    /// let day3 = NaiveDate::from_ymd_opt(2022, 8, 12).unwrap();
     ///
     /// let mut cal = CompactCalendar::new(2000, 2050);
     /// cal.insert(day1);
@@ -165,9 +165,9 @@ impl CompactCalendar {
     /// use compact_calendar::CompactCalendar;
     /// use chrono::NaiveDate;
     ///
-    /// let day1 = NaiveDate::from_ymd(2013, 11, 3);
-    /// let day2 = NaiveDate::from_ymd(2022, 3, 5);
-    /// let day3 = NaiveDate::from_ymd(2022, 8, 12);
+    /// let day1 = NaiveDate::from_ymd_opt(2013, 11, 3).unwrap();
+    /// let day2 = NaiveDate::from_ymd_opt(2022, 3, 5).unwrap();
+    /// let day3 = NaiveDate::from_ymd_opt(2022, 8, 12).unwrap();
     ///
     /// let mut cal = CompactCalendar::new(2000, 2050);
     /// cal.insert(day3);
@@ -181,8 +181,10 @@ impl CompactCalendar {
         (self.first_year..)
             .zip(self.calendar.iter())
             .flat_map(|(year_i, year)| {
-                year.iter()
-                    .map(move |(month, day)| NaiveDate::from_ymd(year_i, month, day))
+                year.iter().map(move |(month, day)| {
+                    NaiveDate::from_ymd_opt(year_i, month, day)
+                        .expect("invalid date loaded from calendar")
+                })
             })
     }
 
@@ -193,10 +195,10 @@ impl CompactCalendar {
     /// use compact_calendar::CompactCalendar;
     /// use chrono::NaiveDate;
     ///
-    /// let day0 = NaiveDate::from_ymd(2010, 1, 1);
-    /// let day1 = NaiveDate::from_ymd(2013, 11, 3);
-    /// let day2 = NaiveDate::from_ymd(2022, 3, 5);
-    /// let day3 = NaiveDate::from_ymd(2022, 8, 12);
+    /// let day0 = NaiveDate::from_ymd_opt(2010, 1, 1).unwrap();
+    /// let day1 = NaiveDate::from_ymd_opt(2013, 11, 3).unwrap();
+    /// let day2 = NaiveDate::from_ymd_opt(2022, 3, 5).unwrap();
+    /// let day3 = NaiveDate::from_ymd_opt(2022, 8, 12).unwrap();
     ///
     /// let mut cal = CompactCalendar::new(2000, 2050);
     /// cal.insert(day1);
@@ -211,7 +213,10 @@ impl CompactCalendar {
         if let Some(year) = self.year_for(date) {
             let from_first_year = year
                 .first_after(date.month(), date.day())
-                .map(|(month, day)| NaiveDate::from_ymd(date.year(), month, day));
+                .map(|(month, day)| {
+                    NaiveDate::from_ymd_opt(date.year(), month, day)
+                        .expect("invalid date loaded from calendar")
+                });
 
             from_first_year.or_else(|| {
                 let year0 = usize::try_from(date.year() - self.first_year).ok()?;
@@ -220,7 +225,10 @@ impl CompactCalendar {
                     .zip(&self.calendar[year0 + 1..])
                     .find_map(|(year_i, year)| {
                         let (month, day) = year.first()?;
-                        Some(NaiveDate::from_ymd(year_i, month, day))
+                        Some(
+                            NaiveDate::from_ymd_opt(year_i, month, day)
+                                .expect("invalid date loaded from calendar"),
+                        )
                     })
             })
         } else {

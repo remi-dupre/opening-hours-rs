@@ -37,8 +37,8 @@ pub static REGION_HOLIDAYS: Lazy<HashMap<&str, CompactCalendar>> = Lazy::new(|| 
 /// The upper bound of dates handled by specification
 pub static DATE_LIMIT: Lazy<NaiveDateTime> = Lazy::new(|| {
     NaiveDateTime::new(
-        NaiveDate::from_ymd(10_000, 1, 1),
-        NaiveTime::from_hms(0, 0, 0),
+        NaiveDate::from_ymd_opt(10_000, 1, 1).expect("invalid max date bound"),
+        NaiveTime::from_hms_opt(0, 0, 0).expect("invalid max time bound"),
     )
 });
 
@@ -295,7 +295,7 @@ impl<'d> TimeDomainIterator<'d> {
                 self.curr_date = self
                     .opening_hours
                     .next_change_hint(self.curr_date)
-                    .unwrap_or_else(|| self.curr_date.succ());
+                    .unwrap_or_else(|| self.curr_date.succ_opt().expect("reached invalid date"));
 
                 if self.curr_date < self.end_datetime.date() {
                     self.curr_schedule = self
