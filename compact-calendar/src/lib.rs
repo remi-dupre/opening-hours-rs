@@ -53,7 +53,7 @@ impl CompactCalendar {
     /// use chrono::NaiveDate;
     ///
     /// let mut cal = CompactCalendar::empty();
-    /// assert!(!cal.insert(NaiveDate::from_ymd_opt(2013, 11, 3))).unwrap();
+    /// assert!(!cal.insert(NaiveDate::from_ymd_opt(2013, 11, 3).unwrap()));
     /// assert_eq!(cal.count(), 0);
     /// ```
     pub const fn empty() -> Self {
