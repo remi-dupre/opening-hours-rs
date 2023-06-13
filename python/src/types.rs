@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use chrono::prelude::*;
 use chrono::NaiveDateTime;
+use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::{PyDateAccess, PyDateTime, PyTimeAccess};
 
@@ -61,21 +62,30 @@ impl From<NaiveDateTime> for NaiveDateTimeWrapper {
 impl<'source> FromPyObject<'source> for NaiveDateTimeWrapper {
     fn extract(ob: &'source PyAny) -> PyResult<Self> {
         let py_datetime: &PyDateTime = ob.downcast()?;
-        Ok({
-            NaiveDateTime::new(
-                NaiveDate::from_ymd(
-                    py_datetime.get_year(),
-                    py_datetime.get_month().into(),
-                    py_datetime.get_day().into(),
-                ),
-                NaiveTime::from_hms(
-                    py_datetime.get_hour().into(),
-                    py_datetime.get_minute().into(),
-                    py_datetime.get_second().into(),
-                ),
+
+        let rs_date = {
+            NaiveDate::from_ymd_opt(
+                py_datetime.get_year(),
+                py_datetime.get_month().into(),
+                py_datetime.get_day().into(),
             )
-            .into()
-        })
+            .ok_or_else(|| {
+                PyErr::new::<PyValueError, _>("Could not convert Python's date to Rust's NaiveDate")
+            })?
+        };
+
+        let rs_time = {
+            NaiveTime::from_hms_opt(
+                py_datetime.get_hour().into(),
+                py_datetime.get_minute().into(),
+                py_datetime.get_second().into(),
+            )
+            .ok_or(PyErr::new::<PyValueError, _>(
+                "Could not convert Python's time to Rust's NaiveTime",
+            ))?
+        };
+
+        Ok(NaiveDateTime::new(rs_date, rs_time).into())
     }
 }
 
