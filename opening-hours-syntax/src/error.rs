@@ -6,7 +6,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Clone, Debug)]
 pub enum Error {
-    Parser(pest::error::Error<Rule>),
+    Parser(Box<pest::error::Error<Rule>>),
     Unsupported(&'static str),
     Overflow { value: String, expected: String },
 }
@@ -14,7 +14,7 @@ pub enum Error {
 impl From<pest::error::Error<Rule>> for Error {
     #[inline]
     fn from(pest_err: pest::error::Error<Rule>) -> Self {
-        Self::Parser(pest_err)
+        Self::Parser(pest_err.into())
     }
 }
 

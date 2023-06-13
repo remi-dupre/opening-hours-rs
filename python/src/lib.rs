@@ -10,9 +10,8 @@ use chrono::NaiveDateTime;
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 
-use types::RangeIterator;
-
 use crate::errors::ParserError;
+use crate::types::RangeIterator;
 use crate::types::{NaiveDateTimeWrapper, State};
 
 fn get_time(datetime: Option<NaiveDateTime>) -> NaiveDateTime {
@@ -30,7 +29,7 @@ fn get_time(datetime: Option<NaiveDateTime>) -> NaiveDateTime {
 #[pyfunction]
 #[pyo3(text_signature = "(oh, /)")]
 fn validate(oh: &str) -> bool {
-    opening_hours::OpeningHours::parse(oh).is_ok()
+    ::opening_hours::OpeningHours::parse(oh).is_ok()
 }
 
 /// Parse input opening hours description.
@@ -46,17 +45,17 @@ fn validate(oh: &str) -> bool {
 /// >>> oh.is_open()
 /// True
 #[pyclass]
-#[pyo3(text_signature = "(oh, /)")]
 struct OpeningHours {
-    inner: Pin<Arc<opening_hours::OpeningHours>>,
+    inner: Pin<Arc<::opening_hours::OpeningHours>>,
 }
 
 #[pymethods]
 impl OpeningHours {
     #[new]
+    #[pyo3(text_signature = "(oh, /)")]
     fn new(oh: &str) -> PyResult<Self> {
         Ok(Self {
-            inner: Arc::pin(opening_hours::OpeningHours::parse(oh).map_err(ParserError::from)?),
+            inner: Arc::pin(::opening_hours::OpeningHours::parse(oh).map_err(ParserError::from)?),
         })
     }
 
