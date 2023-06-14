@@ -215,7 +215,7 @@ jobs:
           pip install poetry
 
       - name: Install dependancies globaly
-        run: poetry config settings.virtualenvs.create false && poetry install
+        run: poetry config virtualenvs.create false && poetry install
 
       - name: Check packaging for pypi.org
         run: maturin develop
