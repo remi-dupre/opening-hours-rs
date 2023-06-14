@@ -370,6 +370,9 @@ jobs:
   deploy-python:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master'
+    defaults:
+      run:
+        working-directory: python
     needs:
       - check-version
       - build-python-linux
@@ -377,14 +380,12 @@ jobs:
       - build-python-macos
       - build-python-emscripten
     permissions:
-      # Used to upload release artifacts
-      contents: write
+      contents: write # used to upload release artifacts
     steps:
+      - uses: actions/checkout@v3
       - uses: actions/download-artifact@v3
         with:
           name: wheels
-      - name: "[hack] Move python/Cargo.toml"
-        run: cp python/Cargo.toml Cargo.toml
       - name: Publish to PyPI
         uses: PyO3/maturin-action@v1
         env:
