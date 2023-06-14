@@ -388,9 +388,8 @@ jobs:
         env:
           MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         with:
-          working-directory: ./python
           command: upload
-          args: --skip-existing *
+          args: --manifest-path python/Cargo.toml --skip-existing *
       - uses: actions/download-artifact@v3
         with:
           name: wasm-wheels
