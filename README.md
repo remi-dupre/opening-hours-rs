@@ -59,7 +59,7 @@ A public holiday database is loaded using Python library [workalendar]. You
 should refer to Python library for more information on which countries are
 supported.
 
-Holidays are not loaded beyond year 2050 to avoid having a huge binary.
+Holidays are not loaded beyond year 2100 to avoid having a huge binary.
 
 
 ### Syntax

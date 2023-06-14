@@ -7,7 +7,7 @@ license = "MIT or Apache 2.0"
 
 [tool.poetry.dependencies]
 python = "^3.10"
-workalendar = "^16.0.0"
+workalendar = "^17.0.0"
 typed-argument-parser = "^1.6.1"
 toml = "^0.10.2"
 httpx = "^0.23.0"

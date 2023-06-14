@@ -4,15 +4,11 @@ use std::fs::File;
 use std::io::{BufRead, BufReader, BufWriter};
 use std::path::PathBuf;
 
-use chrono::NaiveDate;
+use chrono::{Datelike, NaiveDate};
 use flate2::write::ZlibEncoder;
 use flate2::Compression;
 
 use compact_calendar::CompactCalendar;
-
-/// Supported year range
-const MIN_YEAR: i32 = 2000;
-const MAX_YEAR: i32 = 2100;
 
 /// Input path to read holidays from
 const HOLIDAYS_PATH: &str = "data/holidays.txt";
@@ -29,7 +25,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .into();
 
     // Load dates into an hashmap
-    let mut regions: HashMap<String, _> = HashMap::new();
+    let mut region_dates: HashMap<String, Vec<NaiveDate>> = HashMap::new();
     let lines = BufReader::new(File::open(HOLIDAYS_PATH)?).lines();
 
     for line in lines {
@@ -39,11 +35,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let region = line.next().unwrap();
         let date = NaiveDate::parse_from_str(line.next().unwrap(), "%Y-%m-%d")?;
 
-        let calendar = regions
+        region_dates
             .entry(region.to_string())
-            .or_insert_with(|| CompactCalendar::new(MIN_YEAR, MAX_YEAR));
-
-        assert!(calendar.insert(date));
+            .or_default()
+            .push(date);
     }
 
     // Build binary data for all regions
@@ -54,9 +49,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Compression::best(),
     );
 
-    let regions_order: Vec<_> = regions
+    let regions_order: Vec<_> = region_dates
         .into_iter()
-        .map(|(region, calendar)| {
+        .map(|(region, dates)| {
+            let min_year = dates.iter().map(Datelike::year).min().unwrap_or(2000);
+            let max_year = dates.iter().map(Datelike::year).max().unwrap_or(2000);
+            let mut calendar = CompactCalendar::new(min_year, max_year);
+
+            for date in dates {
+                assert!(calendar.insert(date));
+            }
+
             calendar.serialize(&mut output)?;
             Ok::<_, Box<dyn std::error::Error>>(region)
         })
@@ -73,7 +76,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     for path in WATCH_PATHS {
-        println!("cargo:rerun-if-changed={}", path);
+        println!("cargo:rerun-if-changed={path}");
     }
 
     Ok(())
