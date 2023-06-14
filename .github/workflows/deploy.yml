@@ -327,6 +327,24 @@ jobs:
           name: wasm-wheels
           path: dist
 
+  build-python-sdist:
+    runs-on: ubuntu-latest
+    needs: [test, test-python]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build sdist
+        uses: PyO3/maturin-action@v1
+        with:
+          working-directory: python
+          command: sdist
+          args: --out dist
+      - name: Upload sdist
+        uses: actions/upload-artifact@v3
+        with:
+          working-directory: python
+          name: wheels
+          path: dist
+
   deploy-python:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master'
@@ -336,6 +354,7 @@ jobs:
       - build-python-windows
       - build-python-macos
       - build-python-emscripten
+      - build-python-sdist
     permissions:
       contents: write # used to upload release artifacts
     steps:
