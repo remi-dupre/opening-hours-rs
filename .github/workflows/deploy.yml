@@ -289,8 +289,6 @@ jobs:
   build-python-emscripten:
     runs-on: ubuntu-latest
     needs: [test, test-python]
-    defaults:
-      run:
     steps:
       - uses: actions/checkout@v3
       - run: cd python
