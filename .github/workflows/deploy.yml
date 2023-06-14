@@ -374,6 +374,7 @@ jobs:
       run:
         working-directory: python
     needs:
+      - check-version
       - build-python-linux
       - build-python-windows
       - build-python-macos
@@ -391,7 +392,7 @@ jobs:
           MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         with:
           command: upload
-          args: --sdist --skip-existing *
+          args: --skip-existing *
       - uses: actions/download-artifact@v3
         with:
           name: wasm-wheels
