@@ -12,7 +12,7 @@ path = "fuzz_targets/oh.rs"
 cargo-fuzz = true
 
 [dependencies]
-arbitrary = { version = "0.4.0", features = ["derive"] }
+arbitrary = { version = "1", features = ["derive"] }
 chrono = "0.4"
-libfuzzer-sys = "0.3"
+libfuzzer-sys = "0.4"
 opening-hours = { path = ".." }
