@@ -43,7 +43,7 @@ building tool used to create the binding) from a virtualenv.
 
 ```bash
 git clone https://github.com/remi-dupre/opening-hours-rs.git
-cd opening-hours-rs/python
+cd opening-hours-rs
 
 # Install Python dependancies
 poetry install

@@ -14,3 +14,6 @@ pdoc = "^12.0.1"
 [build-system]
 requires = ["poetry>=0.12", "maturin>=1,<2"]
 build-backend = "maturin"
+
+[tool.maturin]
+manifest-path = "python/Cargo.toml"
