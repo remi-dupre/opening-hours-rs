@@ -42,6 +42,7 @@ jobs:
 
   deploy-rust:
     runs-on: ubuntu-latest
+    needs: [check-version, test]
 
     strategy:
       max-parallel: 1
@@ -80,6 +81,7 @@ jobs:
 
   deploy-python:
     runs-on: ubuntu-latest
+    needs: [check-version, test, test-python]
 
     defaults:
       run:
