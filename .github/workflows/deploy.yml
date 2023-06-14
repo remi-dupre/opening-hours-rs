@@ -106,17 +106,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install poetry
 
-      - name: Install dependancies
-        run: poetry install
+      - name: Install dependancies globaly
+        run: poetry config settings.virtualenvs.create false && poetry install
 
       - name: Check packaging for pypi.org
-        run: poetry run maturin develop
+        run: maturin develop
 
       - name: Build python documentation
-        run: poetry run pdoc -o docs -d numpy opening_hours
+        run: pdoc -o docs -d numpy opening_hours
 
       - name: Publish to pypi.org
-        run: poetry run maturin publish --username $USER --password $PASS
+        run: maturin publish --username $USER --password $PASS
         if: github.ref == 'refs/heads/master'
         env:
           USER: remi-dupre
