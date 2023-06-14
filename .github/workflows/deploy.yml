@@ -218,7 +218,7 @@ jobs:
         run: poetry config virtualenvs.create false && poetry install
 
       - name: Publish to pypi.org
-        run: maturin publish --username $USER --password $PASS
+        run: maturin publish -i python3.9 -i python3.10 -i python3.11 --username $USER --password $PASS
         if: github.ref == 'refs/heads/master'
         env:
           USER: remi-dupre

@@ -1,6 +1,6 @@
 [package]
 name = "opening-hours"
-version = "0.6.11"
+version = "0.6.12"
 authors = ["Rémi Dupré <remi@dupre.io>"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
