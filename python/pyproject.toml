@@ -8,9 +8,9 @@ authors = ["Rémi Dupré <remi@dupre.io>"]
 python = "^3.9"
 
 [tool.poetry.dev-dependencies]
-maturin = "^0.9.0"
+maturin = ">=1,<2"
 pdoc = "^12.0.1"
 
 [build-system]
-requires = ["poetry>=0.12", "maturin"]
+requires = ["poetry>=0.12", "maturin>=1,<2"]
 build-backend = "maturin"
