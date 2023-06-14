@@ -162,7 +162,7 @@ checksum = "2da6da31387c7e4ef160ffab6d5e7f00c42626fe39aea70a7b0f1773f7dd6c1b"
 
 [[package]]
 name = "compact-calendar"
-version = "0.6.13"
+version = "0.6.14"
 dependencies = [
  "chrono",
 ]
@@ -554,7 +554,7 @@ checksum = "0ab1bc2a289d34bd04a330323ac98a1b4bc82c9d9fcb1e66b63caa84da26b575"
 
 [[package]]
 name = "opening-hours"
-version = "0.6.13"
+version = "0.6.14"
 dependencies = [
  "chrono",
  "compact-calendar",
@@ -566,7 +566,7 @@ dependencies = [
 
 [[package]]
 name = "opening-hours-py"
-version = "0.6.13"
+version = "0.6.14"
 dependencies = [
  "chrono",
  "opening-hours",
@@ -576,7 +576,7 @@ dependencies = [
 
 [[package]]
 name = "opening-hours-syntax"
-version = "0.6.13"
+version = "0.6.14"
 dependencies = [
  "chrono",
  "pest",
@@ -711,6 +711,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "713eccf888fb05f1a96eb78c0dbc51907fee42b3377272dc902eb38985f418d5"
 dependencies = [
  "once_cell",
+ "python3-dll-a",
  "target-lexicon",
 ]
 
@@ -745,6 +746,15 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "python3-dll-a"
+version = "0.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "212d74540270e3a22eed5f0d4bbc0765dff20958d694e9d4f5ebe6e22778c422"
+dependencies = [
+ "cc",
 ]
 
 [[package]]
