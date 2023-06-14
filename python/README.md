@@ -8,6 +8,9 @@ Python bindings for [OSM Opening Hours](https://github.com/remi-dupre/opening-ho
 Usage
 -----
 
+The package is published for Python 3.9 and above, but you should be able to install it
+with older version of python if you install the Rust toolchain.
+
 Install `opening-hours-py` from PyPI, for example using pip:
 
 ```bash

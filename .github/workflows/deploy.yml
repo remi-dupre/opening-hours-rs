@@ -10,6 +10,7 @@ jobs:
   # ---
   # --- Check that all versions are consistency accross packages
   # ---
+
   check-version:
     runs-on: ubuntu-latest
 
@@ -22,7 +23,7 @@ jobs:
 
       - uses: actions/setup-python@v2
         with:
-          python-version: "3.10"
+          python-version: "3.9"
 
       - name: Install poetry
         run: |
@@ -38,6 +39,7 @@ jobs:
   # ---
   # --- Build an deploy Rust packages
   # ---
+
   deploy-rust:
     runs-on: ubuntu-latest
 
@@ -75,8 +77,16 @@ jobs:
   # ---
   # --- Build and deploy Python bindings
   # ---
+
   deploy-python:
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python:
+          - "3.9"
+          - "3.10"
+          - "3.11"
 
     defaults:
       run:
@@ -93,7 +103,7 @@ jobs:
 
       - uses: actions/setup-python@v2
         with:
-          python-version: "3.10"
+          python-version: ${{ matrix.python }}
 
       - name: Install poetry
         run: |
@@ -118,7 +128,7 @@ jobs:
 
       - name: Publish to github pages
         uses: peaceiris/actions-gh-pages@v3
-        if: github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/master' && matrix.python == '3.11'
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./python/docs
