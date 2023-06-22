@@ -4,11 +4,20 @@ use crate::parser::Rule;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Error {
     Parser(Box<pest::error::Error<Rule>>),
     Unsupported(&'static str),
     Overflow { value: String, expected: String },
+}
+
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Error::Parser(pest_error) => Some(pest_error),
+            _ => None,
+        }
+    }
 }
 
 impl From<pest::error::Error<Rule>> for Error {

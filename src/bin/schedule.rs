@@ -11,10 +11,10 @@ fn main() {
     let start_datetime = Local::now().naive_local();
     let start_date = start_datetime.date();
 
-    let oh = match OpeningHours::parse(&expression) {
-        Ok(val) => val.with_region(REGION),
+    let oh = match OpeningHours::parse(&expression).and_then(|oh| oh.with_region(REGION)) {
+        Ok(val) => val,
         Err(err) => {
-            println!("{}", err);
+            println!("{err}");
             return;
         }
     };

@@ -4,7 +4,7 @@ use std::fs::File;
 use std::io::{BufRead, BufReader, BufWriter};
 use std::path::PathBuf;
 
-use chrono::{Datelike, NaiveDate};
+use chrono::NaiveDate;
 use flate2::write::ZlibEncoder;
 use flate2::Compression;
 
@@ -25,7 +25,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .into();
 
     // Load dates into an hashmap
-    let mut region_dates: HashMap<String, Vec<NaiveDate>> = HashMap::new();
+    let mut region_calendars: HashMap<String, CompactCalendar> = HashMap::new();
     let lines = BufReader::new(File::open(HOLIDAYS_PATH)?).lines();
 
     for line in lines {
@@ -35,10 +35,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let region = line.next().unwrap();
         let date = NaiveDate::parse_from_str(line.next().unwrap(), "%Y-%m-%d")?;
 
-        region_dates
+        region_calendars
             .entry(region.to_string())
             .or_default()
-            .push(date);
+            .insert(date);
     }
 
     // Build binary data for all regions
@@ -49,17 +49,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Compression::best(),
     );
 
-    let regions_order: Vec<_> = region_dates
+    let regions_order: Vec<_> = region_calendars
         .into_iter()
-        .map(|(region, dates)| {
-            let min_year = dates.iter().map(Datelike::year).min().unwrap_or(2000);
-            let max_year = dates.iter().map(Datelike::year).max().unwrap_or(2000);
-            let mut calendar = CompactCalendar::new(min_year, max_year);
-
-            for date in dates {
-                assert!(calendar.insert(date));
-            }
-
+        .map(|(region, calendar)| {
             calendar.serialize(&mut output)?;
             Ok::<_, Box<dyn std::error::Error>>(region)
         })

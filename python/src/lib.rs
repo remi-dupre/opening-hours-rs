@@ -14,8 +14,10 @@ use crate::errors::ParserError;
 use crate::types::RangeIterator;
 use crate::types::{NaiveDateTimeWrapper, State};
 
-fn get_time(datetime: Option<NaiveDateTime>) -> NaiveDateTime {
-    datetime.unwrap_or_else(|| Local::now().naive_local())
+fn get_time<T: Into<NaiveDateTime>>(datetime: Option<T>) -> NaiveDateTime {
+    datetime
+        .map(Into::into)
+        .unwrap_or_else(|| Local::now().naive_local())
 }
 
 /// Validate that input string is a correct opening hours description.
@@ -64,7 +66,7 @@ impl OpeningHours {
     ///
     /// Parameters
     /// ----------
-    /// time : Optional[datetime]
+    /// time : datetime | None
     ///     Base time for the evaluation, current time will be used if it is
     ///     not specified.
     ///
@@ -75,7 +77,7 @@ impl OpeningHours {
     #[pyo3(text_signature = "(self, time=None, /)")]
     fn state(&self, time: Option<NaiveDateTimeWrapper>) -> State {
         self.inner
-            .state(get_time(time.map(Into::into)))
+            .state(get_time(time))
             .expect("unexpected date beyond year 10 000")
             .into()
     }
@@ -84,7 +86,7 @@ impl OpeningHours {
     ///
     /// Parameters
     /// ----------
-    /// time : Optional[datetime]
+    /// time : datetime | None
     ///     Base time for the evaluation, current time will be used if it is
     ///     not specified.
     ///
@@ -94,14 +96,14 @@ impl OpeningHours {
     /// True
     #[pyo3(text_signature = "(self, time=None, /)")]
     fn is_open(&self, time: Option<NaiveDateTimeWrapper>) -> bool {
-        self.inner.is_open(get_time(time.map(Into::into)))
+        self.inner.is_open(get_time(time))
     }
 
     /// Check if current state is closed.
     ///
     /// Parameters
     /// ----------
-    /// time : Optional[datetime]
+    /// time : datetime | None
     ///     Base time for the evaluation, current time will be used if it is
     ///     not specified.
     ///
@@ -111,14 +113,14 @@ impl OpeningHours {
     /// True
     #[pyo3(text_signature = "(self, time=None, /)")]
     fn is_closed(&self, time: Option<NaiveDateTimeWrapper>) -> bool {
-        self.inner.is_closed(get_time(time.map(Into::into)))
+        self.inner.is_closed(get_time(time))
     }
 
     /// Check if current state is unknown.
     ///
     /// Parameters
     /// ----------
-    /// time : Optional[datetime]
+    /// time : datetime | None
     ///     Base time for the evaluation, current time will be used if it is
     ///     not specified.
     ///
@@ -128,7 +130,7 @@ impl OpeningHours {
     /// True
     #[pyo3(text_signature = "(self, time=None, /)")]
     fn is_unknown(&self, time: Option<NaiveDateTimeWrapper>) -> bool {
-        self.inner.is_unknown(get_time(time.map(Into::into)))
+        self.inner.is_unknown(get_time(time))
     }
 
     /// Get the date for next change of state.
@@ -136,7 +138,7 @@ impl OpeningHours {
     ///
     /// Parameters
     /// ----------
-    /// time : Optional[datetime]
+    /// time : datetime | None
     ///     Base time for the evaluation, current time will be used if it is
     ///     not specified.
     ///
@@ -148,7 +150,7 @@ impl OpeningHours {
     #[pyo3(text_signature = "(self, time=None, /)")]
     fn next_change(&self, time: Option<NaiveDateTimeWrapper>) -> NaiveDateTimeWrapper {
         self.inner
-            .next_change(get_time(time.map(Into::into)))
+            .next_change(get_time(time))
             .expect("unexpected date beyond year 10 000")
             .into()
     }
@@ -158,10 +160,10 @@ impl OpeningHours {
     ///
     /// Parameters
     /// ----------
-    /// start: Optional[datetime]
+    /// start : datetime | None
     ///     Initial time for the iterator, current time will be used if it is
     ///     not specified.
-    /// end : Optional[datetime]
+    /// end : datetime | None
     ///     Maximal time for the iterator, the iterator will continue until
     ///     year 9999 if it no max is specified.
     ///
@@ -178,11 +180,7 @@ impl OpeningHours {
         start: Option<NaiveDateTimeWrapper>,
         end: Option<NaiveDateTimeWrapper>,
     ) -> RangeIterator {
-        RangeIterator::new(
-            self.inner.clone(),
-            get_time(start.map(Into::into)),
-            end.map(Into::into),
-        )
+        RangeIterator::new(self.inner.clone(), get_time(start), end.map(Into::into))
     }
 }
 

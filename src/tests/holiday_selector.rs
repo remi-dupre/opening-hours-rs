@@ -1,10 +1,10 @@
-use opening_hours_syntax::error::Error;
 use opening_hours_syntax::rules::RuleKind::*;
 
+use crate::error::Result;
 use crate::schedule_at;
 
 #[test]
-fn holidays() -> Result<(), Error> {
+fn holidays() -> Result<()> {
     // The 14th of July is a holiday in France
     assert_eq!(
         schedule_at!("2020:10:00-12:00; PH off", "2020-07-14", "FR"),

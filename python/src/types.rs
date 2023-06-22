@@ -11,6 +11,8 @@ use pyo3::types::{PyDateAccess, PyDateTime, PyTimeAccess};
 use opening_hours::DateTimeRange;
 use opening_hours_syntax::rules::RuleKind;
 
+use crate::errors::DateImportError;
+
 // ---
 // --- State
 // ---
@@ -69,9 +71,7 @@ impl<'source> FromPyObject<'source> for NaiveDateTimeWrapper {
                 py_datetime.get_month().into(),
                 py_datetime.get_day().into(),
             )
-            .ok_or_else(|| {
-                PyErr::new::<PyValueError, _>("Could not convert Python's date to Rust's NaiveDate")
-            })?
+            .ok_or(DateImportError(py_datetime))?
         };
 
         let rs_time = {
@@ -80,9 +80,7 @@ impl<'source> FromPyObject<'source> for NaiveDateTimeWrapper {
                 py_datetime.get_minute().into(),
                 py_datetime.get_second().into(),
             )
-            .ok_or(PyErr::new::<PyValueError, _>(
-                "Could not convert Python's time to Rust's NaiveTime",
-            ))?
+            .ok_or(DateImportError(py_datetime))?
         };
 
         Ok(NaiveDateTime::new(rs_date, rs_time).into())

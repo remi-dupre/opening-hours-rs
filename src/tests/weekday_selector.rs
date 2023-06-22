@@ -1,10 +1,10 @@
-use opening_hours_syntax::error::Error;
 use opening_hours_syntax::rules::RuleKind::*;
 
+use crate::error::Result;
 use crate::schedule_at;
 
 #[test]
-fn basic_range() -> Result<(), Error> {
+fn basic_range() -> Result<()> {
     assert_eq!(
         schedule_at!("Mo-Su", "2020-06-01"),
         schedule! { 00,00 => Open => 24,00 }
@@ -43,7 +43,7 @@ fn basic_range() -> Result<(), Error> {
 }
 
 #[test]
-fn nth() -> Result<(), Error> {
+fn nth() -> Result<()> {
     for date in &["2020-06-08", "2020-06-15", "2020-06-22"] {
         assert_eq!(
             schedule_at!("Mo[2-4] 10:00-12:00", date),
@@ -74,7 +74,7 @@ fn nth() -> Result<(), Error> {
 }
 
 #[test]
-fn nth_with_offset() -> Result<(), Error> {
+fn nth_with_offset() -> Result<()> {
     for date in &["2020-06-10", "2020-06-17", "2020-06-24"] {
         assert_eq!(
             schedule_at!("Mo[2-4] +2 days 10:00-12:00", date),

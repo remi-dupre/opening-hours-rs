@@ -2,9 +2,9 @@ mod holiday_selector;
 mod issues;
 mod month_selector;
 mod next_change;
-mod next_change_hint;
 mod parser;
 mod rules;
+mod samples;
 mod selective;
 mod time_selector;
 mod week_selector;
@@ -92,7 +92,7 @@ macro_rules! schedule_at {
         use $crate::{date, OpeningHours};
 
         OpeningHours::parse($expression)?
-            .with_region($region)
+            .with_region($region)?
             .schedule_at(date!($date))
     }};
 }

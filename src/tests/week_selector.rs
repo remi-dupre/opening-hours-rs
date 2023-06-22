@@ -1,10 +1,10 @@
-use opening_hours_syntax::error::Error;
 use opening_hours_syntax::rules::RuleKind::*;
 
+use crate::error::Result;
 use crate::schedule_at;
 
 #[test]
-fn week_range() -> Result<(), Error> {
+fn week_range() -> Result<()> {
     assert_eq!(
         schedule_at!(r#"week01:10:00-12:00"#, "2020-01-01"),
         schedule! { 10,00 => Open => 12,00 }
