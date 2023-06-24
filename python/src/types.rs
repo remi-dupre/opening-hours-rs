@@ -4,7 +4,6 @@ use std::sync::Arc;
 
 use chrono::prelude::*;
 use chrono::NaiveDateTime;
-use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::{PyDateAccess, PyDateTime, PyTimeAccess};
 
@@ -122,7 +121,7 @@ impl IntoPy<Py<PyAny>> for NaiveDateTimeWrapper {
 #[pyclass(unsendable)]
 pub struct RangeIterator {
     _td: Pin<Arc<opening_hours::OpeningHours>>,
-    iter: Box<dyn Iterator<Item = DateTimeRange<'static>>>,
+    iter: Box<dyn Iterator<Item = DateTimeRange<'static, NaiveDateTime>>>,
 }
 
 impl RangeIterator {
@@ -150,8 +149,8 @@ impl RangeIterator {
         //   2. `td` won't move as it is marked Pin.
         //   3. we must ensure in [`RangeIterator`]'s implementation that iter is not moved out of
         //      the struct.
-        let iter: Box<dyn Iterator<Item = DateTimeRange<'_>>> = iter;
-        let iter: Box<dyn Iterator<Item = DateTimeRange<'static>>> =
+        let iter: Box<dyn Iterator<Item = DateTimeRange<'_, NaiveDateTime>>> = iter;
+        let iter: Box<dyn Iterator<Item = DateTimeRange<'static, NaiveDateTime>>> =
             unsafe { std::mem::transmute(iter) };
 
         Self { _td: td, iter }

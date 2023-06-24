@@ -10,7 +10,7 @@ use chrono::NaiveDateTime;
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 
-use crate::errors::ParserError;
+use crate::errors::OhError;
 use crate::types::RangeIterator;
 use crate::types::{NaiveDateTimeWrapper, State};
 
@@ -57,7 +57,7 @@ impl OpeningHours {
     #[pyo3(text_signature = "(oh, /)")]
     fn new(oh: &str) -> PyResult<Self> {
         Ok(Self {
-            inner: Arc::pin(::opening_hours::OpeningHours::parse(oh).map_err(ParserError::from)?),
+            inner: Arc::pin(::opening_hours::OpeningHours::parse(oh).map_err(OhError::from)?),
         })
     }
 

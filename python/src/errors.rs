@@ -6,29 +6,36 @@ use pyo3::types::PyDateTime;
 
 /// Error while parsing OH expression
 #[derive(Debug)]
-pub struct ParserError(opening_hours::ParserError);
+pub struct OhError(opening_hours::error::Error);
 
-impl std::error::Error for ParserError {
+impl std::error::Error for OhError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         Some(&self.0)
     }
 }
 
-impl fmt::Display for ParserError {
+impl fmt::Display for OhError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "could not parse expression:\n{}", self.0)
     }
 }
 
-impl From<opening_hours::ParserError> for ParserError {
-    fn from(parser_error: opening_hours::ParserError) -> Self {
+impl From<opening_hours::error::Error> for OhError {
+    fn from(parser_error: opening_hours::error::Error) -> Self {
         Self(parser_error)
     }
 }
 
-impl From<ParserError> for PyErr {
-    fn from(parser_error: ParserError) -> Self {
-        PySyntaxError::new_err(parser_error.to_string())
+impl From<OhError> for PyErr {
+    fn from(error: OhError) -> Self {
+        match error.0 {
+            opening_hours::error::Error::Parser(inner) => PySyntaxError::new_err(inner.to_string()),
+            opening_hours::error::Error::DateLimitExceeded(_)
+            | opening_hours::error::Error::RegionNotFound(_)
+            | opening_hours::error::Error::TzNotFound(_) => {
+                PySyntaxError::new_err(error.0.to_string())
+            }
+        }
     }
 }
 

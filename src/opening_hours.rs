@@ -4,7 +4,7 @@ use std::cmp::{max, min};
 use std::convert::TryInto;
 use std::iter::{empty, Peekable};
 
-use chrono::{Datelike, Duration, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Timelike};
+use chrono::{Datelike, Duration, NaiveDate, NaiveDateTime, NaiveTime, Timelike};
 use once_cell::sync::Lazy;
 
 use compact_calendar::CompactCalendar;
@@ -14,7 +14,7 @@ use opening_hours_syntax::rules::{RuleKind, RuleOperator, RuleSequence};
 use crate::context::{Context, REGION_HOLIDAYS};
 use crate::date_filter::DateFilter;
 use crate::error::{Error, Result};
-use crate::localize::{Localize, LocalizeWithTz, NoLocation};
+use crate::localize::{Localize, NoLocation};
 use crate::schedule::{Schedule, TimeRange};
 use crate::time_filter::{time_selector_intervals_at, time_selector_intervals_at_next_day};
 use crate::DateTimeRange;
@@ -231,46 +231,49 @@ impl<L: Localize> OpeningHours<L> {
     }
 }
 
-impl<L: Localize> OpeningHours<L> {
-    // TODO: doc
-    #[cfg(feature = "localize")]
-    pub fn with_tz<Tz: TimeZone>(self, tz: Tz) -> OpeningHours<L::WithTz<Tz>> {
-        OpeningHours {
-            rules: self.rules,
-            ctx: Context {
-                holidays: self.ctx.holidays,
-                localize: self.ctx.localize.with_tz(tz),
-            },
+#[cfg(feature = "localize")]
+mod feat_localize {
+    use super::*;
+    use crate::localize::LocalizeWithTz;
+
+    impl<L: Localize> OpeningHours<L> {
+        // TODO: doc
+        pub fn with_tz<Tz: chrono::TimeZone>(self, tz: Tz) -> OpeningHours<L::WithTz<Tz>> {
+            OpeningHours {
+                rules: self.rules,
+                ctx: Context {
+                    holidays: self.ctx.holidays,
+                    localize: self.ctx.localize.with_tz(tz),
+                },
+            }
+        }
+
+        // TODO: doc
+        pub fn try_with_coord_infer_tz(
+            self,
+            lat: f64,
+            lon: f64,
+        ) -> Result<OpeningHours<<L::WithTz<chrono_tz::Tz> as LocalizeWithTz>::WithCoord>> {
+            Ok(OpeningHours {
+                rules: self.rules,
+                ctx: Context {
+                    holidays: self.ctx.holidays,
+                    localize: self.ctx.localize.try_with_coord_infer_tz(lat, lon)?,
+                },
+            })
         }
     }
 
-    // TODO: doc
-    #[cfg(feature = "localize")]
-    pub fn try_with_coord_infer_tz(
-        self,
-        lat: f64,
-        lon: f64,
-    ) -> Result<OpeningHours<<L::WithTz<chrono_tz::Tz> as LocalizeWithTz>::WithCoord>> {
-        Ok(OpeningHours {
-            rules: self.rules,
-            ctx: Context {
-                holidays: self.ctx.holidays,
-                localize: self.ctx.localize.try_with_coord_infer_tz(lat, lon)?,
-            },
-        })
-    }
-}
-
-#[cfg(feature = "localize")]
-impl<L: LocalizeWithTz> OpeningHours<L> {
-    // TODO: doc
-    pub fn with_coords(self, lat: f64, lon: f64) -> OpeningHours<L::WithCoord> {
-        OpeningHours {
-            rules: self.rules,
-            ctx: Context {
-                holidays: self.ctx.holidays,
-                localize: self.ctx.localize.with_coord(lat, lon),
-            },
+    impl<L: LocalizeWithTz> OpeningHours<L> {
+        // TODO: doc
+        pub fn with_coords(self, lat: f64, lon: f64) -> OpeningHours<L::WithCoord> {
+            OpeningHours {
+                rules: self.rules,
+                ctx: Context {
+                    holidays: self.ctx.holidays,
+                    localize: self.ctx.localize.with_coord(lat, lon),
+                },
+            }
         }
     }
 }

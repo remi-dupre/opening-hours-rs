@@ -2,7 +2,6 @@ use std::cmp::{max, min, Ordering};
 use std::fmt::Debug;
 use std::ops::{Range, RangeInclusive};
 
-use chrono::NaiveDateTime;
 use opening_hours_syntax::rules::RuleKind;
 use opening_hours_syntax::sorted_vec::UniqueSortedVec;
 
