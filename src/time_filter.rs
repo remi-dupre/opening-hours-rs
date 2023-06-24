@@ -1,6 +1,6 @@
 use std::ops::Range;
 
-use chrono::NaiveDate;
+use chrono::{NaiveDate, Timelike};
 
 use opening_hours_syntax::extended_time::ExtendedTime;
 use opening_hours_syntax::rules::time as ts;
@@ -108,13 +108,12 @@ impl AsNaive for ts::VariableTime {
 impl AsNaive for ts::TimeEvent {
     type Output = ExtendedTime;
 
-    fn as_naive<L: Localize>(&self, ctx: &Context<L>, _date: NaiveDate) -> Self::Output {
-        // TODO: real computation based on the day (and position/timezone?)
-        match self {
-            Self::Dawn => ExtendedTime::new(6, 0),
-            Self::Sunrise => ExtendedTime::new(7, 0),
-            Self::Sunset => ExtendedTime::new(19, 0),
-            Self::Dusk => ExtendedTime::new(20, 0),
-        }
+    fn as_naive<L: Localize>(&self, ctx: &Context<L>, date: NaiveDate) -> Self::Output {
+        let time = ctx.localize.event_time(date, *self);
+
+        ExtendedTime::new(
+            time.hour().try_into().unwrap(),
+            time.minute().try_into().unwrap(),
+        )
     }
 }

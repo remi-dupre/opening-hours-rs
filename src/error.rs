@@ -14,6 +14,10 @@ pub enum Error {
     // TODO: doc
     #[error("could find region `{0}`")]
     RegionNotFound(String),
+    // TODO: doc
+    #[cfg(feature = "localize")]
+    #[error("timezone `{0}` not loaded")]
+    TzNotFound(&'static str),
 }
 
 // TODO: doc

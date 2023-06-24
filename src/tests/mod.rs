@@ -84,15 +84,18 @@ macro_rules! datetime {
 
 #[macro_export]
 macro_rules! schedule_at {
-    ( $expression: expr, $date: expr ) => {{
-        use $crate::{date, OpeningHours};
-        OpeningHours::parse($expression)?.schedule_at(date!($date))
-    }};
-    ( $expression: expr, $date: expr, $region: expr ) => {{
+    (
+        $expression: expr,
+        $date: expr
+        $( , region = $region: expr )?
+        $( , coord = $coord: expr )?
+        $( , )?
+    ) => {{
         use $crate::{date, OpeningHours};
 
         OpeningHours::parse($expression)?
-            .with_region($region)?
+            $( .with_region($region)? )?
+            $( .try_with_coord_infer_tz($coord.0, $coord.1).expect("invalid coord") )?
             .schedule_at(date!($date))
     }};
 }

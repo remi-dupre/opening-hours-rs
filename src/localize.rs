@@ -1,30 +1,81 @@
+use std::collections::HashMap;
+use std::fmt::Debug;
 use std::marker::PhantomData;
+use std::ops::Add;
 
-use chrono::{DateTime, NaiveDateTime};
+use chrono::{DateTime, Datelike, NaiveDate, NaiveDateTime, NaiveTime, Timelike};
 use chrono::{Duration, TimeZone};
+use once_cell::sync::Lazy;
+use sunrise::{DawnType, SolarDay, SolarEvent};
 
 #[cfg(feature = "tracing")]
 use tracing::warn;
 
-use crate::error::Result;
+use crate::error::{Error, Result};
+use opening_hours_syntax::rules::time::TimeEvent;
+
+#[cfg(feature = "localize")]
+static TZ_NAME_FINDER: Lazy<tzf_rs::DefaultFinder> = Lazy::new(tzf_rs::DefaultFinder::new);
+
+#[cfg(feature = "localize")]
+static TZ_BY_NAME: Lazy<HashMap<&str, chrono_tz::Tz>> = Lazy::new(|| {
+    chrono_tz::TZ_VARIANTS
+        .iter()
+        .copied()
+        .map(|tz| (tz.name(), tz))
+        .collect()
+});
 
 // TODO: doc
 pub trait Localize: Clone {
-    type Output;
-    type WithTz<T: TimeZone>: Localize;
-    type WithCoordInferTz: Localize;
+    type DateTime: Clone
+        + Debug
+        + Eq
+        + Ord
+        + Datelike
+        + Timelike
+        + Add<Duration, Output = Self::DateTime>;
 
-    fn localize_datetime(&self, naive: NaiveDateTime) -> Self::Output;
+    type WithTz<T: TimeZone>: LocalizeWithTz;
+    fn datetime(&self, naive: NaiveDateTime) -> Self::DateTime;
+
+    fn event_time(&self, _date: NaiveDate, event: TimeEvent) -> NaiveTime {
+        match event {
+            TimeEvent::Dawn => NaiveTime::from_hms_opt(6, 0, 0),
+            TimeEvent::Sunrise => NaiveTime::from_hms_opt(7, 0, 0),
+            TimeEvent::Sunset => NaiveTime::from_hms_opt(19, 0, 0),
+            TimeEvent::Dusk => NaiveTime::from_hms_opt(20, 0, 0),
+        }
+        .unwrap()
+    }
 
     #[cfg(feature = "localize")]
     fn with_tz<T: TimeZone>(self, tz: T) -> Self::WithTz<T>;
 
     #[cfg(feature = "localize")]
-    fn try_with_coord_infer_tz(self, lat: f64, lon: f64) -> Result<Self::WithCoordInferTz>;
+    fn try_with_coord_infer_tz(
+        self,
+        lat: f64,
+        lon: f64,
+    ) -> Result<<Self::WithTz<chrono_tz::Tz> as LocalizeWithTz>::WithCoord> {
+        let tz_name = TZ_NAME_FINDER.get_tz_name(lon, lat);
+
+        let tz = TZ_BY_NAME
+            .get(tz_name)
+            .copied()
+            .ok_or_else(|| Error::TzNotFound(tz_name))?;
+
+        #[cfg(feature = "tracing")]
+        {
+            tracing::debug!("TimeZone at ({lat},{lon}) is {tz}");
+        }
+
+        Ok(self.with_tz(tz).with_coord(lat, lon))
+    }
 }
 
 pub trait LocalizeWithTz: Localize {
-    type WithCoord: Localize;
+    type WithCoord: LocalizeWithTz;
 
     #[cfg(feature = "localize")]
     fn with_coord(self, lat: f64, lon: f64) -> Self::WithCoord;
@@ -42,22 +93,16 @@ pub struct NoLocation {
 
 #[cfg(feature = "localize")]
 impl Localize for NoLocation {
-    type Output = NaiveDateTime;
+    type DateTime = NaiveDateTime;
     type WithTz<T: TimeZone> = WithTz<T>;
-    type WithCoordInferTz = WithCoordAndTz<chrono_tz::Tz>;
 
-    fn localize_datetime(&self, naive: NaiveDateTime) -> Self::Output {
+    fn datetime(&self, naive: NaiveDateTime) -> Self::DateTime {
         naive
     }
 
     #[cfg(feature = "localize")]
     fn with_tz<T: TimeZone>(self, tz: T) -> Self::WithTz<T> {
         WithTz { tz }
-    }
-
-    #[cfg(feature = "localize")]
-    fn try_with_coord_infer_tz(self, lat: f64, lon: f64) -> Result<Self::WithCoordInferTz> {
-        todo!()
     }
 }
 
@@ -73,11 +118,10 @@ pub struct WithTz<Tz: TimeZone> {
 
 #[cfg(feature = "localize")]
 impl<Tz: TimeZone> Localize for WithTz<Tz> {
-    type Output = DateTime<Tz>;
+    type DateTime = DateTime<Tz>;
     type WithTz<N: TimeZone> = WithTz<N>;
-    type WithCoordInferTz = WithCoordAndTz<Tz>;
 
-    fn localize_datetime(&self, naive: NaiveDateTime) -> Self::Output {
+    fn datetime(&self, naive: NaiveDateTime) -> Self::DateTime {
         localize_next_valid(naive, &self.tz)
     }
 
@@ -85,19 +129,14 @@ impl<Tz: TimeZone> Localize for WithTz<Tz> {
     fn with_tz<N: TimeZone>(self, tz: N) -> Self::WithTz<N> {
         WithTz { tz }
     }
-
-    #[cfg(feature = "localize")]
-    fn try_with_coord_infer_tz(self, lat: f64, lon: f64) -> Result<Self::WithCoordInferTz> {
-        todo!()
-    }
 }
 
 #[cfg(feature = "localize")]
 impl<Tz: TimeZone> LocalizeWithTz for WithTz<Tz> {
     type WithCoord = WithCoordAndTz<Tz>;
 
-    fn with_coord(self, lat: f64, lon: f64) -> Self::WithCoordInferTz {
-        WithCoordAndTz { tz: self.tz, lat, lon }
+    fn with_coord(self, lat: f64, lon: f64) -> Self::WithCoord {
+        WithCoordAndTz { lat, lon, tz: self.tz }
     }
 }
 
@@ -112,22 +151,35 @@ pub struct WithCoordAndTz<Tz: TimeZone> {
 
 #[cfg(feature = "localize")]
 impl<Tz: TimeZone> Localize for WithCoordAndTz<Tz> {
-    type Output = DateTime<Tz>;
+    type DateTime = DateTime<Tz>;
     type WithTz<N: TimeZone> = WithCoordAndTz<N>;
-    type WithCoordInferTz = WithCoordAndTz<Tz>;
 
-    fn localize_datetime(&self, naive: NaiveDateTime) -> Self::Output {
+    fn datetime(&self, naive: NaiveDateTime) -> Self::DateTime {
         localize_next_valid(naive, &self.tz)
+    }
+
+    fn event_time(&self, date: NaiveDate, event: TimeEvent) -> NaiveTime {
+        let solar_event = match event {
+            TimeEvent::Dawn => SolarEvent::Dawn(DawnType::Civil),
+            TimeEvent::Sunrise => SolarEvent::Sunrise,
+            TimeEvent::Sunset => SolarEvent::Sunset,
+            TimeEvent::Dusk => SolarEvent::Dusk(DawnType::Civil),
+        };
+
+        let solar = SolarDay::new(self.lat, self.lon, date.year(), date.month(), date.day());
+        let timestamp = solar.event_time(solar_event);
+
+        let datetime = self.tz.from_utc_datetime(
+            &NaiveDateTime::from_timestamp_opt(timestamp, 0).expect("invalid timestamp"),
+        );
+
+        NaiveTime::from_hms_opt(datetime.hour(), datetime.minute(), datetime.second())
+            .expect("invalid local time")
     }
 
     #[cfg(feature = "localize")]
     fn with_tz<T: TimeZone>(self, tz: T) -> Self::WithTz<T> {
-        todo!()
-    }
-
-    #[cfg(feature = "localize")]
-    fn try_with_coord_infer_tz(self, lat: f64, lon: f64) -> Result<Self> {
-        todo!()
+        WithCoordAndTz { lat: self.lat, lon: self.lon, tz }
     }
 }
 
@@ -135,8 +187,8 @@ impl<Tz: TimeZone> Localize for WithCoordAndTz<Tz> {
 impl<Tz: TimeZone> LocalizeWithTz for WithCoordAndTz<Tz> {
     type WithCoord = WithCoordAndTz<Tz>;
 
-    fn with_coord(self, lat: f64, lon: f64) -> Self::WithCoordInferTz {
-        todo!()
+    fn with_coord(self, lat: f64, lon: f64) -> Self::WithCoord {
+        Self { lat, lon, tz: self.tz }
     }
 }
 

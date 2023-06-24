@@ -1,4 +1,5 @@
 use std::cmp::{max, min, Ordering};
+use std::fmt::Debug;
 use std::ops::{Range, RangeInclusive};
 
 use chrono::NaiveDateTime;
@@ -8,28 +9,39 @@ use opening_hours_syntax::sorted_vec::UniqueSortedVec;
 // DateTimeRange
 
 #[non_exhaustive]
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct DateTimeRange<'c> {
-    pub range: Range<NaiveDateTime>,
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DateTimeRange<'c, D> {
+    pub range: Range<D>,
     pub kind: RuleKind,
     pub comments: UniqueSortedVec<&'c str>,
 }
 
-impl<'c> DateTimeRange<'c> {
+impl<'c, D: Debug + Eq> DateTimeRange<'c, D> {
     pub(crate) fn new_with_sorted_comments(
-        range: Range<NaiveDateTime>,
+        range: Range<D>,
         kind: RuleKind,
         comments: UniqueSortedVec<&'c str>,
     ) -> Self {
         Self { range, kind, comments }
     }
 
+    // TODO: doc
     pub fn comments(&self) -> &[&'c str] {
         &self.comments
     }
 
+    // TODO: doc
     pub fn into_comments(self) -> UniqueSortedVec<&'c str> {
         self.comments
+    }
+
+    // TODO: doc
+    pub fn map<E: Debug + Eq, F: Fn(D) -> E>(self, f: F) -> DateTimeRange<'c, E> {
+        DateTimeRange {
+            range: f(self.range.start)..f(self.range.end),
+            kind: self.kind,
+            comments: self.comments,
+        }
     }
 }
 

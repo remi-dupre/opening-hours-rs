@@ -1,9 +1,10 @@
+use std::borrow::Cow;
 use std::boxed::Box;
 use std::cmp::{max, min};
 use std::convert::TryInto;
 use std::iter::{empty, Peekable};
 
-use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime, TimeZone};
+use chrono::{Datelike, Duration, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Timelike};
 use once_cell::sync::Lazy;
 
 use compact_calendar::CompactCalendar;
@@ -26,6 +27,17 @@ pub static DATE_LIMIT: Lazy<NaiveDateTime> = Lazy::new(|| {
     )
 });
 
+/// TODO: move to helpers
+fn dt_as_naive<D: Datelike + Timelike>(dt: D) -> NaiveDateTime {
+    let date = NaiveDate::from_ymd_opt(dt.year(), dt.month(), dt.day())
+        .expect("could not process input date");
+
+    let time = NaiveTime::from_hms_opt(dt.hour(), dt.minute(), dt.second())
+        .expect("could not process input time");
+
+    NaiveDateTime::new(date, time)
+}
+
 // OpeningHours
 
 #[derive(Clone)]
@@ -43,16 +55,6 @@ impl OpeningHours<NoLocation> {
             rules: opening_hours_syntax::parse(data)?,
             ctx: Context::default(),
         })
-    }
-
-    // TODO: doc
-    #[cfg(feature = "localize")]
-    pub fn try_with_coord(
-        self,
-        lat: f64,
-        lon: f64,
-    ) -> Result<OpeningHours<<NoLocation as Localize>::WithCoordInferTz>> {
-        todo!()
     }
 }
 
@@ -78,6 +80,63 @@ impl<L: Localize> OpeningHours<L> {
             .ok_or_else(|| Error::RegionNotFound(region.to_string()))?;
 
         Ok(self)
+    }
+
+    // High level implementations
+
+    // TODO: doc
+    pub fn next_change(&self, current_time: L::DateTime) -> Result<L::DateTime> {
+        Ok(self
+            .iter_from(current_time)?
+            .next()
+            .map(|dtr| dtr.range.end)
+            .unwrap_or_else(|| self.ctx.localize.datetime(*DATE_LIMIT)))
+    }
+
+    // TODO: doc
+    pub fn state(&self, current_time: L::DateTime) -> Result<RuleKind> {
+        Ok(self
+            .iter_range(current_time.clone(), current_time + Duration::minutes(1))?
+            .next()
+            .map(|dtr| dtr.kind)
+            .unwrap_or(RuleKind::Unknown))
+    }
+
+    // TODO: doc
+    pub fn is_open(&self, current_time: L::DateTime) -> bool {
+        matches!(self.state(current_time), Ok(RuleKind::Open))
+    }
+
+    // TODO: doc
+    pub fn is_closed(&self, current_time: L::DateTime) -> bool {
+        matches!(self.state(current_time), Ok(RuleKind::Closed))
+    }
+
+    // TODO: doc
+    pub fn is_unknown(&self, current_time: L::DateTime) -> bool {
+        matches!(
+            self.state(current_time),
+            Err(Error::DateLimitExceeded(_)) | Ok(RuleKind::Unknown)
+        )
+    }
+
+    // TODO: doc
+    pub fn intervals(
+        &self,
+        from: L::DateTime,
+        to: L::DateTime,
+    ) -> Result<impl Iterator<Item = DateTimeRange<L::DateTime>>> {
+        Ok(self
+            .iter_from(from.clone())?
+            .take_while({
+                let to = to.clone();
+                move |dtr| dtr.range.start < to
+            })
+            .map(move |dtr| {
+                let start = max(Cow::Owned(dtr.range.start), Cow::Borrowed(&from)).into_owned();
+                let end = min(Cow::Owned(dtr.range.end), Cow::Borrowed(&to)).into_owned();
+                DateTimeRange::new_with_sorted_comments(start..end, dtr.kind, dtr.comments)
+            }))
     }
 
     // Low level implementations.
@@ -142,17 +201,20 @@ impl<L: Localize> OpeningHours<L> {
     // TODO: doc
     pub fn iter_from(
         &self,
-        from: NaiveDateTime,
-    ) -> Result<impl Iterator<Item = DateTimeRange> + '_> {
-        self.iter_range(from, *DATE_LIMIT)
+        from: L::DateTime,
+    ) -> Result<impl Iterator<Item = DateTimeRange<L::DateTime>> + '_> {
+        self.iter_range(from, self.ctx.localize.datetime(*DATE_LIMIT))
     }
 
     // TODO: doc
     pub fn iter_range(
         &self,
-        from: NaiveDateTime,
-        to: NaiveDateTime,
-    ) -> Result<impl Iterator<Item = DateTimeRange> + '_> {
+        from: L::DateTime,
+        to: L::DateTime,
+    ) -> Result<impl Iterator<Item = DateTimeRange<L::DateTime>> + '_> {
+        let from = dt_as_naive(from);
+        let to = dt_as_naive(to);
+
         if from >= *DATE_LIMIT {
             Err(Error::DateLimitExceeded(from))
         } else if to > *DATE_LIMIT {
@@ -161,65 +223,11 @@ impl<L: Localize> OpeningHours<L> {
             Ok(TimeDomainIterator::new(self, from, to)
                 .take_while(move |dtr| dtr.range.start < to)
                 .map(move |dtr| {
-                    let start = max(dtr.range.start, from);
-                    let end = min(dtr.range.end, to);
+                    let start = self.ctx.localize.datetime(max(dtr.range.start, from));
+                    let end = self.ctx.localize.datetime(min(dtr.range.end, to));
                     DateTimeRange::new_with_sorted_comments(start..end, dtr.kind, dtr.comments)
                 }))
         }
-    }
-
-    // High level implementations
-
-    // TODO: doc
-    pub fn next_change(&self, current_time: NaiveDateTime) -> Result<NaiveDateTime> {
-        Ok(self
-            .iter_from(current_time)?
-            .next()
-            .map(|dtr| dtr.range.end)
-            .unwrap_or(*DATE_LIMIT))
-    }
-
-    // TODO: doc
-    pub fn state(&self, current_time: NaiveDateTime) -> Result<RuleKind> {
-        Ok(self
-            .iter_range(current_time, current_time + Duration::minutes(1))?
-            .next()
-            .map(|dtr| dtr.kind)
-            .unwrap_or(RuleKind::Unknown))
-    }
-
-    // TODO: doc
-    pub fn is_open(&self, current_time: NaiveDateTime) -> bool {
-        matches!(self.state(current_time), Ok(RuleKind::Open))
-    }
-
-    // TODO: doc
-    pub fn is_closed(&self, current_time: NaiveDateTime) -> bool {
-        matches!(self.state(current_time), Ok(RuleKind::Closed))
-    }
-
-    // TODO: doc
-    pub fn is_unknown(&self, current_time: NaiveDateTime) -> bool {
-        matches!(
-            self.state(current_time),
-            Err(Error::DateLimitExceeded(_)) | Ok(RuleKind::Unknown)
-        )
-    }
-
-    // TODO: doc
-    pub fn intervals(
-        &self,
-        from: NaiveDateTime,
-        to: NaiveDateTime,
-    ) -> Result<impl Iterator<Item = DateTimeRange>> {
-        Ok(self
-            .iter_from(from)?
-            .take_while(move |dtr| dtr.range.start < to)
-            .map(move |dtr| {
-                let start = max(dtr.range.start, from);
-                let end = min(dtr.range.end, to);
-                DateTimeRange::new_with_sorted_comments(start..end, dtr.kind, dtr.comments)
-            }))
     }
 }
 
@@ -238,11 +246,11 @@ impl<L: Localize> OpeningHours<L> {
 
     // TODO: doc
     #[cfg(feature = "localize")]
-    fn try_with_coord_infer_tz(
+    pub fn try_with_coord_infer_tz(
         self,
         lat: f64,
         lon: f64,
-    ) -> Result<OpeningHours<L::WithCoordInferTz>> {
+    ) -> Result<OpeningHours<<L::WithTz<chrono_tz::Tz> as LocalizeWithTz>::WithCoord>> {
         Ok(OpeningHours {
             rules: self.rules,
             ctx: Context {
@@ -291,8 +299,7 @@ fn rule_sequence_schedule_at<'s, L: Localize>(
 
 // TimeDomainIterator
 
-// TODO: lacks documentation
-pub struct TimeDomainIterator<'d, L: Localize> {
+pub(crate) struct TimeDomainIterator<'d, L: Localize> {
     opening_hours: &'d OpeningHours<L>,
     curr_date: NaiveDate,
     curr_schedule: Peekable<Box<dyn Iterator<Item = TimeRange<'d>> + 'd>>,
@@ -356,7 +363,7 @@ impl<'d, L: Localize> TimeDomainIterator<'d, L> {
 }
 
 impl<'d, L: Localize> Iterator for TimeDomainIterator<'d, L> {
-    type Item = DateTimeRange<'d>;
+    type Item = DateTimeRange<'d, NaiveDateTime>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(curr_tr) = self.curr_schedule.peek().cloned() {

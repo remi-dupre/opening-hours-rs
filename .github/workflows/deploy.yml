@@ -15,8 +15,15 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        crate: ["opening-hours-syntax", ".", "compact-calendar"]
-        toolchain: ["stable", "beta", "nightly"]
+        crate: [".", "opening-hours-syntax", "compact-calendar"]
+        features: [""]
+        include:
+          - crate: "."
+            features: "localize"
+          - crate: "."
+            features: "tracing"
+          - crate: "."
+            features: "localize,tracing"
     defaults:
       run:
         working-directory: ${{ matrix.crate }}
@@ -24,7 +31,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: ${{ matrix.toolchain }}
+          toolchain: stable
           default: true
           profile: minimal
           components: rustfmt, clippy
@@ -34,13 +41,13 @@ jobs:
           cargo clippy -- --version
           cargo fmt -- --version
       - name: Lint
-        run: cargo clippy -- -D warnings
+        run: cargo clippy --no-default-features --features "${{ matrix.features }}" -- -D warnings
         if: matrix.toolchain != 'nightly'
       - name: Format
         run: cargo fmt -- --check
         if: matrix.toolchain != 'nightly'
       - name: Tests
-        run: cargo test
+        run: cargo test --no-default-features --features "${{ matrix.features }}"
 
   # ---
   # --- Execute tests for python package
