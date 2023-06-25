@@ -1,38 +1,23 @@
+use std::borrow::Cow;
 use std::boxed::Box;
 use std::cmp::{max, min};
-use std::collections::HashMap;
 use std::convert::TryInto;
 use std::iter::{empty, Peekable};
 
-use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime};
-use flate2::read::ZlibDecoder;
+use chrono::{Datelike, Duration, NaiveDate, NaiveDateTime, NaiveTime, Timelike};
 use once_cell::sync::Lazy;
 
 use compact_calendar::CompactCalendar;
 use opening_hours_syntax::extended_time::ExtendedTime;
 use opening_hours_syntax::rules::{RuleKind, RuleOperator, RuleSequence};
 
+use crate::context::{Context, REGION_HOLIDAYS};
 use crate::date_filter::DateFilter;
+use crate::error::{Error, Result};
+use crate::localize::{Localize, NoLocation};
 use crate::schedule::{Schedule, TimeRange};
 use crate::time_filter::{time_selector_intervals_at, time_selector_intervals_at_next_day};
 use crate::DateTimeRange;
-
-const EMPTY_CALENDAR: &CompactCalendar = &CompactCalendar::empty();
-
-/// An array of sorted holidays for each known region
-pub static REGION_HOLIDAYS: Lazy<HashMap<&str, CompactCalendar>> = Lazy::new(|| {
-    let mut reader = ZlibDecoder::new(include_bytes!(env!("HOLIDAYS_FILE")) as &[_]);
-
-    env!("HOLIDAYS_REGIONS")
-        .split(',')
-        .map(|region| {
-            let calendar =
-                CompactCalendar::deserialize(&mut reader).expect("unable to parse holiday data");
-
-            (region, calendar)
-        })
-        .collect()
-});
 
 /// The upper bound of dates handled by specification
 pub static DATE_LIMIT: Lazy<NaiveDateTime> = Lazy::new(|| {
@@ -42,31 +27,41 @@ pub static DATE_LIMIT: Lazy<NaiveDateTime> = Lazy::new(|| {
     )
 });
 
-#[derive(Debug)]
-pub struct DateLimitExceeded;
+/// TODO: move to helpers
+fn dt_as_naive<D: Datelike + Timelike>(dt: D) -> NaiveDateTime {
+    let date = NaiveDate::from_ymd_opt(dt.year(), dt.month(), dt.day())
+        .expect("could not process input date");
+
+    let time = NaiveTime::from_hms_opt(dt.hour(), dt.minute(), dt.second())
+        .expect("could not process input time");
+
+    NaiveDateTime::new(date, time)
+}
 
 // OpeningHours
 
 #[derive(Clone)]
-pub struct OpeningHours {
+pub struct OpeningHours<L = NoLocation> {
     /// Rules describing opening hours
     rules: Vec<RuleSequence>,
-    /// The sorted list of holidays
-    holidays: &'static CompactCalendar,
+    /// Execution context for opening hours
+    ctx: Context<L>,
 }
 
-impl OpeningHours {
+impl OpeningHours<NoLocation> {
     /// Init a new TimeDomain with the given set of Rules.
-    pub fn parse(data: &str) -> Result<Self, crate::ParserError> {
+    pub fn parse(data: &str) -> Result<OpeningHours<NoLocation>> {
         Ok(OpeningHours {
             rules: opening_hours_syntax::parse(data)?,
-            holidays: EMPTY_CALENDAR,
+            ctx: Context::default(),
         })
     }
+}
 
+impl<L: Localize> OpeningHours<L> {
     /// Get the list of all loaded public holidays.
     pub fn holidays(&self) -> &'static CompactCalendar {
-        self.holidays
+        self.ctx.holidays
     }
 
     /// Replace loaded holidays with known holidays for the given region. If
@@ -77,15 +72,71 @@ impl OpeningHours {
     ///
     /// let oh = OpeningHours::parse("24/7").unwrap();
     /// assert_eq!(oh.holidays().count(), 0);
-    /// assert_ne!(oh.with_region("FR").holidays().count(), 0);
+    /// assert_ne!(oh.with_region("FR").unwrap().holidays().count(), 0);
     /// ```
-    pub fn with_region(self, region: &str) -> Self {
-        OpeningHours {
-            holidays: REGION_HOLIDAYS
-                .get(region.to_uppercase().as_str())
-                .unwrap_or(EMPTY_CALENDAR),
-            ..self
-        }
+    pub fn with_region(mut self, region: &str) -> Result<Self> {
+        self.ctx.holidays = REGION_HOLIDAYS
+            .get(region.to_uppercase().as_str())
+            .ok_or_else(|| Error::RegionNotFound(region.to_string()))?;
+
+        Ok(self)
+    }
+
+    // High level implementations
+
+    // TODO: doc
+    pub fn next_change(&self, current_time: L::DateTime) -> Result<L::DateTime> {
+        Ok(self
+            .iter_from(current_time)?
+            .next()
+            .map(|dtr| dtr.range.end)
+            .unwrap_or_else(|| self.ctx.localize.datetime(*DATE_LIMIT)))
+    }
+
+    // TODO: doc
+    pub fn state(&self, current_time: L::DateTime) -> Result<RuleKind> {
+        Ok(self
+            .iter_range(current_time.clone(), current_time + Duration::minutes(1))?
+            .next()
+            .map(|dtr| dtr.kind)
+            .unwrap_or(RuleKind::Unknown))
+    }
+
+    // TODO: doc
+    pub fn is_open(&self, current_time: L::DateTime) -> bool {
+        matches!(self.state(current_time), Ok(RuleKind::Open))
+    }
+
+    // TODO: doc
+    pub fn is_closed(&self, current_time: L::DateTime) -> bool {
+        matches!(self.state(current_time), Ok(RuleKind::Closed))
+    }
+
+    // TODO: doc
+    pub fn is_unknown(&self, current_time: L::DateTime) -> bool {
+        matches!(
+            self.state(current_time),
+            Err(Error::DateLimitExceeded(_)) | Ok(RuleKind::Unknown)
+        )
+    }
+
+    // TODO: doc
+    pub fn intervals(
+        &self,
+        from: L::DateTime,
+        to: L::DateTime,
+    ) -> Result<impl Iterator<Item = DateTimeRange<L::DateTime>>> {
+        Ok(self
+            .iter_from(from.clone())?
+            .take_while({
+                let to = to.clone();
+                move |dtr| dtr.range.start < to
+            })
+            .map(move |dtr| {
+                let start = max(Cow::Owned(dtr.range.start), Cow::Borrowed(&from)).into_owned();
+                let end = min(Cow::Owned(dtr.range.end), Cow::Borrowed(&to)).into_owned();
+                DateTimeRange::new_with_sorted_comments(start..end, dtr.kind, dtr.comments)
+            }))
     }
 
     // Low level implementations.
@@ -106,13 +157,14 @@ impl OpeningHours {
             .flatten()
     }
 
+    // TODO: doc
     pub fn schedule_at(&self, date: NaiveDate) -> Schedule {
         let mut prev_match = false;
         let mut prev_eval = None;
 
         for rules_seq in &self.rules {
             let curr_match = rules_seq.day_selector.filter(date, self.holidays());
-            let curr_eval = rule_sequence_schedule_at(rules_seq, date, self.holidays());
+            let curr_eval = rule_sequence_schedule_at(&self.ctx, rules_seq, date, self.holidays());
 
             let (new_match, new_eval) = match rules_seq.operator {
                 RuleOperator::Normal => (
@@ -146,96 +198,100 @@ impl OpeningHours {
         prev_eval.unwrap_or_else(Schedule::empty)
     }
 
+    // TODO: doc
     pub fn iter_from(
         &self,
-        from: NaiveDateTime,
-    ) -> Result<impl Iterator<Item = DateTimeRange> + '_, DateLimitExceeded> {
-        self.iter_range(from, *DATE_LIMIT)
+        from: L::DateTime,
+    ) -> Result<impl Iterator<Item = DateTimeRange<L::DateTime>> + '_> {
+        self.iter_range(from, self.ctx.localize.datetime(*DATE_LIMIT))
     }
 
+    // TODO: doc
     pub fn iter_range(
         &self,
-        from: NaiveDateTime,
-        to: NaiveDateTime,
-    ) -> Result<impl Iterator<Item = DateTimeRange> + '_, DateLimitExceeded> {
-        if from >= *DATE_LIMIT || to > *DATE_LIMIT {
-            Err(DateLimitExceeded)
+        from: L::DateTime,
+        to: L::DateTime,
+    ) -> Result<impl Iterator<Item = DateTimeRange<L::DateTime>> + '_> {
+        let from = dt_as_naive(from);
+        let to = dt_as_naive(to);
+
+        if from >= *DATE_LIMIT {
+            Err(Error::DateLimitExceeded(from))
+        } else if to > *DATE_LIMIT {
+            Err(Error::DateLimitExceeded(to))
         } else {
             Ok(TimeDomainIterator::new(self, from, to)
                 .take_while(move |dtr| dtr.range.start < to)
                 .map(move |dtr| {
-                    let start = max(dtr.range.start, from);
-                    let end = min(dtr.range.end, to);
+                    let start = self.ctx.localize.datetime(max(dtr.range.start, from));
+                    let end = self.ctx.localize.datetime(min(dtr.range.end, to));
                     DateTimeRange::new_with_sorted_comments(start..end, dtr.kind, dtr.comments)
                 }))
         }
     }
+}
 
-    // High level implementations
+#[cfg(feature = "localize")]
+mod feat_localize {
+    use super::*;
+    use crate::localize::LocalizeWithTz;
 
-    pub fn next_change(
-        &self,
-        current_time: NaiveDateTime,
-    ) -> Result<NaiveDateTime, DateLimitExceeded> {
-        Ok(self
-            .iter_from(current_time)?
-            .next()
-            .map(|dtr| dtr.range.end)
-            .unwrap_or(*DATE_LIMIT))
+    impl<L: Localize> OpeningHours<L> {
+        // TODO: doc
+        pub fn with_tz<Tz: chrono::TimeZone>(self, tz: Tz) -> OpeningHours<L::WithTz<Tz>> {
+            OpeningHours {
+                rules: self.rules,
+                ctx: Context {
+                    holidays: self.ctx.holidays,
+                    localize: self.ctx.localize.with_tz(tz),
+                },
+            }
+        }
+
+        // TODO: doc
+        pub fn try_with_coord_infer_tz(
+            self,
+            lat: f64,
+            lon: f64,
+        ) -> Result<OpeningHours<<L::WithTz<chrono_tz::Tz> as LocalizeWithTz>::WithCoord>> {
+            Ok(OpeningHours {
+                rules: self.rules,
+                ctx: Context {
+                    holidays: self.ctx.holidays,
+                    localize: self.ctx.localize.try_with_coord_infer_tz(lat, lon)?,
+                },
+            })
+        }
     }
 
-    pub fn state(&self, current_time: NaiveDateTime) -> Result<RuleKind, DateLimitExceeded> {
-        Ok(self
-            .iter_range(current_time, current_time + Duration::minutes(1))?
-            .next()
-            .map(|dtr| dtr.kind)
-            .unwrap_or(RuleKind::Unknown))
-    }
-
-    pub fn is_open(&self, current_time: NaiveDateTime) -> bool {
-        matches!(self.state(current_time), Ok(RuleKind::Open))
-    }
-
-    pub fn is_closed(&self, current_time: NaiveDateTime) -> bool {
-        matches!(self.state(current_time), Ok(RuleKind::Closed))
-    }
-
-    pub fn is_unknown(&self, current_time: NaiveDateTime) -> bool {
-        matches!(
-            self.state(current_time),
-            Err(DateLimitExceeded) | Ok(RuleKind::Unknown)
-        )
-    }
-
-    pub fn intervals(
-        &self,
-        from: NaiveDateTime,
-        to: NaiveDateTime,
-    ) -> Result<impl Iterator<Item = DateTimeRange>, DateLimitExceeded> {
-        Ok(self
-            .iter_from(from)?
-            .take_while(move |dtr| dtr.range.start < to)
-            .map(move |dtr| {
-                let start = max(dtr.range.start, from);
-                let end = min(dtr.range.end, to);
-                DateTimeRange::new_with_sorted_comments(start..end, dtr.kind, dtr.comments)
-            }))
+    impl<L: LocalizeWithTz> OpeningHours<L> {
+        // TODO: doc
+        pub fn with_coords(self, lat: f64, lon: f64) -> OpeningHours<L::WithCoord> {
+            OpeningHours {
+                rules: self.rules,
+                ctx: Context {
+                    holidays: self.ctx.holidays,
+                    localize: self.ctx.localize.with_coord(lat, lon),
+                },
+            }
+        }
     }
 }
 
-fn rule_sequence_schedule_at<'s>(
+fn rule_sequence_schedule_at<'s, L: Localize>(
+    ctx: &'s Context<L>,
     rule_sequence: &'s RuleSequence,
     date: NaiveDate,
     holiday: &CompactCalendar,
 ) -> Option<Schedule<'s>> {
     let from_today = Some(date)
         .filter(|date| rule_sequence.day_selector.filter(*date, holiday))
-        .map(|date| time_selector_intervals_at(&rule_sequence.time_selector, date))
+        .map(|date| time_selector_intervals_at(ctx, &rule_sequence.time_selector, date))
         .map(|rgs| Schedule::from_ranges(rgs, rule_sequence.kind, rule_sequence.comments.to_ref()));
 
     let from_yesterday = (date.pred_opt())
         .filter(|prev| rule_sequence.day_selector.filter(*prev, holiday))
-        .map(|prev| time_selector_intervals_at_next_day(&rule_sequence.time_selector, prev))
+        .map(|prev| time_selector_intervals_at_next_day(ctx, &rule_sequence.time_selector, prev))
         .map(|rgs| Schedule::from_ranges(rgs, rule_sequence.kind, rule_sequence.comments.to_ref()));
 
     match (from_today, from_yesterday) {
@@ -246,16 +302,16 @@ fn rule_sequence_schedule_at<'s>(
 
 // TimeDomainIterator
 
-pub struct TimeDomainIterator<'d> {
-    opening_hours: &'d OpeningHours,
+pub(crate) struct TimeDomainIterator<'d, L: Localize> {
+    opening_hours: &'d OpeningHours<L>,
     curr_date: NaiveDate,
     curr_schedule: Peekable<Box<dyn Iterator<Item = TimeRange<'d>> + 'd>>,
     end_datetime: NaiveDateTime,
 }
 
-impl<'d> TimeDomainIterator<'d> {
-    pub fn new(
-        opening_hours: &'d OpeningHours,
+impl<'d, L: Localize> TimeDomainIterator<'d, L> {
+    pub(crate) fn new(
+        opening_hours: &'d OpeningHours<L>,
         start_datetime: NaiveDateTime,
         end_datetime: NaiveDateTime,
     ) -> Self {
@@ -309,8 +365,8 @@ impl<'d> TimeDomainIterator<'d> {
     }
 }
 
-impl<'d> Iterator for TimeDomainIterator<'d> {
-    type Item = DateTimeRange<'d>;
+impl<'d, L: Localize> Iterator for TimeDomainIterator<'d, L> {
+    type Item = DateTimeRange<'d, NaiveDateTime>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(curr_tr) = self.curr_schedule.peek().cloned() {

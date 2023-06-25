@@ -3,9 +3,12 @@
 pub mod date_filter;
 #[macro_use]
 pub mod schedule;
+pub mod error;
+pub mod localize;
 pub mod opening_hours;
 pub mod time_filter;
 
+mod context;
 mod utils;
 
 #[cfg(test)]

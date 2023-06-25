@@ -4,12 +4,13 @@ use std::sync::Arc;
 
 use chrono::prelude::*;
 use chrono::NaiveDateTime;
-use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::{PyDateAccess, PyDateTime, PyTimeAccess};
 
 use opening_hours::DateTimeRange;
 use opening_hours_syntax::rules::RuleKind;
+
+use crate::errors::DateImportError;
 
 // ---
 // --- State
@@ -69,9 +70,7 @@ impl<'source> FromPyObject<'source> for NaiveDateTimeWrapper {
                 py_datetime.get_month().into(),
                 py_datetime.get_day().into(),
             )
-            .ok_or_else(|| {
-                PyErr::new::<PyValueError, _>("Could not convert Python's date to Rust's NaiveDate")
-            })?
+            .ok_or(DateImportError(py_datetime))?
         };
 
         let rs_time = {
@@ -80,9 +79,7 @@ impl<'source> FromPyObject<'source> for NaiveDateTimeWrapper {
                 py_datetime.get_minute().into(),
                 py_datetime.get_second().into(),
             )
-            .ok_or(PyErr::new::<PyValueError, _>(
-                "Could not convert Python's time to Rust's NaiveTime",
-            ))?
+            .ok_or(DateImportError(py_datetime))?
         };
 
         Ok(NaiveDateTime::new(rs_date, rs_time).into())
@@ -124,7 +121,7 @@ impl IntoPy<Py<PyAny>> for NaiveDateTimeWrapper {
 #[pyclass(unsendable)]
 pub struct RangeIterator {
     _td: Pin<Arc<opening_hours::OpeningHours>>,
-    iter: Box<dyn Iterator<Item = DateTimeRange<'static>>>,
+    iter: Box<dyn Iterator<Item = DateTimeRange<'static, NaiveDateTime>>>,
 }
 
 impl RangeIterator {
@@ -152,8 +149,8 @@ impl RangeIterator {
         //   2. `td` won't move as it is marked Pin.
         //   3. we must ensure in [`RangeIterator`]'s implementation that iter is not moved out of
         //      the struct.
-        let iter: Box<dyn Iterator<Item = DateTimeRange<'_>>> = iter;
-        let iter: Box<dyn Iterator<Item = DateTimeRange<'static>>> =
+        let iter: Box<dyn Iterator<Item = DateTimeRange<'_, NaiveDateTime>>> = iter;
+        let iter: Box<dyn Iterator<Item = DateTimeRange<'static, NaiveDateTime>>> =
             unsafe { std::mem::transmute(iter) };
 
         Self { _td: td, iter }

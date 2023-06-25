@@ -23,7 +23,11 @@ fn bench_eval(c: &mut Criterion) {
     let date_time = NaiveDateTime::parse_from_str("2021-02-01 12:03", "%Y-%m-%d %H:%M").unwrap();
     let sch_24_7 = OpeningHours::parse(SCH_24_7).unwrap();
     let sch_addition = OpeningHours::parse(SCH_ADDITION).unwrap();
-    let sch_holiday = OpeningHours::parse(SCH_HOLIDAY).unwrap().with_region("FR");
+
+    let sch_holiday = OpeningHours::parse(SCH_HOLIDAY)
+        .unwrap()
+        .with_region("FR")
+        .unwrap();
 
     {
         let mut group = c.benchmark_group("is_open");

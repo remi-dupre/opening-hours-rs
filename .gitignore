@@ -2,3 +2,5 @@
 fuzz/artifacts
 fuzz/corpus
 python/docs
+docs/
+.python-version

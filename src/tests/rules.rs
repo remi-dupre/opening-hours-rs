@@ -1,10 +1,10 @@
-use opening_hours_syntax::error::Error;
 use opening_hours_syntax::rules::RuleKind::*;
 
+use crate::error::Result;
 use crate::schedule_at;
 
 #[test]
-fn empty() -> Result<(), Error> {
+fn empty() -> Result<()> {
     assert_eq!(
         schedule_at!("", "2020-06-01"),
         schedule! { 00,00 => Open => 24,00 }
@@ -14,7 +14,7 @@ fn empty() -> Result<(), Error> {
 }
 
 #[test]
-fn always_open() -> Result<(), Error> {
+fn always_open() -> Result<()> {
     assert_eq!(
         schedule_at!("24/7", "2020-06-01"),
         schedule! { 00,00 => Open => 24,00 }
@@ -24,7 +24,7 @@ fn always_open() -> Result<(), Error> {
 }
 
 #[test]
-fn regular_rule() -> Result<(), Error> {
+fn regular_rule() -> Result<()> {
     assert_eq!(
         schedule_at!("Sa,Su 11:00-13:45 open; 10:00-18:00", "2020-06-01"),
         schedule! { 10,00 => Open => 18,00 }
@@ -39,7 +39,7 @@ fn regular_rule() -> Result<(), Error> {
 }
 
 #[test]
-fn additional_rule() -> Result<(), Error> {
+fn additional_rule() -> Result<()> {
     assert_eq!(
         schedule_at!(
             "10:00-12:00 open, 14:00-16:00 unknown, 16:00-23:00 closed",
@@ -66,7 +66,7 @@ fn additional_rule() -> Result<(), Error> {
 }
 
 #[test]
-fn fallback_rule() -> Result<(), Error> {
+fn fallback_rule() -> Result<()> {
     assert_eq!(
         schedule_at!("Jun:10:00-12:00 open || unknown", "2020-06-01"),
         schedule! { 10,00 => Open => 12,00 }
@@ -105,7 +105,7 @@ fn fallback_rule() -> Result<(), Error> {
 }
 
 #[test]
-fn comments() -> Result<(), Error> {
+fn comments() -> Result<()> {
     assert_eq!(
         schedule_at!(r#"10:00-12:00 open "welcome!""#, "2020-06-01"),
         schedule! { 10,00 => Open, "welcome!" => 12,00 }

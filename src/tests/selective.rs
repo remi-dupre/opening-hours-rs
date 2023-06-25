@@ -1,10 +1,10 @@
-use opening_hours_syntax::error::Error;
 use opening_hours_syntax::rules::RuleKind::*;
 
+use crate::error::Result;
 use crate::{assert_speed, datetime, schedule_at, OpeningHours};
 
 #[test]
-fn s000_idunn_interval_stops_next_day() -> Result<(), Error> {
+fn s000_idunn_interval_stops_next_day() -> Result<()> {
     use crate::DateTimeRange;
     use chrono::Duration;
 
@@ -25,7 +25,7 @@ fn s000_idunn_interval_stops_next_day() -> Result<(), Error> {
 }
 
 #[test]
-fn s001_idunn_override_weekday() -> Result<(), Error> {
+fn s001_idunn_override_weekday() -> Result<()> {
     assert_eq!(
         schedule_at!("Tu-Su 09:30-18:00; Th 09:30-21:45", "2018-06-14"),
         schedule! { 9,30 => Open => 21,45 }
@@ -35,7 +35,7 @@ fn s001_idunn_override_weekday() -> Result<(), Error> {
 }
 
 #[test]
-fn s002_idunn_override_weekday_keep_unmatched() -> Result<(), Error> {
+fn s002_idunn_override_weekday_keep_unmatched() -> Result<()> {
     assert_eq!(
         schedule_at!("Tu-Su 09:30-18:00; Th 09:30-21:45", "2018-06-15"),
         schedule! { 9,30 => Open => 18,00 }
@@ -50,7 +50,7 @@ fn s003_idunn_space_separator() {
 }
 
 #[test]
-fn s004_idunn_until_midnight_as_00() -> Result<(), Error> {
+fn s004_idunn_until_midnight_as_00() -> Result<()> {
     assert_eq!(
         schedule_at!("Mo-Su 09:00-00:00 open", "2018-06-14"),
         schedule! { 9,00 => Open => 24,00 }
@@ -60,7 +60,7 @@ fn s004_idunn_until_midnight_as_00() -> Result<(), Error> {
 }
 
 #[test]
-fn s005_idunn_days_cycle() -> Result<(), Error> {
+fn s005_idunn_days_cycle() -> Result<()> {
     assert_eq!(
         schedule_at!("We-Mo 11:00-19:00", "2018-06-11"),
         schedule! { 11,00 => Open => 19,00 }
@@ -85,7 +85,7 @@ fn s005_idunn_days_cycle() -> Result<(), Error> {
 }
 
 #[test]
-fn s006_idunn_month_cycle() -> Result<(), Error> {
+fn s006_idunn_month_cycle() -> Result<()> {
     assert_eq!(
         OpeningHours::parse("Oct-Mar 07:30-19:30; Apr-Sep 07:00-21:00")?
             .next_change(datetime!("2019-02-10 11:00"))
