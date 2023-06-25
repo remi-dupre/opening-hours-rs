@@ -1,6 +1,6 @@
 [package]
 name = "opening-hours"
-version = "0.6.17"
+version = "0.7.0"
 authors = ["Rémi Dupré <remi@dupre.io>"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
@@ -20,8 +20,8 @@ localize = ["dep:chrono-tz", "dep:sunrise-next", "dep:tzf-rs"]
 tracing = ["dep:tracing"]
 
 [dependencies]
-compact-calendar = { path = "compact-calendar", version = "0.6" }
-opening-hours-syntax = { path = "opening-hours-syntax", version = "0.6" }
+compact-calendar = { path = "compact-calendar" }
+opening-hours-syntax = { path = "opening-hours-syntax" }
 chrono = "0.4"
 flate2 = "1.0"
 once_cell = "1.8"
@@ -33,10 +33,10 @@ tracing = { version = "0.1.37", optional = true, default-features = false }
 # feature: localize
 chrono-tz = { version = "0.8", optional = true }
 sunrise-next = { version = "1.2", optional = true }
-tzf-rs = { version = "0.4", optional = true }
+tzf-rs = { version = "0.4", optional = true, default-features = false }
 
 [build-dependencies]
-compact-calendar = { path = "compact-calendar", version = "0.6" }
+compact-calendar = { path = "compact-calendar" }
 chrono = "0.4"
 flate2 = "1.0"
 
