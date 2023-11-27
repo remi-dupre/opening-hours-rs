@@ -122,8 +122,8 @@ impl<'c> Schedule<'c> {
         let mut before: Vec<_> = self
             .inner
             .iter()
-            .cloned()
             .filter(|tr| tr.range.start < ins_end)
+            .cloned()
             .filter_map(|mut tr| {
                 tr.range.end = min(tr.range.end, ins_tr.range.start);
 
