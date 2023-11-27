@@ -16,3 +16,4 @@ mod tests;
 pub use crate::opening_hours::OpeningHours;
 pub use crate::utils::range::DateTimeRange;
 pub use opening_hours_syntax::error::Error as ParserError;
+pub use opening_hours_syntax::rules::RuleKind;
