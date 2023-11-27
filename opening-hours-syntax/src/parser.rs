@@ -73,7 +73,7 @@ fn build_rule_sequence(pair: Pair<Rule>, operator: rl::RuleOperator) -> Result<r
 
     let comments = comment
         .into_iter()
-        .chain(extra_comment.into_iter())
+        .chain(extra_comment)
         .collect::<Vec<_>>()
         .into();
 
