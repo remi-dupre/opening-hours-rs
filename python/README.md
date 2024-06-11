@@ -31,7 +31,7 @@ The API is very similar to Rust API but you can find a Python specific
 documentation [here](https://remi-dupre.github.io/opening-hours-rs/opening_hours.html).
 
 
-Developpement
+Developement
 -------------
 
 To build the library by yourself you will require a recent version of Rust,
