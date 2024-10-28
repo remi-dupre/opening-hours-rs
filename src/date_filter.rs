@@ -78,7 +78,7 @@ impl DateFilter for ds::YearRange {
                 curr_year + 1
             } else {
                 // 5. time is in the range but doesn't match the step
-                let round_up = |x: u16, d: u16| d * ((x + d - 1) / d); // get the first multiple of `d` greater than `x`.
+                let round_up = |x: u16, d: u16| d * x.div_ceil(d); // get the first multiple of `d` greater than `x`.
                 self.range.start() + round_up(curr_year - self.range.start(), self.step)
             }
         };
@@ -166,7 +166,7 @@ impl DateFilter for ds::MonthdayRange {
                     }
                 };
 
-                if naive >= date {
+                if naive > date {
                     Some(naive)
                 } else {
                     naive.with_year(naive.year() + 1)

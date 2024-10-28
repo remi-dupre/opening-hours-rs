@@ -1,6 +1,6 @@
 [package]
 name = "compact-calendar"
-version = "0.6.18"
+version = "0.7.0"
 authors = ["Rémi Dupré <remi@dupre.io>"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
@@ -11,4 +11,4 @@ description = "Compact representation of a set of days based on a bit-maps"
 edition = "2021"
 
 [dependencies]
-chrono = { version = "0.4", default_features = false }
+chrono = { version = "0.4", default-features = false }
