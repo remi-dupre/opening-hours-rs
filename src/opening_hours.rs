@@ -3,10 +3,10 @@ use std::cmp::{max, min};
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::iter::{empty, Peekable};
+use std::sync::LazyLock;
 
 use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime};
 use flate2::read::ZlibDecoder;
-use once_cell::sync::Lazy;
 
 use compact_calendar::CompactCalendar;
 use opening_hours_syntax::extended_time::ExtendedTime;
@@ -20,7 +20,7 @@ use crate::DateTimeRange;
 const EMPTY_CALENDAR: &CompactCalendar = &CompactCalendar::empty();
 
 /// An array of sorted holidays for each known region
-pub static REGION_HOLIDAYS: Lazy<HashMap<&str, CompactCalendar>> = Lazy::new(|| {
+pub static REGION_HOLIDAYS: LazyLock<HashMap<&str, CompactCalendar>> = LazyLock::new(|| {
     let mut reader = ZlibDecoder::new(include_bytes!(env!("HOLIDAYS_FILE")) as &[_]);
 
     env!("HOLIDAYS_REGIONS")
@@ -35,7 +35,7 @@ pub static REGION_HOLIDAYS: Lazy<HashMap<&str, CompactCalendar>> = Lazy::new(|| 
 });
 
 /// The upper bound of dates handled by specification
-pub static DATE_LIMIT: Lazy<NaiveDateTime> = Lazy::new(|| {
+pub static DATE_LIMIT: LazyLock<NaiveDateTime> = LazyLock::new(|| {
     NaiveDateTime::new(
         NaiveDate::from_ymd_opt(10_000, 1, 1).expect("invalid max date bound"),
         NaiveTime::from_hms_opt(0, 0, 0).expect("invalid max time bound"),
