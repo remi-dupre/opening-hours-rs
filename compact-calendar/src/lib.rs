@@ -41,7 +41,7 @@ impl CompactCalendar {
 
         Self {
             first_year,
-            calendar: vec![CompactYear::new(); length],
+            calendar: vec![CompactYear::default(); length],
         }
     }
 
@@ -356,24 +356,12 @@ impl fmt::Debug for CompactCalendar {
 pub struct CompactYear([CompactMonth; 12]);
 
 impl CompactYear {
-    /// Create a new year that does not include any day.
-    ///
-    /// ```
-    /// use compact_calendar::CompactYear;
-    ///
-    /// let year = CompactYear::new();
-    /// assert_eq!(year.count(), 0);
-    /// ```
-    pub const fn new() -> Self {
-        Self([CompactMonth::new(); 12])
-    }
-
     /// Include a day in this year.
     ///
     /// ```
     /// use compact_calendar::CompactYear;
     ///
-    /// let mut year = CompactYear::new();
+    /// let mut year = CompactYear::default();
     /// year.insert(11, 3);
     /// year.insert(11, 3);
     /// year.insert(1, 25);
@@ -390,7 +378,7 @@ impl CompactYear {
     /// ```
     /// use compact_calendar::CompactYear;
     ///
-    /// let mut year = CompactYear::new();
+    /// let mut year = CompactYear::default();
     /// year.insert(3, 1);
     /// year.insert(9, 5);
     ///
@@ -409,7 +397,7 @@ impl CompactYear {
     /// ```
     /// use compact_calendar::CompactYear;
     ///
-    /// let mut year = CompactYear::new();
+    /// let mut year = CompactYear::default();
     /// year.insert(9, 5);
     /// year.insert(3, 1);
     ///
@@ -426,7 +414,7 @@ impl CompactYear {
     /// ```
     /// use compact_calendar::CompactYear;
     ///
-    /// let mut year = CompactYear::new();
+    /// let mut year = CompactYear::default();
     /// assert_eq!(year.first(), None);
     ///
     /// year.insert(12, 31);
@@ -447,7 +435,7 @@ impl CompactYear {
     /// ```
     /// use compact_calendar::CompactYear;
     ///
-    /// let mut year = CompactYear::new();
+    /// let mut year = CompactYear::default();
     /// year.insert(3, 15);
     /// year.insert(10, 9);
     /// year.insert(2, 7);
@@ -479,7 +467,7 @@ impl CompactYear {
     /// ```
     /// use compact_calendar::CompactYear;
     ///
-    /// let mut year = CompactYear::new();
+    /// let mut year = CompactYear::default();
     /// year.insert(11, 3);
     /// year.insert(4, 28);
     /// assert_eq!(year.count(), 2);
@@ -493,7 +481,7 @@ impl CompactYear {
     /// ```
     /// use compact_calendar::CompactYear;
     ///
-    /// let mut year = CompactYear::new();
+    /// let mut year = CompactYear::default();
     ///
     /// let mut buf1 = Vec::new();
     /// year.insert(11, 3);
@@ -518,7 +506,7 @@ impl CompactYear {
     /// ```
     /// use compact_calendar::CompactYear;
     ///
-    /// let mut year1 = CompactYear::new();
+    /// let mut year1 = CompactYear::default();
     /// year1.insert(11, 3);
     /// year1.insert(4, 28);
     ///
@@ -531,7 +519,7 @@ impl CompactYear {
     pub fn deserialize(mut reader: impl io::Read) -> io::Result<Self> {
         // NOTE: could use `try_from_fn` when stabilized:
         //       https://doc.rust-lang.org/std/array/fn.try_from_fn.html
-        let mut res = Self::new();
+        let mut res = Self::default();
 
         for month in &mut res.0 {
             *month = CompactMonth::deserialize(&mut reader)?;
@@ -541,11 +529,25 @@ impl CompactYear {
     }
 }
 
+impl Default for CompactYear {
+    /// Create a new year that does not include any day.
+    ///
+    /// ```
+    /// use compact_calendar::CompactYear;
+    ///
+    /// let year = CompactYear::default();
+    /// assert_eq!(year.count(), 0);
+    /// ```
+    fn default() -> Self {
+        Self([CompactMonth::default(); 12])
+    }
+}
+
 impl fmt::Debug for CompactYear {
     /// ```
     /// use compact_calendar::CompactYear;
     ///
-    /// let mut year = CompactYear::new();
+    /// let mut year = CompactYear::default();
     /// year.insert(11, 3);
     /// year.insert(4, 28);
     /// assert_eq!(format!("{year:?}"), "{04-28, 11-03}");
@@ -573,24 +575,12 @@ impl fmt::Debug for CompactYear {
 pub struct CompactMonth(u32);
 
 impl CompactMonth {
-    /// Create a new month that does not include any day.
-    ///
-    /// ```
-    /// use compact_calendar::CompactMonth;
-    ///
-    /// let month = CompactMonth::new();
-    /// assert_eq!(month.count(), 0);
-    /// ```
-    pub const fn new() -> Self {
-        Self(0)
-    }
-
     /// Include a day in this month.
     ///
     /// ```
     /// use compact_calendar::CompactMonth;
     ///
-    /// let mut month = CompactMonth::new();
+    /// let mut month = CompactMonth::default();
     /// month.insert(2);
     /// month.insert(2);
     /// month.insert(19);
@@ -606,7 +596,7 @@ impl CompactMonth {
     /// ```
     /// use compact_calendar::CompactMonth;
     ///
-    /// let mut month = CompactMonth::new();
+    /// let mut month = CompactMonth::default();
     /// month.insert(1);
     /// month.insert(18);
     ///
@@ -624,7 +614,7 @@ impl CompactMonth {
     /// ```
     /// use compact_calendar::CompactMonth;
     ///
-    /// let mut month = CompactMonth::new();
+    /// let mut month = CompactMonth::default();
     /// month.insert(18);
     /// month.insert(1);
     ///
@@ -650,7 +640,7 @@ impl CompactMonth {
     /// ```
     /// use compact_calendar::CompactMonth;
     ///
-    /// let mut month = CompactMonth::new();
+    /// let mut month = CompactMonth::default();
     /// assert_eq!(month.first(), None);
     ///
     /// month.insert(31);
@@ -672,7 +662,7 @@ impl CompactMonth {
     /// ```
     /// use compact_calendar::CompactMonth;
     ///
-    /// let mut month = CompactMonth::new();
+    /// let mut month = CompactMonth::default();
     /// month.insert(4);
     /// month.insert(17);
     ///
@@ -696,7 +686,7 @@ impl CompactMonth {
     /// ```
     /// use compact_calendar::CompactMonth;
     ///
-    /// let mut month = CompactMonth::new();
+    /// let mut month = CompactMonth::default();
     /// month.insert(26);
     /// month.insert(3);
     /// assert_eq!(month.count(), 2);
@@ -710,7 +700,7 @@ impl CompactMonth {
     /// ```
     /// use compact_calendar::CompactMonth;
     ///
-    /// let mut month = CompactMonth::new();
+    /// let mut month = CompactMonth::default();
     ///
     /// let mut buf1 = Vec::new();
     /// month.insert(31);
@@ -731,7 +721,7 @@ impl CompactMonth {
     /// ```
     /// use compact_calendar::CompactMonth;
     ///
-    /// let mut month1 = CompactMonth::new();
+    /// let mut month1 = CompactMonth::default();
     /// month1.insert(30);
     /// month1.insert(2);
     ///
@@ -748,11 +738,26 @@ impl CompactMonth {
     }
 }
 
+#[allow(clippy::derivable_impls)]
+impl Default for CompactMonth {
+    /// Create a new month that does not include any day.
+    ///
+    /// ```
+    /// use compact_calendar::CompactMonth;
+    ///
+    /// let month = CompactMonth::default();
+    /// assert_eq!(month.count(), 0);
+    /// ```
+    fn default() -> Self {
+        Self(0)
+    }
+}
+
 impl fmt::Debug for CompactMonth {
     /// ```
     /// use compact_calendar::CompactMonth;
     ///
-    /// let mut month = CompactMonth::new();
+    /// let mut month = CompactMonth::default();
     /// month.insert(26);
     /// month.insert(3);
     /// assert_eq!(format!("{month:?}"), "{03, 26}");
