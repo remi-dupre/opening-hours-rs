@@ -334,7 +334,7 @@ impl fmt::Debug for CompactCalendar {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         struct DebugCalendar<'a>(&'a CompactCalendar);
 
-        impl<'a> fmt::Debug for DebugCalendar<'a> {
+        impl fmt::Debug for DebugCalendar<'_> {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 f.debug_set().entries(self.0.iter()).finish()
             }
