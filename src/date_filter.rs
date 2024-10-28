@@ -166,7 +166,7 @@ impl DateFilter for ds::MonthdayRange {
                     }
                 };
 
-                if naive >= date {
+                if naive > date {
                     Some(naive)
                 } else {
                     naive.with_year(naive.year() + 1)

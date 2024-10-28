@@ -292,10 +292,13 @@ impl<'d> TimeDomainIterator<'d> {
             self.curr_schedule.next();
 
             if self.curr_schedule.peek().is_none() {
-                self.curr_date = self
+                let next_change_hint = self
                     .opening_hours
                     .next_change_hint(self.curr_date)
                     .unwrap_or_else(|| self.curr_date.succ_opt().expect("reached invalid date"));
+
+                assert!(next_change_hint > self.curr_date);
+                self.curr_date = next_change_hint;
 
                 if self.curr_date < self.end_datetime.date() {
                     self.curr_schedule = self

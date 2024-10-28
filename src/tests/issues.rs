@@ -24,3 +24,12 @@ fn gh024_no_date_range_end_in_intervals() -> Result<(), Error> {
     assert_eq!(oh.next_change(start).unwrap(), expected_end);
     Ok(())
 }
+
+/// https://github.com/remi-dupre/opening-hours-rs/issues/45
+#[test]
+fn gh45_infinite_loop() -> Result<(), Error> {
+    let oh = OpeningHours::parse("Jan-Dec")?;
+    let start = datetime!("2024-01-01 00:00");
+    assert!(oh.next_change(start).is_ok());
+    Ok(())
+}
