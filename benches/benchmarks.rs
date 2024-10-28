@@ -6,6 +6,7 @@ use criterion::{black_box, criterion_group, criterion_main, Criterion};
 const SCH_24_7: &str = "24/7";
 const SCH_ADDITION: &str = "10:00-12:00 open, 14:00-16:00 unknown, 16:00-23:00 closed";
 const SCH_HOLIDAY: &str = "PH";
+const SCH_JAN_DEC: &str = "Jan-Dec";
 
 fn bench_parse(c: &mut Criterion) {
     let mut group = c.benchmark_group("parse");
@@ -24,6 +25,7 @@ fn bench_eval(c: &mut Criterion) {
     let sch_24_7 = OpeningHours::parse(SCH_24_7).unwrap();
     let sch_addition = OpeningHours::parse(SCH_ADDITION).unwrap();
     let sch_holiday = OpeningHours::parse(SCH_HOLIDAY).unwrap().with_region("FR");
+    let sch_jan_dec = OpeningHours::parse(SCH_JAN_DEC).unwrap();
 
     {
         let mut group = c.benchmark_group("is_open");
@@ -54,6 +56,10 @@ fn bench_eval(c: &mut Criterion) {
 
         group.bench_function("holiday", |b| {
             b.iter(|| black_box(&sch_holiday).next_change(black_box(date_time)))
+        });
+
+        group.bench_function("jan-dec", |b| {
+            b.iter(|| black_box(&sch_jan_dec).next_change(black_box(date_time)))
         });
     }
 }

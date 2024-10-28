@@ -158,6 +158,10 @@ impl DateFilter for ds::MonthdayRange {
             ds::MonthdayRange::Month { range, year: None } => {
                 let month = date.month().try_into().expect("invalid month value");
 
+                if range.end().next() == *range.start() {
+                    return Some(DATE_LIMIT.date());
+                }
+
                 let naive = {
                     if range.wrapping_contains(&month) {
                         NaiveDate::from_ymd_opt(date.year(), range.end().next() as _, 1)?
