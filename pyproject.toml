@@ -8,7 +8,7 @@ authors = ["Rémi Dupré <remi@dupre.io>"]
 python = "^3.7"
 
 [tool.poetry.dev-dependencies]
-maturin = ">=1,<2"
+maturin = ">=1,<1.7"  # can't be built with 1.7 due to https://github.com/PyO3/maturin/issues/2244
 pdoc = "^12.0.1"
 
 [build-system]

@@ -198,26 +198,27 @@ jobs:
       matrix:
         target: [x86_64, x86, aarch64, armv7, s390x, ppc64le]
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: |
-            3.7
-            3.8
             3.9
             3.10
             3.11
+            3.12
+            3.13
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
+          maturin-version: 1.6.0  # pinned until 1.8.0 is released
           target: ${{ matrix.target }}
           args: --release --out dist --find-interpreter --zig
           sccache: "true"
           manylinux: auto
       - name: Upload wheels
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: wheels
+          name: wheels-linux-${{ matrix.target }}
           path: dist
 
   build-python-windows:
@@ -231,15 +232,16 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: |
-            3.7
-            3.8
             3.9
             3.10
             3.11
+            3.12
+            3.13
           architecture: ${{ matrix.target }}
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
+          maturin-version: 1.6.0  # pinned until 1.8.0 is released
           target: ${{ matrix.target }}
           args: --release --out dist --find-interpreter
           sccache: "true"
@@ -268,6 +270,7 @@ jobs:
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
+          maturin-version: 1.6.0  # pinned until 1.8.0 is released
           target: ${{ matrix.target }}
           args: --release --out dist --find-interpreter
           sccache: "true"
@@ -300,6 +303,7 @@ jobs:
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
+          maturin-version: 1.6.0  # pinned until 1.8.0 is released
           target: wasm32-unknown-emscripten
           args: --release --out dist -i ${{ env.PYTHON_VERSION }}
           sccache: "true"
@@ -318,6 +322,7 @@ jobs:
       - name: Build sdist
         uses: PyO3/maturin-action@v1
         with:
+          maturin-version: 1.6.0  # pinned until 1.8.0 is released
           command: sdist
           args: --out dist
       - name: Upload sdist
