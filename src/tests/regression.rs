@@ -216,3 +216,24 @@ fn s016_fuzz_week01_sh() -> Result<(), Error> {
 
     Ok(())
 }
+
+#[test]
+fn s017_fuzz_open_range_timeout() -> Result<(), Error> {
+    exec_with_timeout(Duration::from_millis(100), || {
+        assert_eq!(
+            dbg!(OpeningHours::parse("May2+")?)
+                .next_change(datetime!("2020-01-01 12:00"))
+                .unwrap(),
+            datetime!("2020-05-02 00:00")
+        );
+
+        assert_eq!(
+            dbg!(OpeningHours::parse("May2+")?)
+                .next_change(datetime!("2020-05-15 12:00"))
+                .unwrap(),
+            datetime!("2021-01-01 00:00")
+        );
+
+        Ok(())
+    })
+}

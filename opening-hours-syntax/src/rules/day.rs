@@ -95,8 +95,21 @@ pub enum Date {
 
 impl Date {
     #[inline]
-    pub fn day(day: u8, month: Month, year: u16) -> Self {
+    pub fn ymd(day: u8, month: Month, year: u16) -> Self {
         Self::Fixed { day, month, year: Some(year) }
+    }
+
+    #[inline]
+    pub fn md(day: u8, month: Month) -> Self {
+        Self::Fixed { day, month, year: None }
+    }
+
+    #[inline]
+    pub fn has_year(&self) -> bool {
+        matches!(
+            self,
+            Self::Fixed { year: Some(_), .. } | Self::Easter { year: Some(_) }
+        )
     }
 }
 

@@ -20,7 +20,7 @@ impl ExtendedTime {
     #[inline]
     pub fn new(hour: u8, minute: u8) -> Self {
         if minute >= 60 {
-            panic!("invalid time: minute is {}", minute)
+            panic!("Invalid time: minute is {}", minute)
         }
 
         Self { hour, minute }

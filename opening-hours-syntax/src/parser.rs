@@ -503,7 +503,12 @@ fn build_monthday_range(pair: Pair<Rule>) -> Result<ds::MonthdayRange> {
                 Some(Rule::date_to) => build_date_to(pairs.next().unwrap(), start)?,
                 Some(Rule::monthday_range_plus) => {
                     pairs.next();
-                    ds::Date::day(31, ds::Month::December, 9999)
+
+                    if start.has_year() {
+                        ds::Date::ymd(31, ds::Month::December, 9999)
+                    } else {
+                        ds::Date::md(31, ds::Month::December)
+                    }
                 }
                 None => start,
                 Some(other) => unexpected_token(other, Rule::monthday_range),
