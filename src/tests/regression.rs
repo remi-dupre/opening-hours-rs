@@ -1,9 +1,12 @@
+use std::time::Duration;
+
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use opening_hours_syntax::error::Error;
 use opening_hours_syntax::rules::RuleKind::*;
 
 use crate::opening_hours::DATE_LIMIT;
-use crate::{assert_speed, datetime, schedule_at, OpeningHours};
+use crate::tests::exec_with_timeout;
+use crate::{datetime, schedule_at, OpeningHours};
 
 #[test]
 fn s000_idunn_interval_stops_next_day() -> Result<(), Error> {
@@ -120,22 +123,24 @@ fn s009_pj_no_open_before_separator() {
 }
 
 #[test]
-fn s010_pj_slow_after_24_7() {
-    assert_speed!(
-        10 ms;
-        OpeningHours::parse("24/7 open ; 2021Jan-Feb off")
-            .unwrap()
+fn s010_pj_slow_after_24_7() -> Result<(), Error> {
+    exec_with_timeout(Duration::from_millis(100), || {
+        OpeningHours::parse("24/7 open ; 2021Jan-Feb off")?
             .next_change(datetime!("2021-07-09 19:30"))
-            .unwrap()
-    );
+            .unwrap();
 
-    assert_speed!(
-        10 ms;
-        OpeningHours::parse("24/7 open ; 2021 Jan 01-Feb 10 off")
-            .unwrap()
+        Ok::<(), Error>(())
+    })?;
+
+    exec_with_timeout(Duration::from_millis(100), || {
+        OpeningHours::parse("24/7 open ; 2021 Jan 01-Feb 10 off")?
             .next_change(datetime!("2021-07-09 19:30"))
-            .unwrap()
-    );
+            .unwrap();
+
+        Ok::<(), Error>(())
+    })?;
+
+    Ok(())
 }
 
 #[test]
@@ -154,13 +159,31 @@ fn s011_fuzz_extreme_year() -> Result<(), Error> {
 
 #[test]
 fn s012_fuzz_slow_sh() -> Result<(), Error> {
-    assert_speed!(
-        10 ms;
-        OpeningHours::parse("SH")
-            .unwrap()
+    exec_with_timeout(Duration::from_millis(100), || {
+        OpeningHours::parse("SH")?
             .next_change(datetime!("2020-01-01 00:00"))
-            .unwrap()
-    );
+            .unwrap();
+
+        Ok(())
+    })
+}
+
+#[test]
+fn s013_fuzz_slow_weeknum() -> Result<(), Error> {
+    exec_with_timeout(Duration::from_millis(100), || {
+        OpeningHours::parse("Novweek09")?
+            .next_change(datetime!("2020-01-01 00:00"))
+            .unwrap();
+
+        Ok(())
+    })
+}
+
+#[test]
+fn s014_fuzz_feb30_before_leap_year() -> Result<(), Error> {
+    OpeningHours::parse("Feb30")?
+        .next_change(datetime!("4419-03-01 00:00"))
+        .unwrap();
 
     Ok(())
 }

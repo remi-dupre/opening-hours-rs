@@ -116,44 +116,39 @@ impl DateFilter for ds::MonthdayRange {
                 start: (start, start_offset),
                 end: (end, end_offset),
             } => {
-                match (&start, end) {
+                match (start, end) {
                     (
-                        ds::Date::Fixed { year: year_1, month: month_1, day: day_1 },
-                        ds::Date::Fixed { year: year_2, month: month_2, day: day_2 },
+                        &ds::Date::Fixed { year: year_1, month: month_1, day: day_1 },
+                        &ds::Date::Fixed { year: year_2, month: month_2, day: day_2 },
                     ) => {
-                        let start = first_valid_ymd(
-                            year_1.map(|x| x as i32).unwrap_or_else(|| date.year()),
-                            *month_1 as u32,
-                            *day_1 as u32,
-                        );
-
-                        let mut start = start_offset.apply(start);
+                        let mut start = start_offset.apply(first_valid_ymd(
+                            year_1.map(Into::into).unwrap_or(date.year()),
+                            month_1.into(),
+                            day_1.into(),
+                        ));
 
                         // If no year is specified we can shift of as many years as needed.
-                        if year_1.is_none() {
-                            start = start.with_year(date.year()).unwrap();
-
-                            if start > date {
-                                start = start.with_year(start.year() - 1).expect("year overflow");
-                            }
+                        if year_1.is_none() && start > date {
+                            start = start_offset.apply(first_valid_ymd(
+                                year_1.map(Into::into).unwrap_or(date.year()) - 1,
+                                month_1.into(),
+                                day_1.into(),
+                            ))
                         }
 
-                        let end = first_valid_ymd(
-                            year_2.map(|x| x as i32).unwrap_or_else(|| start.year()),
-                            *month_2 as u32,
-                            *day_2 as u32,
-                        );
-
-                        let mut end = end_offset.apply(end);
+                        let mut end = end_offset.apply(first_valid_ymd(
+                            year_2.map(Into::into).unwrap_or(start.year()),
+                            month_2.into(),
+                            day_2.into(),
+                        ));
 
                         // If no year is specified we can shift of as many years as needed.
-                        if year_2.is_none() {
-                            end = end.with_year(start.year()).unwrap();
-
-                            // If end's month is prior that start's month, end must be next year.
-                            if end < start {
-                                end = end.with_year(end.year() + 1).expect("year overflow")
-                            }
+                        if year_2.is_none() && end < start {
+                            end = end_offset.apply(first_valid_ymd(
+                                year_2.map(Into::into).unwrap_or(start.year()) + 1,
+                                month_2.into(),
+                                day_2.into(),
+                            ))
                         }
 
                         (start..=end).contains(&date)
@@ -312,11 +307,7 @@ impl DateFilter for ds::WeekDayRange {
                     let date = date - Duration::days(*offset);
                     holidays.contains(date)
                 }
-                ds::HolidayKind::School => {
-                    // TODO: run during parsing
-                    // eprintln!("[WARN] school holidays are not supported, thus ignored");
-                    false
-                }
+                ds::HolidayKind::School => false,
             },
         }
     }
@@ -347,5 +338,52 @@ impl DateFilter for ds::WeekRange {
     fn filter(&self, date: NaiveDate, _holidays: &CompactCalendar) -> bool {
         let week = date.iso_week().week() as u8;
         self.range.wrapping_contains(&week) && (week - self.range.start()) % self.step == 0
+    }
+
+    fn next_change_hint(&self, date: NaiveDate, _holidays: &CompactCalendar) -> Option<NaiveDate> {
+        let week = date.iso_week().week() as u8;
+
+        if self.range.wrapping_contains(&week) {
+            let end_week = {
+                if self.step == 1 {
+                    *self.range.end() % 53 + 1
+                } else if (week - self.range.start()) % self.step == 0 {
+                    (date.iso_week().week() as u8 % 53) + 1
+                } else {
+                    return None;
+                }
+            };
+
+            let end_year = {
+                if date.iso_week().week() <= u32::from(end_week) {
+                    date.year()
+                } else {
+                    date.year() + 1
+                }
+            };
+
+            Some(
+                NaiveDate::from_isoywd_opt(end_year, end_week.into(), ds::Weekday::Mon)
+                    .unwrap_or(DATE_LIMIT.date()),
+            )
+        } else if week < *self.range.start() {
+            Some(
+                NaiveDate::from_isoywd_opt(
+                    date.year(),
+                    (*self.range.start()).into(),
+                    ds::Weekday::Mon,
+                )
+                .unwrap_or(DATE_LIMIT.date()),
+            )
+        } else {
+            Some(
+                NaiveDate::from_isoywd_opt(
+                    date.year() + 1,
+                    (*self.range.start()).into(),
+                    ds::Weekday::Mon,
+                )
+                .unwrap_or(DATE_LIMIT.date()),
+            )
+        }
     }
 }

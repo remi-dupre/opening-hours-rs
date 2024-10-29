@@ -334,7 +334,7 @@ impl Display for Month {
     }
 }
 
-macro_rules! impl_try_into_for_month {
+macro_rules! impl_convert_for_month {
     ( $from_type: ty ) => {
         impl TryFrom<$from_type> for Month {
             type Error = InvalidMonth;
@@ -360,11 +360,17 @@ macro_rules! impl_try_into_for_month {
                 })
             }
         }
+
+        impl From<Month> for $from_type {
+            fn from(val: Month) -> Self {
+                val as _
+            }
+        }
     };
     ( $from_type: ty, $( $tail: tt )+ ) => {
-        impl_try_into_for_month!($from_type);
-        impl_try_into_for_month!($($tail)+);
+        impl_convert_for_month!($from_type);
+        impl_convert_for_month!($($tail)+);
     };
 }
 
-impl_try_into_for_month!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, isize);
+impl_convert_for_month!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, isize);
