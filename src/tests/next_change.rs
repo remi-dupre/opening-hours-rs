@@ -1,3 +1,4 @@
+use crate::opening_hours::DATE_LIMIT;
 use crate::{datetime, OpeningHours};
 use opening_hours_syntax::error::Error;
 
@@ -7,7 +8,7 @@ fn always_open() -> Result<(), Error> {
         OpeningHours::parse("24/7")?
             .next_change(datetime!("2019-02-10 11:00"))
             .unwrap(),
-        datetime!("+10000-01-01 00:00")
+        DATE_LIMIT,
     );
 
     Ok(())

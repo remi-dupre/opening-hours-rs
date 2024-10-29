@@ -18,7 +18,5 @@ crate-type = ["cdylib"]
 chrono = "0.4"
 opening-hours = { path = ".." }
 opening-hours-syntax = { path = "../opening-hours-syntax" }
-
-[dependencies.pyo3]
-version = "0.19"
-features = ["extension-module", "generate-import-lib"]
+pyo3 = { version = "0.22", features = ["chrono", "extension-module", "generate-import-lib"] }
+pyo3-log = "0.11"

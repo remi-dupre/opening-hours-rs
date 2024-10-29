@@ -1,12 +1,8 @@
-use std::convert::TryInto;
 use std::pin::Pin;
 use std::sync::Arc;
 
-use chrono::prelude::*;
 use chrono::NaiveDateTime;
-use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use pyo3::types::{PyDateAccess, PyDateTime, PyTimeAccess};
 
 use opening_hours::DateTimeRange;
 use opening_hours_syntax::rules::RuleKind;
@@ -38,80 +34,6 @@ impl IntoPy<Py<PyAny>> for State {
             Self::Closed => "closed".into_py(py),
             Self::Unknown => "unknown".into_py(py),
         }
-    }
-}
-
-// ---
-// --- NaiveDateTime wrapper
-// ---
-
-pub struct NaiveDateTimeWrapper(NaiveDateTime);
-
-impl From<NaiveDateTimeWrapper> for NaiveDateTime {
-    fn from(val: NaiveDateTimeWrapper) -> Self {
-        val.0
-    }
-}
-
-impl From<NaiveDateTime> for NaiveDateTimeWrapper {
-    fn from(dt: NaiveDateTime) -> Self {
-        Self(dt)
-    }
-}
-
-impl<'source> FromPyObject<'source> for NaiveDateTimeWrapper {
-    fn extract(ob: &'source PyAny) -> PyResult<Self> {
-        let py_datetime: &PyDateTime = ob.downcast()?;
-
-        let rs_date = {
-            NaiveDate::from_ymd_opt(
-                py_datetime.get_year(),
-                py_datetime.get_month().into(),
-                py_datetime.get_day().into(),
-            )
-            .ok_or_else(|| {
-                PyErr::new::<PyValueError, _>("Could not convert Python's date to Rust's NaiveDate")
-            })?
-        };
-
-        let rs_time = {
-            NaiveTime::from_hms_opt(
-                py_datetime.get_hour().into(),
-                py_datetime.get_minute().into(),
-                py_datetime.get_second().into(),
-            )
-            .ok_or(PyErr::new::<PyValueError, _>(
-                "Could not convert Python's time to Rust's NaiveTime",
-            ))?
-        };
-
-        Ok(NaiveDateTime::new(rs_date, rs_time).into())
-    }
-}
-
-impl IntoPy<PyResult<Py<PyDateTime>>> for NaiveDateTimeWrapper {
-    fn into_py(self, py: Python<'_>) -> PyResult<Py<PyDateTime>> {
-        PyDateTime::new(
-            py,
-            self.0.date().year(),
-            self.0.date().month().try_into()?,
-            self.0.date().day().try_into()?,
-            self.0.time().hour().try_into()?,
-            self.0.time().minute().try_into()?,
-            0,
-            0,
-            None,
-        )
-        .map(|x| x.into())
-    }
-}
-
-impl IntoPy<Py<PyAny>> for NaiveDateTimeWrapper {
-    fn into_py(self, py: Python<'_>) -> Py<PyAny> {
-        let result: PyResult<_> = self.into_py(py);
-        result
-            .map(|date| date.into_py(py))
-            .unwrap_or_else(|_| Python::None(py))
     }
 }
 
@@ -168,16 +90,11 @@ impl RangeIterator {
 
     fn __next__(
         mut slf: PyRefMut<Self>,
-    ) -> Option<(
-        NaiveDateTimeWrapper,
-        NaiveDateTimeWrapper,
-        State,
-        Vec<&'_ str>,
-    )> {
+    ) -> Option<(NaiveDateTime, NaiveDateTime, State, Vec<&'_ str>)> {
         let dt_range = slf.iter.next()?;
         Some((
-            dt_range.range.start.into(),
-            dt_range.range.end.into(),
+            dt_range.range.start,
+            dt_range.range.end,
             dt_range.kind.into(),
             dt_range.into_comments().into(),
         ))

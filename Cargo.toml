@@ -18,6 +18,7 @@ members = ["compact-calendar", "fuzz", "opening-hours-syntax", "python"]
 chrono = "0.4"
 compact-calendar = { path = "compact-calendar", version = "0.7" }
 flate2 = "1.0"
+log = { version = "0.4", features = [ "kv" ] }
 opening-hours-syntax = { path = "opening-hours-syntax", version = "0.7" }
 
 [build-dependencies]

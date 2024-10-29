@@ -385,7 +385,7 @@ fn build_holiday(pair: Pair<Rule>) -> Result<ds::WeekDayRange> {
     let kind = match pairs.next().expect("empty holiday").as_rule() {
         Rule::public_holiday => ds::HolidayKind::Public,
         Rule::school_holiday => {
-            eprintln!("[WARN] school holidays are not supported, thus ignored");
+            log::warn!("School holidays are not supported, thus ignored");
             ds::HolidayKind::School
         }
         other => unexpected_token(other, Rule::holiday),
@@ -560,7 +560,7 @@ fn build_date_from(pair: Pair<Rule>) -> ds::Date {
 
     match pairs.peek().expect("empty date (from)").as_rule() {
         Rule::variable_date => {
-            eprintln!("[WARN] Easter is not supported yet");
+            log::warn!("Easter is not supported yet");
             ds::Date::Easter { year }
         }
         Rule::month => ds::Date::Fixed {
@@ -748,12 +748,12 @@ fn build_daynum(pair: Pair<Rule>) -> u8 {
     let daynum = pair.as_str().parse().expect("invalid month format");
 
     if daynum == 0 {
-        eprintln!("[WARN] Found day number 0 in opening hours: specify the 1st or 31st of previous month.");
+        log::warn!("Found day number 0 in opening hours: specify the 1st or 31st instead.");
         return 1;
     }
 
     if daynum > 31 {
-        eprintln!("[WARN] Found day number {daynum} in opening hours");
+        log::warn!("Found day number {daynum} in opening hours");
         return 31;
     }
 
