@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "opening-hours-py"
-version = "0.7.0"
+version = "0.7.1"
 description = "A parser for the opening_hours fields from OpenStreetMap."
 authors = ["Rémi Dupré <remi@dupre.io>"]
 
