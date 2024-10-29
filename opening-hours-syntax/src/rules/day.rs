@@ -310,20 +310,40 @@ impl Month {
         ((num % 12) + 1).try_into().unwrap()
     }
 
+    #[inline]
+    pub fn from_date(date: impl Datelike) -> Self {
+        match date.month() {
+            1 => Self::January,
+            2 => Self::February,
+            3 => Self::March,
+            4 => Self::April,
+            5 => Self::May,
+            6 => Self::June,
+            7 => Self::July,
+            8 => Self::August,
+            9 => Self::September,
+            10 => Self::October,
+            11 => Self::November,
+            12 => Self::December,
+            other => unreachable!("Unexpected month for date `{other}`"),
+        }
+    }
+
+    #[inline]
     pub fn as_str(self) -> &'static str {
         match self {
-            Month::January => "January",
-            Month::February => "February",
-            Month::March => "March",
-            Month::April => "April",
-            Month::May => "May",
-            Month::June => "June",
-            Month::July => "July",
-            Month::August => "August",
-            Month::September => "September",
-            Month::October => "October",
-            Month::November => "November",
-            Month::December => "December",
+            Self::January => "January",
+            Self::February => "February",
+            Self::March => "March",
+            Self::April => "April",
+            Self::May => "May",
+            Self::June => "June",
+            Self::July => "July",
+            Self::August => "August",
+            Self::September => "September",
+            Self::October => "October",
+            Self::November => "November",
+            Self::December => "December",
         }
     }
 }

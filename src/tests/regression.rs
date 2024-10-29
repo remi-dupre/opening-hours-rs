@@ -187,3 +187,32 @@ fn s014_fuzz_feb30_before_leap_year() -> Result<(), Error> {
 
     Ok(())
 }
+
+#[test]
+fn s015_fuzz_31dec_may_be_week_01() -> Result<(), Error> {
+    assert_eq!(
+        OpeningHours::parse("week04")?
+            .next_change(datetime!("2024-12-31 12:00"))
+            .unwrap(),
+        datetime!("2025-01-20 00:00")
+    );
+
+    Ok(())
+}
+
+#[test]
+fn s016_fuzz_week01_sh() -> Result<(), Error> {
+    let dt = datetime!("2010-01-03 00:55"); // still week 53 of 2009
+
+    assert_eq!(
+        OpeningHours::parse("week01")?.next_change(dt).unwrap(),
+        datetime!("2011-01-03 00:00"),
+    );
+
+    assert_eq!(
+        OpeningHours::parse("week01SH")?.next_change(dt).unwrap(),
+        DATE_LIMIT
+    );
+
+    Ok(())
+}

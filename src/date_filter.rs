@@ -5,7 +5,7 @@ use chrono::prelude::Datelike;
 use chrono::{Duration, NaiveDate};
 
 use compact_calendar::CompactCalendar;
-use opening_hours_syntax::rules::day as ds;
+use opening_hours_syntax::rules::day::{self as ds, Month};
 
 use crate::opening_hours::DATE_LIMIT;
 use crate::utils::range::{RangeExt, WrappingRange};
@@ -106,7 +106,7 @@ impl DateFilter for ds::YearRange {
 impl DateFilter for ds::MonthdayRange {
     fn filter(&self, date: NaiveDate, _holidays: &CompactCalendar) -> bool {
         let in_year = date.year() as u16;
-        let in_month = date.month().try_into().expect("invalid month value");
+        let in_month = Month::from_date(date);
 
         match self {
             ds::MonthdayRange::Month { year, range } => {
@@ -165,7 +165,7 @@ impl DateFilter for ds::MonthdayRange {
     fn next_change_hint(&self, date: NaiveDate, _holidays: &CompactCalendar) -> Option<NaiveDate> {
         match self {
             ds::MonthdayRange::Month { range, year: None } => {
-                let month = date.month().try_into().expect("invalid month value");
+                let month = Month::from_date(date);
 
                 if range.end().next() == *range.start() {
                     return Some(DATE_LIMIT.date());
@@ -356,9 +356,9 @@ impl DateFilter for ds::WeekRange {
 
             let end_year = {
                 if date.iso_week().week() <= u32::from(end_week) {
-                    date.year()
+                    date.iso_week().year()
                 } else {
-                    date.year() + 1
+                    date.iso_week().year() + 1
                 }
             };
 
@@ -369,7 +369,7 @@ impl DateFilter for ds::WeekRange {
         } else if week < *self.range.start() {
             Some(
                 NaiveDate::from_isoywd_opt(
-                    date.year(),
+                    date.iso_week().year(),
                     (*self.range.start()).into(),
                     ds::Weekday::Mon,
                 )
