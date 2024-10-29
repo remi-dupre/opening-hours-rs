@@ -556,7 +556,10 @@ fn build_date_from(pair: Pair<Rule>) -> ds::Date {
     };
 
     match pairs.peek().expect("empty date (from)").as_rule() {
-        Rule::variable_date => ds::Date::Easter { year },
+        Rule::variable_date => {
+            eprintln!("[WARN] Easter is not supported yet");
+            ds::Date::Easter { year }
+        }
         Rule::month => ds::Date::Fixed {
             year,
             month: build_month(pairs.next().expect("missing month")),
@@ -739,7 +742,19 @@ fn build_wday(pair: Pair<Rule>) -> ds::Weekday {
 
 fn build_daynum(pair: Pair<Rule>) -> u8 {
     assert_eq!(pair.as_rule(), Rule::daynum);
-    pair.as_str().parse().expect("invalid month format")
+    let daynum = pair.as_str().parse().expect("invalid month format");
+
+    if daynum == 0 {
+        eprintln!("[WARN] Found day number 0 in opening hours: specify the 1st or 31st of previous month.");
+        return 1;
+    }
+
+    if daynum > 31 {
+        eprintln!("[WARN] Found day number {daynum} in opening hours");
+        return 31;
+    }
+
+    daynum
 }
 
 fn build_weeknum(pair: Pair<Rule>) -> u8 {

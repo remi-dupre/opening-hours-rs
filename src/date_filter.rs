@@ -10,6 +10,17 @@ use opening_hours_syntax::rules::day as ds;
 use crate::opening_hours::DATE_LIMIT;
 use crate::utils::range::{RangeExt, WrappingRange};
 
+/// Get the first valid date before give "yyyy/mm/dd", for example if
+/// 2021/02/30 is given, this will return february 28th as 2021 is not a leap
+/// year.
+fn first_valid_ymd(year: i32, month: u32, day: u32) -> NaiveDate {
+    (1..=day)
+        .rev()
+        .filter_map(|day| NaiveDate::from_ymd_opt(year, month, day))
+        .next()
+        .unwrap_or(DATE_LIMIT.date())
+}
+
 /// Generic trait to specify the behavior of a selector over dates.
 pub trait DateFilter {
     fn filter(&self, date: NaiveDate, holidays: &CompactCalendar) -> bool;
@@ -56,12 +67,17 @@ impl DateFilter for ds::DaySelector {
 
 impl DateFilter for ds::YearRange {
     fn filter(&self, date: NaiveDate, _holidays: &CompactCalendar) -> bool {
-        let year: u16 = date.year().try_into().unwrap();
+        let Ok(year) = date.year().try_into() else {
+            return false;
+        };
+
         self.range.contains(&year) && (year - self.range.start()) % self.step == 0
     }
 
     fn next_change_hint(&self, date: NaiveDate, _holidays: &CompactCalendar) -> Option<NaiveDate> {
-        let curr_year: u16 = date.year().try_into().unwrap();
+        let Ok(curr_year) = date.year().try_into() else {
+            return Some(DATE_LIMIT.date());
+        };
 
         let next_year = {
             if *self.range.end() < curr_year {
@@ -83,10 +99,7 @@ impl DateFilter for ds::YearRange {
             }
         };
 
-        Some(
-            NaiveDate::from_ymd_opt(next_year.into(), 1, 1)
-                .expect("invalid year range: end bound is too large"),
-        )
+        Some(NaiveDate::from_ymd_opt(next_year.into(), 1, 1).unwrap_or(DATE_LIMIT.date()))
     }
 }
 
@@ -108,12 +121,11 @@ impl DateFilter for ds::MonthdayRange {
                         ds::Date::Fixed { year: year_1, month: month_1, day: day_1 },
                         ds::Date::Fixed { year: year_2, month: month_2, day: day_2 },
                     ) => {
-                        let start = NaiveDate::from_ymd_opt(
+                        let start = first_valid_ymd(
                             year_1.map(|x| x as i32).unwrap_or_else(|| date.year()),
                             *month_1 as u32,
                             *day_1 as u32,
-                        )
-                        .expect("invalid date range: start bound is too large");
+                        );
 
                         let mut start = start_offset.apply(start);
 
@@ -126,12 +138,11 @@ impl DateFilter for ds::MonthdayRange {
                             }
                         }
 
-                        let end = NaiveDate::from_ymd_opt(
+                        let end = first_valid_ymd(
                             year_2.map(|x| x as i32).unwrap_or_else(|| start.year()),
                             *month_2 as u32,
                             *day_2 as u32,
-                        )
-                        .expect("invalid date range: end bound is too large");
+                        );
 
                         let mut end = end_offset.apply(end);
 
@@ -147,7 +158,10 @@ impl DateFilter for ds::MonthdayRange {
 
                         (start..=end).contains(&date)
                     }
-                    _ => todo!("Easter not implemented yet"),
+                    (_, ds::Date::Easter { year: _ }) | (ds::Date::Easter { year: _ }, _) => {
+                        // TODO
+                        false
+                    }
                 }
             }
         }
@@ -299,7 +313,8 @@ impl DateFilter for ds::WeekDayRange {
                     holidays.contains(date)
                 }
                 ds::HolidayKind::School => {
-                    eprintln!("[WARN] school holidays are not supported, thus ignored");
+                    // TODO: run during parsing
+                    // eprintln!("[WARN] school holidays are not supported, thus ignored");
                     false
                 }
             },
@@ -320,7 +335,10 @@ impl DateFilter for ds::WeekDayRange {
                         .unwrap_or_else(|| DATE_LIMIT.date())
                 }
             }),
-            _ => None,
+            ds::WeekDayRange::Holiday { kind: ds::HolidayKind::School, offset: _ } => {
+                Some(DATE_LIMIT.date())
+            }
+            ds::WeekDayRange::Fixed { range: _, offset: _, nth: _ } => None, // TODO
         }
     }
 }

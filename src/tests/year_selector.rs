@@ -1,7 +1,6 @@
+use crate::schedule_at;
 use opening_hours_syntax::error::Error;
 use opening_hours_syntax::rules::RuleKind::*;
-
-use crate::schedule_at;
 
 #[test]
 fn range() -> Result<(), Error> {
@@ -55,5 +54,11 @@ fn range() -> Result<(), Error> {
         schedule! {}
     );
 
+    Ok(())
+}
+
+#[test]
+fn easter() -> Result<(), Error> {
+    assert_eq!(schedule_at!("easter", "2024-03-31"), schedule! {});
     Ok(())
 }

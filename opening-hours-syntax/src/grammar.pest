@@ -188,7 +188,7 @@ date_to = {
     | daynum
 }
 
-variable_date = { "easter" }
+variable_date = { " "? ~ "easter" }
 
 
 // Year selector

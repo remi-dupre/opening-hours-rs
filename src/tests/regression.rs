@@ -1,6 +1,8 @@
+use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use opening_hours_syntax::error::Error;
 use opening_hours_syntax::rules::RuleKind::*;
 
+use crate::opening_hours::DATE_LIMIT;
 use crate::{assert_speed, datetime, schedule_at, OpeningHours};
 
 #[test]
@@ -120,18 +122,45 @@ fn s009_pj_no_open_before_separator() {
 #[test]
 fn s010_pj_slow_after_24_7() {
     assert_speed!(
+        10 ms;
         OpeningHours::parse("24/7 open ; 2021Jan-Feb off")
             .unwrap()
             .next_change(datetime!("2021-07-09 19:30"))
-            .unwrap();
-        100 ms
+            .unwrap()
     );
 
     assert_speed!(
+        10 ms;
         OpeningHours::parse("24/7 open ; 2021 Jan 01-Feb 10 off")
             .unwrap()
             .next_change(datetime!("2021-07-09 19:30"))
-            .unwrap();
-        100 ms
+            .unwrap()
     );
+}
+
+#[test]
+fn s011_fuzz_extreme_year() -> Result<(), Error> {
+    let oh = OpeningHours::parse("2000")?;
+
+    let dt = NaiveDateTime::new(
+        NaiveDate::from_ymd_opt(-50_000, 1, 1).unwrap(),
+        NaiveTime::default(),
+    );
+
+    assert!(oh.is_closed(dt));
+    assert_eq!(oh.next_change(dt).unwrap(), DATE_LIMIT);
+    Ok(())
+}
+
+#[test]
+fn s012_fuzz_slow_sh() -> Result<(), Error> {
+    assert_speed!(
+        10 ms;
+        OpeningHours::parse("SH")
+            .unwrap()
+            .next_change(datetime!("2020-01-01 00:00"))
+            .unwrap()
+    );
+
+    Ok(())
 }

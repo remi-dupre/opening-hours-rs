@@ -1,6 +1,6 @@
 #![no_main]
 use arbitrary::Arbitrary;
-use chrono::NaiveDateTime;
+use chrono::DateTime;
 use libfuzzer_sys::fuzz_target;
 use opening_hours::OpeningHours;
 
@@ -17,14 +17,10 @@ fuzz_target!(|data: Data| {
         return;
     }
 
-    if let Some(date) = NaiveDateTime::from_timestamp_opt(data.date_secs, data.date_nsecs) {
-        if let Ok(oh) = OpeningHours::parse(&data.oh) {
-            eprintln!(
-                "oh: {:?} -- date: {}",
-                data.oh,
-                date.format("%Y-%m-%d %H:%M:%S")
-            );
+    if let Some(date) = DateTime::from_timestamp(data.date_secs, data.date_nsecs) {
+        let date = date.naive_utc();
 
+        if let Ok(oh) = OpeningHours::parse(&data.oh) {
             let _ = oh.is_open(date);
             let _ = oh.next_change(date);
         }

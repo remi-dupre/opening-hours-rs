@@ -4,8 +4,8 @@ mod month_selector;
 mod next_change;
 mod next_change_hint;
 mod parser;
+mod regression;
 mod rules;
-mod selective;
 mod time_selector;
 mod week_selector;
 mod weekday_selector;
@@ -53,7 +53,7 @@ fn exec_with_timeout(f: impl FnOnce() + Send + 'static, timeout: Duration) -> bo
 
 #[macro_export]
 macro_rules! assert_speed {
-    ( $expr: expr ; $time: literal ms ) => {{
+    ( $time: literal ms ; $expr: expr ) => {{
         use std::time::Duration;
         use $crate::tests::exec_with_timeout;
 

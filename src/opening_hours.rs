@@ -35,19 +35,24 @@ pub static REGION_HOLIDAYS: LazyLock<HashMap<&str, CompactCalendar>> = LazyLock:
 });
 
 /// The upper bound of dates handled by specification
-pub static DATE_LIMIT: LazyLock<NaiveDateTime> = LazyLock::new(|| {
-    NaiveDateTime::new(
-        NaiveDate::from_ymd_opt(10_000, 1, 1).expect("invalid max date bound"),
-        NaiveTime::from_hms_opt(0, 0, 0).expect("invalid max time bound"),
-    )
-});
+pub const DATE_LIMIT: NaiveDateTime = {
+    let Some(date) = NaiveDate::from_ymd_opt(10_000, 1, 1) else {
+        panic!("Invalid limit date")
+    };
+
+    let Some(time) = NaiveTime::from_hms_opt(0, 0, 0) else {
+        panic!("Invalid limit time")
+    };
+
+    NaiveDateTime::new(date, time)
+};
 
 #[derive(Debug)]
 pub struct DateLimitExceeded;
 
 // OpeningHours
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct OpeningHours {
     /// Rules describing opening hours
     rules: Vec<RuleSequence>,
@@ -150,7 +155,7 @@ impl OpeningHours {
         &self,
         from: NaiveDateTime,
     ) -> Result<impl Iterator<Item = DateTimeRange> + '_, DateLimitExceeded> {
-        self.iter_range(from, *DATE_LIMIT)
+        self.iter_range(from, DATE_LIMIT)
     }
 
     pub fn iter_range(
@@ -158,7 +163,7 @@ impl OpeningHours {
         from: NaiveDateTime,
         to: NaiveDateTime,
     ) -> Result<impl Iterator<Item = DateTimeRange> + '_, DateLimitExceeded> {
-        if from >= *DATE_LIMIT || to > *DATE_LIMIT {
+        if from >= DATE_LIMIT || to > DATE_LIMIT {
             Err(DateLimitExceeded)
         } else {
             Ok(TimeDomainIterator::new(self, from, to)
@@ -181,7 +186,7 @@ impl OpeningHours {
             .iter_from(current_time)?
             .next()
             .map(|dtr| dtr.range.end)
-            .unwrap_or(*DATE_LIMIT))
+            .unwrap_or(DATE_LIMIT))
     }
 
     pub fn state(&self, current_time: NaiveDateTime) -> Result<RuleKind, DateLimitExceeded> {

@@ -1,4 +1,5 @@
 use std::convert::{TryFrom, TryInto};
+use std::fmt::Display;
 use std::ops::RangeInclusive;
 
 use chrono::prelude::Datelike;
@@ -6,6 +7,40 @@ use chrono::{Duration, NaiveDate};
 
 // Reexport Weekday from chrono as part of the public type.
 pub use chrono::Weekday;
+
+// Display
+
+fn wday_str(wday: Weekday) -> &'static str {
+    match wday {
+        Weekday::Mon => "Mo",
+        Weekday::Tue => "Tu",
+        Weekday::Wed => "We",
+        Weekday::Thu => "Th",
+        Weekday::Fri => "Fr",
+        Weekday::Sat => "Sa",
+        Weekday::Sun => "Su",
+    }
+}
+
+fn write_days_offset(f: &mut std::fmt::Formatter<'_>, offset: i64) -> std::fmt::Result {
+    if offset == 0 {
+        return Ok(());
+    }
+
+    write!(f, " ")?;
+
+    if offset > 0 {
+        write!(f, "+")?;
+    }
+
+    write!(f, "{offset} day")?;
+
+    if offset.abs() > 1 {
+        write!(f, "s")?;
+    }
+
+    Ok(())
+}
 
 // Errors
 
@@ -65,6 +100,29 @@ impl Date {
     }
 }
 
+impl Display for Date {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Date::Fixed { year, month, day } => {
+                if let Some(year) = year {
+                    write!(f, "{year} ")?;
+                }
+
+                write!(f, "{month} {day}")?;
+            }
+            Date::Easter { year } => {
+                if let Some(year) = year {
+                    write!(f, "{year} ")?;
+                }
+
+                write!(f, "easter")?;
+            }
+        }
+
+        Ok(())
+    }
+}
+
 // DateOffset
 
 #[derive(Clone, Debug, Default)]
@@ -94,6 +152,14 @@ impl DateOffset {
     }
 }
 
+impl Display for DateOffset {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.wday_offset)?;
+        write_days_offset(f, self.day_offset)?;
+        Ok(())
+    }
+}
+
 // WeekDayOffset
 
 #[derive(Clone, Copy, Debug)]
@@ -107,6 +173,18 @@ impl Default for WeekDayOffset {
     #[inline]
     fn default() -> Self {
         Self::None
+    }
+}
+
+impl Display for WeekDayOffset {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::None => {}
+            Self::Next(wday) => write!(f, "+{}", wday_str(*wday))?,
+            Self::Prev(wday) => write!(f, "-{}", wday_str(*wday))?,
+        }
+
+        Ok(())
     }
 }
 
@@ -125,6 +203,47 @@ pub enum WeekDayRange {
     },
 }
 
+impl Display for WeekDayRange {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Fixed { range, offset, nth } => {
+                write!(f, "{}", wday_str(*range.start()))?;
+
+                if range.start() != range.end() {
+                    write!(f, "-{}", wday_str(*range.end()))?;
+                }
+
+                if nth.contains(&true) {
+                    let mut weeknum_iter = nth
+                        .iter()
+                        .enumerate()
+                        .filter(|(_, x)| **x)
+                        .map(|(idx, _)| idx + 1);
+
+                    write!(f, "[{}", weeknum_iter.next().unwrap())?;
+
+                    for num in weeknum_iter {
+                        write!(f, ",{num}")?;
+                    }
+
+                    write!(f, "]")?;
+                }
+
+                write_days_offset(f, *offset)?;
+            }
+            Self::Holiday { kind, offset } => {
+                write!(f, "{kind}")?;
+
+                if *offset != 0 {
+                    write!(f, " {offset}")?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
+
 // HolidayKind
 
 #[derive(Clone, Copy, Debug)]
@@ -133,12 +252,37 @@ pub enum HolidayKind {
     School,
 }
 
+impl Display for HolidayKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Public => write!(f, "PH"),
+            Self::School => write!(f, "SH"),
+        }
+    }
+}
+
 // WeekRange
 
 #[derive(Clone, Debug)]
 pub struct WeekRange {
     pub range: RangeInclusive<u8>,
     pub step: u8,
+}
+
+impl Display for WeekRange {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.range.start())?;
+
+        if self.range.start() != self.range.end() {
+            write!(f, "-{}", self.range.end())?;
+        }
+
+        if self.step != 1 {
+            write!(f, "/{}", self.step)?;
+        }
+
+        Ok(())
+    }
 }
 
 // Month
@@ -164,6 +308,29 @@ impl Month {
     pub fn next(self) -> Self {
         let num = self as u8;
         ((num % 12) + 1).try_into().unwrap()
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Month::January => "January",
+            Month::February => "February",
+            Month::March => "March",
+            Month::April => "April",
+            Month::May => "May",
+            Month::June => "June",
+            Month::July => "July",
+            Month::August => "August",
+            Month::September => "September",
+            Month::October => "October",
+            Month::November => "November",
+            Month::December => "December",
+        }
+    }
+}
+
+impl Display for Month {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", &self.as_str()[..3])
     }
 }
 

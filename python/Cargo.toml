@@ -14,10 +14,6 @@ edition = "2021"
 name = "opening_hours"
 crate-type = ["cdylib"]
 
-[profile.release]
-codegen-units = 1
-lto = "fat"
-
 [dependencies]
 chrono = "0.4"
 opening-hours = { path = ".." }
