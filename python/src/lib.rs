@@ -43,7 +43,8 @@ fn validate(oh: &str) -> bool {
 /// >>> oh = OpeningHours("24/7")
 /// >>> oh.is_open()
 /// True
-#[pyclass]
+#[pyclass(eq, hash, frozen)]
+#[derive(Hash, PartialEq, Eq)]
 struct OpeningHours {
     inner: Pin<Arc<::opening_hours::OpeningHours>>,
 }
@@ -51,11 +52,21 @@ struct OpeningHours {
 #[pymethods]
 impl OpeningHours {
     #[new]
-    #[pyo3(text_signature = "(oh, /)")]
+    #[pyo3(signature = (oh, /))]
     fn new(oh: &str) -> PyResult<Self> {
         Ok(Self {
             inner: Arc::pin(::opening_hours::OpeningHours::parse(oh).map_err(ParserError::from)?),
         })
+    }
+
+    #[pyo3()]
+    fn __str__(&self) -> String {
+        self.inner.to_string()
+    }
+
+    #[pyo3()]
+    fn __repr__(&self) -> String {
+        format!("OpeningHours({:?})", self.inner.to_string())
     }
 
     /// Get current state of the time domain, the state can be either "open",

@@ -7,7 +7,7 @@ use crate::sorted_vec::UniqueSortedVec;
 
 // RuleSequence
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct RuleSequence {
     pub day_selector: day::DaySelector,
     pub time_selector: time::TimeSelector,
@@ -17,7 +17,8 @@ pub struct RuleSequence {
 }
 
 impl RuleSequence {
-    pub(crate) fn write_rules_seq(
+    /// Pretty print the rules set through given writer.
+    pub fn write_rules_seq(
         f: &mut std::fmt::Formatter<'_>,
         seq: &[RuleSequence],
     ) -> std::fmt::Result {

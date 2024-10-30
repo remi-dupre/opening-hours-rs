@@ -53,7 +53,7 @@ pub struct DateLimitExceeded;
 
 // OpeningHours
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct OpeningHours {
     /// Rules describing opening hours
     rules: Vec<RuleSequence>,

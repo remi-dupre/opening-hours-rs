@@ -8,7 +8,7 @@ use crate::extended_time::ExtendedTime;
 
 // TimeSelector
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct TimeSelector {
     pub time: Vec<TimeSpan>,
 }
@@ -44,7 +44,7 @@ impl Display for TimeSelector {
 
 // TimeSpan
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct TimeSpan {
     pub range: Range<Time>,
     pub open_end: bool,
@@ -88,7 +88,7 @@ impl Display for TimeSpan {
 
 // Time
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub enum Time {
     Fixed(ExtendedTime),
     Variable(VariableTime),
@@ -105,7 +105,7 @@ impl Display for Time {
 
 // VariableTime
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub struct VariableTime {
     pub event: TimeEvent,
     pub offset: i16,

@@ -31,7 +31,7 @@ pub struct InvalidMonth;
 
 // DaySelector
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, Hash, PartialEq, Eq)]
 pub struct DaySelector {
     pub year: Vec<YearRange>,
     pub monthday: Vec<MonthdayRange>,
@@ -66,7 +66,7 @@ impl Display for DaySelector {
 
 // YearRange
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct YearRange {
     pub range: RangeInclusive<u16>,
     pub step: u16,
@@ -90,7 +90,7 @@ impl Display for YearRange {
 
 // MonthdayRange
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub enum MonthdayRange {
     Month {
         range: RangeInclusive<Month>,
@@ -131,7 +131,7 @@ impl Display for MonthdayRange {
 
 // Date
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub enum Date {
     Fixed {
         year: Option<u16>,
@@ -188,7 +188,7 @@ impl Display for Date {
 
 // DateOffset
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, Hash, PartialEq, Eq)]
 pub struct DateOffset {
     pub wday_offset: WeekDayOffset,
     pub day_offset: i64,
@@ -225,7 +225,7 @@ impl Display for DateOffset {
 
 // WeekDayOffset
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub enum WeekDayOffset {
     None,
     Next(Weekday),
@@ -253,7 +253,7 @@ impl Display for WeekDayOffset {
 
 // WeekDayRange
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub enum WeekDayRange {
     Fixed {
         range: RangeInclusive<Weekday>,
@@ -326,7 +326,7 @@ impl Display for HolidayKind {
 
 // WeekRange
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct WeekRange {
     pub range: RangeInclusive<u8>,
     pub step: u8,
@@ -350,7 +350,7 @@ impl Display for WeekRange {
 
 // Month
 
-#[derive(Copy, Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Copy, Clone, Debug, Hash, Eq, Ord, PartialEq, PartialOrd)]
 pub enum Month {
     January = 1,
     February = 2,
