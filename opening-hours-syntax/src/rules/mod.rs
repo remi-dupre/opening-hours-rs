@@ -17,7 +17,7 @@ pub struct RuleSequence {
 }
 
 impl RuleSequence {
-    pub fn write_rules_seq(
+    pub(crate) fn write_rules_seq(
         f: &mut std::fmt::Formatter<'_>,
         seq: &[RuleSequence],
     ) -> std::fmt::Result {

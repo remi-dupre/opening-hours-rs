@@ -373,6 +373,7 @@ impl Month {
         ((num % 12) + 1).try_into().unwrap()
     }
 
+    /// Extract a month from a [`chrono::Datelike`].
     #[inline]
     pub fn from_date(date: impl Datelike) -> Self {
         match date.month() {
@@ -392,6 +393,7 @@ impl Month {
         }
     }
 
+    /// Stringify the month (`"January"`, `"February"`, ...).
     #[inline]
     pub fn as_str(self) -> &'static str {
         match self {
