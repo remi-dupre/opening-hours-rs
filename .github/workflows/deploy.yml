@@ -86,7 +86,11 @@ jobs:
         uses: actions-rs/tarpaulin@v0.1
         with:
           version: 0.20.1
-          args: "--ignore-panics --ignore-tests"
+          args: >-
+            --ignore-panics --ignore-tests
+            --features disable-test-timeouts
+            -p opening-hours -p opening-hours-syntax -p compact-calendar
+            --run-types Tests --run-types Doctests
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v1
         with:

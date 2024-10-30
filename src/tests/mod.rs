@@ -27,6 +27,10 @@ pub fn exec_with_timeout<R: Send + 'static>(
     timeout: Duration,
     f: impl FnOnce() -> R + Send + 'static,
 ) -> R {
+    if cfg!(feature = "disable-test-timeouts") {
+        return f();
+    }
+
     let result = Arc::new(Mutex::new(None));
     let finished = Arc::new(Condvar::new());
 
