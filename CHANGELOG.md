@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.1
+
+### Fixes
+
+- Rust crate couldn't publish
+
+
 ## 0.8.0
 
 ### General
