@@ -5,11 +5,11 @@ description = "A parser for the opening_hours fields from OpenStreetMap."
 authors = ["Rémi Dupré <remi@dupre.io>"]
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.11"
 
 [tool.poetry.dev-dependencies]
 maturin = ">=1,<1.7"  # can't be built with 1.7 due to https://github.com/PyO3/maturin/issues/2244
-pdoc = "^12.0.1"
+pdoc = "^15"
 
 [build-system]
 requires = ["poetry>=0.12", "maturin>=1,<2"]
