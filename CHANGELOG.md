@@ -1,5 +1,13 @@
 # Changelog
 
+
+## 0.8.2
+
+### Fixes
+
+- Python's Linux binary build were not uploading
+
+
 ## 0.8.1
 
 ### Fixes

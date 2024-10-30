@@ -171,7 +171,7 @@ checksum = "1462739cb27611015575c0c11df5df7601141071f07518d56fcc1be504cbec97"
 
 [[package]]
 name = "compact-calendar"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "chrono",
 ]
@@ -499,7 +499,7 @@ checksum = "b410bbe7e14ab526a0e86877eb47c6996a2bd7746f027ba551028c925390e4e9"
 
 [[package]]
 name = "opening-hours"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "chrono",
  "compact-calendar",
@@ -511,7 +511,7 @@ dependencies = [
 
 [[package]]
 name = "opening-hours-py"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "chrono",
  "opening-hours",
@@ -522,7 +522,7 @@ dependencies = [
 
 [[package]]
 name = "opening-hours-syntax"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "chrono",
  "log",
