@@ -8,6 +8,8 @@ use chrono::{Duration, NaiveDate};
 // Reexport Weekday from chrono as part of the public type.
 pub use chrono::Weekday;
 
+use crate::display::{write_days_offset, write_selector};
+
 // Display
 
 fn wday_str(wday: Weekday) -> &'static str {
@@ -22,34 +24,14 @@ fn wday_str(wday: Weekday) -> &'static str {
     }
 }
 
-fn write_days_offset(f: &mut std::fmt::Formatter<'_>, offset: i64) -> std::fmt::Result {
-    if offset == 0 {
-        return Ok(());
-    }
-
-    write!(f, " ")?;
-
-    if offset > 0 {
-        write!(f, "+")?;
-    }
-
-    write!(f, "{offset} day")?;
-
-    if offset.abs() > 1 {
-        write!(f, "s")?;
-    }
-
-    Ok(())
-}
-
 // Errors
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct InvalidMonth;
 
 // DaySelector
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct DaySelector {
     pub year: Vec<YearRange>,
     pub monthday: Vec<MonthdayRange>,
@@ -57,17 +39,58 @@ pub struct DaySelector {
     pub weekday: Vec<WeekDayRange>,
 }
 
+impl DaySelector {
+    pub(crate) fn is_empty(&self) -> bool {
+        self.year.is_empty()
+            && self.monthday.is_empty()
+            && self.week.is_empty()
+            && self.weekday.is_empty()
+    }
+}
+
+impl Display for DaySelector {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if !(self.year.is_empty() && self.monthday.is_empty() && self.week.is_empty()) {
+            write_selector(f, &self.year)?;
+            write_selector(f, &self.monthday)?;
+            write_selector(f, &self.week)?;
+
+            if !self.weekday.is_empty() {
+                write!(f, " ")?;
+            }
+        }
+
+        write_selector(f, &self.weekday)
+    }
+}
+
 // YearRange
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct YearRange {
     pub range: RangeInclusive<u16>,
     pub step: u16,
 }
 
+impl Display for YearRange {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.range.start())?;
+
+        if self.range.start() != self.range.end() {
+            write!(f, "-{}", self.range.end())?;
+        }
+
+        if self.step != 1 {
+            write!(f, "/{}", self.step)?;
+        }
+
+        Ok(())
+    }
+}
+
 // MonthdayRange
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum MonthdayRange {
     Month {
         range: RangeInclusive<Month>,
@@ -79,9 +102,36 @@ pub enum MonthdayRange {
     },
 }
 
+impl Display for MonthdayRange {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Month { range, year } => {
+                if let Some(year) = year {
+                    write!(f, "{year}")?;
+                }
+
+                write!(f, "{}", range.start())?;
+
+                if range.start() != range.end() {
+                    write!(f, "-{}", range.end())?;
+                }
+            }
+            Self::Date { start, end } => {
+                write!(f, "{}{}", start.0, start.1)?;
+
+                if start != end {
+                    write!(f, "-{}{}", end.0, end.1)?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
+
 // Date
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Date {
     Fixed {
         year: Option<u16>,
@@ -138,7 +188,7 @@ impl Display for Date {
 
 // DateOffset
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct DateOffset {
     pub wday_offset: WeekDayOffset,
     pub day_offset: i64,
@@ -175,7 +225,7 @@ impl Display for DateOffset {
 
 // WeekDayOffset
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum WeekDayOffset {
     None,
     Next(Weekday),
@@ -203,7 +253,7 @@ impl Display for WeekDayOffset {
 
 // WeekDayRange
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum WeekDayRange {
     Fixed {
         range: RangeInclusive<Weekday>,
@@ -226,7 +276,7 @@ impl Display for WeekDayRange {
                     write!(f, "-{}", wday_str(*range.end()))?;
                 }
 
-                if nth.contains(&true) {
+                if nth.contains(&false) {
                     let mut weeknum_iter = nth
                         .iter()
                         .enumerate()
@@ -259,7 +309,7 @@ impl Display for WeekDayRange {
 
 // HolidayKind
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub enum HolidayKind {
     Public,
     School,
@@ -276,7 +326,7 @@ impl Display for HolidayKind {
 
 // WeekRange
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct WeekRange {
     pub range: RangeInclusive<u8>,
     pub step: u8,

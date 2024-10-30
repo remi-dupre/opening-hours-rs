@@ -1,7 +1,8 @@
 #![no_main]
 use arbitrary::Arbitrary;
 use chrono::DateTime;
-use libfuzzer_sys::fuzz_target;
+use libfuzzer_sys::{fuzz_target, Corpus};
+use opening_hours::opening_hours::REGION_HOLIDAYS;
 
 use std::fmt::Debug;
 
@@ -29,23 +30,38 @@ impl Debug for Data {
     }
 }
 
-fuzz_target!(|data: Data| {
+fuzz_target!(|data: Data| -> Corpus {
     if data.oh.contains('=') {
         // The fuzzer spends way too much time building comments.
-        return;
+        return Corpus::Reject;
     }
 
     let Some(date) = DateTime::from_timestamp(data.date_secs, data.date_nsecs) else {
-        return;
+        return Corpus::Reject;
     };
 
     let date = date.naive_utc();
 
-    let Ok(oh) = OpeningHours::parse(&data.oh) else {
-        return;
+    let Ok(mut oh_1) = OpeningHours::parse(&data.oh) else {
+        return Corpus::Reject;
     };
 
-    let oh = oh.with_region(&data.region);
-    let _ = oh.is_open(date);
-    let _ = oh.next_change(date);
+    let mut oh_2 = OpeningHours::parse(&oh_1.to_string()).unwrap_or_else(|err| {
+        eprintln!("[ERR] Initial Expression: {}", data.oh);
+        eprintln!("[ERR] Invalid stringified Expression: {oh_1}");
+        panic!("{err}")
+    });
+
+    if data.region.is_empty() {
+        if !REGION_HOLIDAYS.contains_key(data.region.as_str()) {
+            return Corpus::Reject;
+        }
+
+        oh_1 = oh_1.with_region(&data.region);
+        oh_2 = oh_2.with_region(&data.region);
+    }
+
+    assert_eq!(oh_1.is_open(date), oh_2.is_open(date));
+    assert_eq!(oh_1.next_change(date), oh_2.next_change(date));
+    Corpus::Keep
 });

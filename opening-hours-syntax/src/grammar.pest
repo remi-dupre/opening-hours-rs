@@ -236,9 +236,12 @@ thursday = @{ "Th" }
 friday = @{ "Fr" }
 saturday = @{ "Sa" }
 
+// Ensures that we are not greedily matching the "hour" component from a timespan
+daynum = @{ daynum_digits ~ !(":" ~ minute ~ !(":" ~ minute)) }
+
 // NOTE: In specification, single digit numbers are not allowed, but it seems
 //       pretty common.
-daynum = @{
+daynum_digits = {
       '0'..'2' ~ '0'..'9'  // 00 -> 29
     |      "3" ~ '0'..'1'  // 30 -> 31
     |            '0'..'9'  //  0 -> 9

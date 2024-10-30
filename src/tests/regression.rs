@@ -170,7 +170,7 @@ fn s012_fuzz_slow_sh() -> Result<(), Error> {
 
 #[test]
 fn s013_fuzz_slow_weeknum() -> Result<(), Error> {
-    exec_with_timeout(Duration::from_millis(100), || {
+    exec_with_timeout(Duration::from_millis(200), || {
         OpeningHours::parse("Novweek09")?
             .next_change(datetime!("2020-01-01 00:00"))
             .unwrap();

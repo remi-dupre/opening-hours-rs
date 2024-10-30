@@ -2,6 +2,7 @@ use std::boxed::Box;
 use std::cmp::{max, min};
 use std::collections::HashMap;
 use std::convert::TryInto;
+use std::fmt::Display;
 use std::iter::{empty, Peekable};
 use std::sync::LazyLock;
 
@@ -47,7 +48,7 @@ pub const DATE_LIMIT: NaiveDateTime = {
     NaiveDateTime::new(date, time)
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct DateLimitExceeded;
 
 // OpeningHours
@@ -228,6 +229,12 @@ impl OpeningHours {
                 let end = min(dtr.range.end, to);
                 DateTimeRange::new_with_sorted_comments(start..end, dtr.kind, dtr.comments)
             }))
+    }
+}
+
+impl Display for OpeningHours {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        RuleSequence::write_rules_seq(f, &self.rules)
     }
 }
 
