@@ -384,7 +384,10 @@ fn build_holiday(pair: Pair<Rule>) -> Result<ds::WeekDayRange> {
 
     let kind = match pairs.next().expect("empty holiday").as_rule() {
         Rule::public_holiday => ds::HolidayKind::Public,
-        Rule::school_holiday => ds::HolidayKind::School,
+        Rule::school_holiday => {
+            log::warn!("School holidays are not supported, thus ignored");
+            ds::HolidayKind::School
+        }
         other => unexpected_token(other, Rule::holiday),
     };
 
@@ -500,7 +503,12 @@ fn build_monthday_range(pair: Pair<Rule>) -> Result<ds::MonthdayRange> {
                 Some(Rule::date_to) => build_date_to(pairs.next().unwrap(), start)?,
                 Some(Rule::monthday_range_plus) => {
                     pairs.next();
-                    ds::Date::day(31, ds::Month::December, 9999)
+
+                    if start.has_year() {
+                        ds::Date::ymd(31, ds::Month::December, 9999)
+                    } else {
+                        ds::Date::md(31, ds::Month::December)
+                    }
                 }
                 None => start,
                 Some(other) => unexpected_token(other, Rule::monthday_range),
@@ -556,7 +564,10 @@ fn build_date_from(pair: Pair<Rule>) -> ds::Date {
     };
 
     match pairs.peek().expect("empty date (from)").as_rule() {
-        Rule::variable_date => ds::Date::Easter { year },
+        Rule::variable_date => {
+            log::warn!("Easter is not supported yet");
+            ds::Date::Easter { year }
+        }
         Rule::month => ds::Date::Fixed {
             year,
             month: build_month(pairs.next().expect("missing month")),
@@ -739,7 +750,19 @@ fn build_wday(pair: Pair<Rule>) -> ds::Weekday {
 
 fn build_daynum(pair: Pair<Rule>) -> u8 {
     assert_eq!(pair.as_rule(), Rule::daynum);
-    pair.as_str().parse().expect("invalid month format")
+    let daynum = pair.as_str().parse().expect("invalid month format");
+
+    if daynum == 0 {
+        log::warn!("Found day number 0 in opening hours: specify the 1st or 31st instead.");
+        return 1;
+    }
+
+    if daynum > 31 {
+        log::warn!("Found day number {daynum} in opening hours");
+        return 31;
+    }
+
+    daynum
 }
 
 fn build_weeknum(pair: Pair<Rule>) -> u8 {

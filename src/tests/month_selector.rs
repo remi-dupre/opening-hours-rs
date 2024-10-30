@@ -62,3 +62,27 @@ fn range() -> Result<(), Error> {
 
     Ok(())
 }
+
+#[test]
+fn invalid_day() -> Result<(), Error> {
+    let oh_oob_february = "Feb00-Feb31:10:00-12:00";
+    assert_eq!(schedule_at!(oh_oob_february, "2021-01-31"), schedule! {},);
+
+    assert_eq!(
+        schedule_at!(oh_oob_february, "2021-02-01"),
+        schedule! { 10,00 => Open => 12,00 }
+    );
+
+    assert_eq!(
+        schedule_at!(oh_oob_february, "2021-02-28"),
+        schedule! { 10,00 => Open => 12,00 }
+    );
+
+    assert_eq!(
+        schedule_at!(oh_oob_february, "2020-02-29"),
+        schedule! { 10,00 => Open => 12,00 }
+    );
+
+    assert_eq!(schedule_at!(oh_oob_february, "2021-03-01"), schedule! {});
+    Ok(())
+}

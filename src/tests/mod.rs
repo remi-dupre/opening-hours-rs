@@ -2,10 +2,9 @@ mod holiday_selector;
 mod issues;
 mod month_selector;
 mod next_change;
-mod next_change_hint;
 mod parser;
+mod regression;
 mod rules;
-mod selective;
 mod time_selector;
 mod week_selector;
 mod weekday_selector;
@@ -23,7 +22,15 @@ fn sample() -> impl Iterator<Item = &'static str> {
         .filter(|line| !line.is_empty() && !line.starts_with('#'))
 }
 
-fn exec_with_timeout(f: impl FnOnce() + Send + 'static, timeout: Duration) -> bool {
+/// Wraps input function but panics if it runs longer than specified timeout.
+pub fn exec_with_timeout<R: Send + 'static>(
+    timeout: Duration,
+    f: impl FnOnce() -> R + Send + 'static,
+) -> R {
+    if cfg!(feature = "disable-test-timeouts") {
+        return f();
+    }
+
     let result = Arc::new(Mutex::new(None));
     let finished = Arc::new(Condvar::new());
 
@@ -35,8 +42,8 @@ fn exec_with_timeout(f: impl FnOnce() + Send + 'static, timeout: Duration) -> bo
         thread::spawn(move || {
             let elapsed = {
                 let start = Instant::now();
-                f();
-                start.elapsed()
+                let res = f();
+                (start.elapsed(), res)
             };
 
             *result.lock().expect("failed to write result") = Some(elapsed);
@@ -44,26 +51,19 @@ fn exec_with_timeout(f: impl FnOnce() + Send + 'static, timeout: Duration) -> bo
         })
     };
 
-    let (result, _) = finished
+    let (mut result, _) = finished
         .wait_timeout(result.lock().expect("failed to fetch result"), timeout)
         .expect("poisoned lock");
 
-    result.map(|elapsed| elapsed < timeout).unwrap_or(false)
-}
+    let Some((elapsed, res)) = result.take() else {
+        panic!("exec stopped due to {timeout:?} timeout");
+    };
 
-#[macro_export]
-macro_rules! assert_speed {
-    ( $expr: expr ; $time: literal ms ) => {{
-        use std::time::Duration;
-        use $crate::tests::exec_with_timeout;
+    if elapsed > timeout {
+        panic!("exec ran for {elapsed:?}");
+    }
 
-        assert!(exec_with_timeout(
-            || {
-                $expr;
-            },
-            Duration::from_millis(100),
-        ));
-    }};
+    res
 }
 
 #[macro_export]

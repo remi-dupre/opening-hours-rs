@@ -1,6 +1,6 @@
 [package]
 name = "opening-hours-py"
-version = "0.7.0"
+version = "0.8.0"
 authors = ["Rémi Dupré <remi@dupre.io>"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
@@ -14,15 +14,9 @@ edition = "2021"
 name = "opening_hours"
 crate-type = ["cdylib"]
 
-[profile.release]
-codegen-units = 1
-lto = "fat"
-
 [dependencies]
 chrono = "0.4"
 opening-hours = { path = ".." }
 opening-hours-syntax = { path = "../opening-hours-syntax" }
-
-[dependencies.pyo3]
-version = "0.19"
-features = ["extension-module", "generate-import-lib"]
+pyo3 = { version = "0.22", features = ["chrono", "extension-module", "generate-import-lib"] }
+pyo3-log = "0.11"

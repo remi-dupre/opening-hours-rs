@@ -1,6 +1,6 @@
 [package]
 name = "opening-hours-syntax"
-version = "0.7.0"
+version = "0.8.0"
 authors = ["Rémi Dupré <remi@dupre.io>"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
@@ -12,5 +12,6 @@ edition = "2021"
 
 [dependencies]
 chrono = { version = "0.4", default-features = false }
+log = { version = "0.4", features = [ "kv" ] }
 pest = "2.0"
 pest_derive = "2.0"

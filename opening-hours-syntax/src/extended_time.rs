@@ -1,5 +1,5 @@
 use std::convert::TryInto;
-use std::fmt;
+use std::fmt::{Debug, Display};
 use std::num::TryFromIntError;
 
 use chrono::{NaiveTime, Timelike};
@@ -10,9 +10,15 @@ pub struct ExtendedTime {
     minute: u8,
 }
 
-impl fmt::Debug for ExtendedTime {
-    fn fmt(&self, f: &mut fmt::Formatter) -> std::result::Result<(), fmt::Error> {
-        write!(f, "{}:{:02}", self.hour, self.minute)
+impl Display for ExtendedTime {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:02}:{:02}", self.hour, self.minute)
+    }
+}
+
+impl Debug for ExtendedTime {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::result::Result<(), std::fmt::Error> {
+        write!(f, "{self}")
     }
 }
 
@@ -20,7 +26,7 @@ impl ExtendedTime {
     #[inline]
     pub fn new(hour: u8, minute: u8) -> Self {
         if minute >= 60 {
-            panic!("invalid time: minute is {}", minute)
+            panic!("Invalid time: minute is {}", minute)
         }
 
         Self { hour, minute }

@@ -156,7 +156,6 @@ impl<'c> Schedule<'c> {
 
         // Extend the inserted interval if it has adjacent intervals with same value
 
-        #[allow(clippy::suspicious_operation_groupings)]
         while before
             .last()
             .map(|tr| tr.range.end == ins_tr.range.start && tr.kind == ins_tr.kind)

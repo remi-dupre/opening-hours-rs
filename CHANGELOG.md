@@ -1,0 +1,18 @@
+# Changelog
+
+## 0.8.0
+
+### General
+
+- Emit some logs when parsing unsupported syntax.
+- Basic support for stringifying `OpeningHours`
+
+### Python
+
+- Implement `__repr__`, `__str__`, `__hash__` and `__eq__`
+- Upgrade to PyO3 0.22 (from 0.19) which natively supports datetime conversions
+
+### Fixes
+
+- Most crashing edge cases have been removed (through `.expect()` removal and fuzzing)
+- Monthday & Time ambiguity has been fixed for parser (eg. "Oct 12:00-24:00")
