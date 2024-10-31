@@ -1,6 +1,6 @@
 [package]
 name = "opening-hours"
-version = "0.8.2"
+version = "0.9.0"
 authors = ["Rémi Dupré <remi@dupre.io>"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
@@ -22,13 +22,13 @@ disable-test-timeouts = []
 
 [dependencies]
 chrono = "0.4"
-compact-calendar = { path = "compact-calendar", version = "0.8.2" }
+compact-calendar = { path = "compact-calendar", version = "0.9.0" }
 flate2 = "1.0"
 log = { version = "0.4", features = [ "kv" ] }
-opening-hours-syntax = { path = "opening-hours-syntax", version = "0.8.2" }
+opening-hours-syntax = { path = "opening-hours-syntax", version = "0.9.0" }
 
 [build-dependencies]
-compact-calendar = { path = "compact-calendar", version = "0.8.2" }
+compact-calendar = { path = "compact-calendar", version = "0.9.0" }
 chrono = "0.4"
 flate2 = "1.0"
 

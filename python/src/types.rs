@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use chrono::NaiveDateTime;
 use pyo3::prelude::*;
 

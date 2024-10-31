@@ -1,6 +1,9 @@
 mod errors;
 mod types;
 
+#[cfg(test)]
+mod tests;
+
 use chrono::offset::Local;
 use chrono::NaiveDateTime;
 
