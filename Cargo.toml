@@ -39,6 +39,9 @@ criterion = "0.5"
 name = "benchmarks"
 harness = false
 
+[profile.dev.package.flate2]
+opt-level = 3  # build script will run substantially faster for dev
+
 [profile.bench]
 codegen-units = 1
 lto = "fat"

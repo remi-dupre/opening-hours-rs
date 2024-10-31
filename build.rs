@@ -68,15 +68,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     output.finish()?;
 
     // Export path values
-    println!("cargo:rustc-env=HOLIDAYS_FILE={}", out_path.display());
+    println!("cargo::rustc-env=HOLIDAYS_FILE={}", out_path.display());
 
     println!(
-        "cargo:rustc-env=HOLIDAYS_REGIONS={}",
+        "cargo::rustc-env=HOLIDAYS_REGIONS={}",
         regions_order.join(",")
     );
 
     for path in WATCH_PATHS {
-        println!("cargo:rerun-if-changed={path}");
+        println!("cargo::rerun-if-changed={path}");
     }
 
     Ok(())

@@ -207,7 +207,7 @@ macro_rules! schedule {
 
             $(
                 let curr = ExtendedTime::new($hh2, $mm2);
-                let comments = vec![$($comment),*].into();
+                let comments = vec![$(std::sync::Arc::from($comment)),*].into();
                 inner.push(TimeRange::new(prev..curr, $kind, comments));
 
                 #[allow(unused_assignments)]
