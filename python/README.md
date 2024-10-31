@@ -1,8 +1,9 @@
-Python bindings for [OSM Opening Hours](https://github.com/remi-dupre/opening-hours-rs)
-=======================================
+🐍 Python bindings for [OSM Opening Hours](https://github.com/remi-dupre/opening-hours-rs)
+==========================================
 
-[![PyPI](https://img.shields.io/pypi/v/opening-hours-py)](https://pypi.org/project/opening-hours-py/)
-[![Doc](https://img.shields.io/badge/doc-pdoc-blue)](https://remi-dupre.github.io/opening-hours-rs/opening_hours.html)
+[![PyPI](https://img.shields.io/pypi/v/opening-hours-py)][pypi]
+[![Doc](https://img.shields.io/badge/doc-pdoc-blue)][docs]
+[![PyPI - Downloads](https://img.shields.io/pypi/dm/opening-hours-py)][pypi]
 
 
 Usage
@@ -61,3 +62,7 @@ python
 >>> oh.state()
 "open"
 ```
+
+
+[pypi]: https://pypi.org/project/opening-hours-py/
+[docs]: https://remi-dupre.github.io/opening-hours-rs/opening_hours.html
