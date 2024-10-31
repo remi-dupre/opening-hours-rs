@@ -73,7 +73,7 @@ impl Schedule {
     //       iterator could give some performances: it would avoid Boxing,
     //       resulting trait object and allows to implement `peek()`
     //       without any wrapper.
-    pub fn into_iter_filled(self) -> Box<dyn Iterator<Item = TimeRange>> {
+    pub fn into_iter_filled(self) -> Box<dyn Iterator<Item = TimeRange> + Send + Sync> {
         let time_points = self.inner.into_iter().flat_map(|tr| {
             [
                 (tr.range.start, tr.kind, tr.comments),

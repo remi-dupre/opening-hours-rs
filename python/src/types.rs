@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use chrono::NaiveDateTime;
 use pyo3::prelude::*;
 
@@ -40,9 +42,9 @@ impl IntoPy<Py<PyAny>> for State {
 
 /// Iterator that owns a pointer to a [`OpeningHours`] together with a
 /// self reference to it.
-#[pyclass(unsendable)]
+#[pyclass()]
 pub struct RangeIterator {
-    iter: Box<dyn Iterator<Item = DateTimeRange>>,
+    iter: Box<dyn Iterator<Item = DateTimeRange> + Send + Sync>,
 }
 
 impl RangeIterator {

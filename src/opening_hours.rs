@@ -158,7 +158,7 @@ impl OpeningHours {
     pub fn iter_from(
         &self,
         from: NaiveDateTime,
-    ) -> Result<impl Iterator<Item = DateTimeRange>, DateLimitExceeded> {
+    ) -> Result<impl Iterator<Item = DateTimeRange> + Send + Sync, DateLimitExceeded> {
         self.iter_range(from, DATE_LIMIT)
     }
 
@@ -166,7 +166,7 @@ impl OpeningHours {
         &self,
         from: NaiveDateTime,
         to: NaiveDateTime,
-    ) -> Result<impl Iterator<Item = DateTimeRange>, DateLimitExceeded> {
+    ) -> Result<impl Iterator<Item = DateTimeRange> + Send + Sync, DateLimitExceeded> {
         if from >= DATE_LIMIT || to > DATE_LIMIT {
             Err(DateLimitExceeded)
         } else {
@@ -220,7 +220,7 @@ impl OpeningHours {
         &self,
         from: NaiveDateTime,
         to: NaiveDateTime,
-    ) -> Result<impl Iterator<Item = DateTimeRange>, DateLimitExceeded> {
+    ) -> Result<impl Iterator<Item = DateTimeRange> + Send + Sync, DateLimitExceeded> {
         Ok(self
             .iter_from(from)?
             .take_while(move |dtr| dtr.range.start < to)
@@ -264,7 +264,7 @@ fn rule_sequence_schedule_at(
 pub struct TimeDomainIterator {
     opening_hours: OpeningHours,
     curr_date: NaiveDate,
-    curr_schedule: Peekable<Box<dyn Iterator<Item = TimeRange>>>,
+    curr_schedule: Peekable<Box<dyn Iterator<Item = TimeRange> + Send + Sync>>,
     end_datetime: NaiveDateTime,
 }
 
