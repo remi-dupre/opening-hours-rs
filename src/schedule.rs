@@ -3,6 +3,7 @@ use std::cmp::{max, min};
 use std::iter::once;
 use std::mem::take;
 use std::ops::Range;
+use std::sync::Arc;
 
 use opening_hours_syntax::extended_time::ExtendedTime;
 use opening_hours_syntax::rules::RuleKind;
@@ -10,17 +11,17 @@ use opening_hours_syntax::sorted_vec::UniqueSortedVec;
 
 #[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct TimeRange<'c> {
+pub struct TimeRange {
     pub range: Range<ExtendedTime>,
     pub kind: RuleKind,
-    pub comments: UniqueSortedVec<&'c str>,
+    pub comments: UniqueSortedVec<Arc<str>>,
 }
 
-impl<'c> TimeRange<'c> {
+impl TimeRange {
     pub(crate) fn new(
         range: Range<ExtendedTime>,
         kind: RuleKind,
-        comments: UniqueSortedVec<&'c str>,
+        comments: UniqueSortedVec<Arc<str>>,
     ) -> Self {
         TimeRange { range, kind, comments }
     }
@@ -32,12 +33,12 @@ impl<'c> TimeRange<'c> {
 /// Internal arrays always keep a sequence of non-overlaping, increasing time
 /// ranges.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct Schedule<'c> {
-    pub(crate) inner: Vec<TimeRange<'c>>,
+pub struct Schedule {
+    pub(crate) inner: Vec<TimeRange>,
 }
 
-impl<'c> IntoIterator for Schedule<'c> {
-    type Item = TimeRange<'c>;
+impl IntoIterator for Schedule {
+    type Item = TimeRange;
     type IntoIter = <Vec<Self::Item> as IntoIterator>::IntoIter;
 
     fn into_iter(self) -> Self::IntoIter {
@@ -45,7 +46,7 @@ impl<'c> IntoIterator for Schedule<'c> {
     }
 }
 
-impl<'c> Schedule<'c> {
+impl Schedule {
     pub fn empty() -> Self {
         Self { inner: Vec::new() }
     }
@@ -53,7 +54,7 @@ impl<'c> Schedule<'c> {
     pub fn from_ranges(
         ranges: impl IntoIterator<Item = Range<ExtendedTime>>,
         kind: RuleKind,
-        comments: UniqueSortedVec<&'c str>,
+        comments: &UniqueSortedVec<Arc<str>>,
     ) -> Self {
         Schedule {
             inner: ranges
@@ -72,7 +73,7 @@ impl<'c> Schedule<'c> {
     //       iterator could give some performances: it would avoid Boxing,
     //       resulting trait object and allows to implement `peek()`
     //       without any wrapper.
-    pub fn into_iter_filled(self) -> Box<dyn Iterator<Item = TimeRange<'c>> + 'c> {
+    pub fn into_iter_filled(self) -> Box<dyn Iterator<Item = TimeRange>> {
         let time_points = self.inner.into_iter().flat_map(|tr| {
             [
                 (tr.range.start, tr.kind, tr.comments),
@@ -113,7 +114,7 @@ impl<'c> Schedule<'c> {
         }
     }
 
-    fn insert(self, mut ins_tr: TimeRange<'c>) -> Self {
+    fn insert(self, mut ins_tr: TimeRange) -> Self {
         // Build sets of intervals before and after the inserted interval
 
         let ins_start = ins_tr.range.start;

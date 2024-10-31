@@ -1,9 +1,6 @@
 mod errors;
 mod types;
 
-use std::pin::Pin;
-use std::sync::Arc;
-
 use chrono::offset::Local;
 use chrono::NaiveDateTime;
 
@@ -46,7 +43,7 @@ fn validate(oh: &str) -> bool {
 #[pyclass(eq, hash, frozen)]
 #[derive(Hash, PartialEq, Eq)]
 struct OpeningHours {
-    inner: Pin<Arc<::opening_hours::OpeningHours>>,
+    inner: ::opening_hours::OpeningHours,
 }
 
 #[pymethods]
@@ -55,7 +52,7 @@ impl OpeningHours {
     #[pyo3(signature = (oh, /))]
     fn new(oh: &str) -> PyResult<Self> {
         Ok(Self {
-            inner: Arc::pin(::opening_hours::OpeningHours::parse(oh).map_err(ParserError::from)?),
+            inner: ::opening_hours::OpeningHours::parse(oh).map_err(ParserError::from)?,
         })
     }
 
@@ -185,7 +182,7 @@ impl OpeningHours {
     #[pyo3(signature = (start=None, end=None, /))]
     fn intervals(&self, start: Option<NaiveDateTime>, end: Option<NaiveDateTime>) -> RangeIterator {
         RangeIterator::new(
-            self.inner.clone(),
+            &self.inner,
             get_time(start.map(Into::into)),
             end.map(Into::into),
         )

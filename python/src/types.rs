@@ -1,6 +1,3 @@
-use std::pin::Pin;
-use std::sync::Arc;
-
 use chrono::NaiveDateTime;
 use pyo3::prelude::*;
 
@@ -45,13 +42,12 @@ impl IntoPy<Py<PyAny>> for State {
 /// self reference to it.
 #[pyclass(unsendable)]
 pub struct RangeIterator {
-    _td: Pin<Arc<opening_hours::OpeningHours>>,
-    iter: Box<dyn Iterator<Item = DateTimeRange<'static>>>,
+    iter: Box<dyn Iterator<Item = DateTimeRange>>,
 }
 
 impl RangeIterator {
     pub fn new(
-        td: Pin<Arc<opening_hours::OpeningHours>>,
+        td: &opening_hours::OpeningHours,
         start: NaiveDateTime,
         end: Option<NaiveDateTime>,
     ) -> Self {
@@ -69,16 +65,7 @@ impl RangeIterator {
             }
         };
 
-        // Extend the lifetime of the reference to td inside of iter.
-        //   1. `td` won't be dropped before `iter` as they are both owned by the struct.
-        //   2. `td` won't move as it is marked Pin.
-        //   3. we must ensure in [`RangeIterator`]'s implementation that iter is not moved out of
-        //      the struct.
-        let iter: Box<dyn Iterator<Item = DateTimeRange<'_>>> = iter;
-        let iter: Box<dyn Iterator<Item = DateTimeRange<'static>>> =
-            unsafe { std::mem::transmute(iter) };
-
-        Self { _td: td, iter }
+        Self { iter }
     }
 }
 
@@ -90,13 +77,14 @@ impl RangeIterator {
 
     fn __next__(
         mut slf: PyRefMut<Self>,
-    ) -> Option<(NaiveDateTime, NaiveDateTime, State, Vec<&'_ str>)> {
+    ) -> Option<(NaiveDateTime, NaiveDateTime, State, Vec<String>)> {
         let dt_range = slf.iter.next()?;
+
         Some((
             dt_range.range.start,
             dt_range.range.end,
             dt_range.kind.into(),
-            dt_range.into_comments().into(),
+            dt_range.comments.iter().map(|c| c.to_string()).collect(),
         ))
     }
 }

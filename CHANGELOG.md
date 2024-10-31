@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.0
+
+### Python
+
+- Got rid of `unsafe` used in `OpeningHours.intervals` implementation.
+- The iterator returned by `OpeningHours.intervals` can be moved between
+  threads.
+
 
 ## 0.8.2
 
