@@ -5,12 +5,13 @@ Ensure the version of the repository is consistent, precisely:
   2. If this runs outside of the master branch, the version must be greater
      than the one uploaded to crates.io and pypi.org.
 """
+
 import asyncio
 import subprocess
 import sys
 from pathlib import Path
 
-import httpx
+import aiohttp
 import toml
 from semantic_version import Version
 
@@ -22,19 +23,21 @@ CCAL_META_URL = "https://crates.io/api/v1/crates/compact-calendar"
 
 
 async def get_pypi_version():
-    async with httpx.AsyncClient() as http:
+    async with aiohttp.ClientSession() as http:
         res = await http.get(PYPI_META_URL)
+        res.raise_for_status()
+        res = await res.json()
 
-    res.raise_for_status()
-    return Version(res.json()["info"]["version"])
+    return Version(res["info"]["version"])
 
 
 async def get_crate_version(url=CRATE_META_URL):
-    async with httpx.AsyncClient() as http:
+    async with aiohttp.ClientSession() as http:
         res = await http.get(url)
+        res.raise_for_status()
+        res = await res.json()
 
-    res.raise_for_status()
-    return Version(res.json()["crate"]["newest_version"])
+    return Version(res["crate"]["newest_version"])
 
 
 async def main():

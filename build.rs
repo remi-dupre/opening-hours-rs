@@ -1,83 +1,80 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::env;
 use std::fs::File;
 use std::io::{BufRead, BufReader, BufWriter};
 use std::path::PathBuf;
 
-use chrono::{Datelike, NaiveDate};
-use flate2::write::ZlibEncoder;
+use chrono::NaiveDate;
+use flate2::write::DeflateEncoder;
 use flate2::Compression;
 
 use compact_calendar::CompactCalendar;
 
-/// Input path to read holidays from
-const HOLIDAYS_PATH: &str = "data/holidays.txt";
-
-/// Output path for holidays
-const OUTPUT_FILE: &str = "holidays.bin";
-
-/// Watched path for cargo to rebuild holidays
-const WATCH_PATHS: &[&str] = &["build.rs", "data/holidays.txt"];
+const PATH_ENV_IN_OUT: [[&str; 3]; 2] = [
+    ["PUBLIC", "data/holidays_public.txt", "holidays_public.bin"],
+    ["SCHOOL", "data/holidays_school.txt", "holidays_school.bin"],
+];
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let out_dir: PathBuf = env::var_os("OUT_DIR")
         .expect("cargo build didn't specify an `OUT_DIR` variable")
         .into();
 
-    // Load dates into an hashmap
-    let mut region_dates: HashMap<String, Vec<NaiveDate>> = HashMap::new();
-    let lines = BufReader::new(File::open(HOLIDAYS_PATH)?).lines();
+    for [env, in_path, out_path] in &PATH_ENV_IN_OUT {
+        // Load dates into an hashmap
+        let mut region_dates: BTreeMap<String, Vec<NaiveDate>> = BTreeMap::new();
+        let lines = BufReader::new(File::open(in_path)?).lines();
 
-    for line in lines {
-        let line = line?;
-        let mut line = line.splitn(2, ' ');
+        for line in lines {
+            let line = line?;
+            let mut line = line.splitn(2, ' ');
 
-        let region = line.next().unwrap();
-        let date = NaiveDate::parse_from_str(line.next().unwrap(), "%Y-%m-%d")?;
+            let region = line.next().unwrap();
+            let date = NaiveDate::parse_from_str(line.next().unwrap(), "%Y-%m-%d")?;
 
-        region_dates
-            .entry(region.to_string())
-            .or_default()
-            .push(date);
+            region_dates
+                .entry(region.to_string())
+                .or_default()
+                .push(date);
+        }
+
+        // Build binary data for all regions
+        let out_path = out_dir.join(out_path);
+
+        let mut output = DeflateEncoder::new(
+            BufWriter::new(File::create(&out_path)?),
+            Compression::best(),
+        );
+
+        let regions_order: Vec<_> = region_dates
+            .into_iter()
+            .map(|(region, dates)| {
+                let mut calendar = CompactCalendar::default();
+
+                for date in dates {
+                    calendar.insert(date);
+                }
+
+                calendar.serialize(&mut output)?;
+                Ok::<_, Box<dyn std::error::Error>>(region)
+            })
+            .collect::<Result<_, _>>()?;
+
+        output.finish()?;
+        println!("cargo::rerun-if-changed={}", out_path.display());
+
+        // Export path values
+        println!(
+            "cargo::rustc-env=HOLIDAYS_{env}_FILE={}",
+            out_path.display()
+        );
+
+        println!(
+            "cargo::rustc-env=HOLIDAYS_{env}_REGIONS={}",
+            regions_order.join(",")
+        );
     }
 
-    // Build binary data for all regions
-    let out_path = out_dir.join(OUTPUT_FILE);
-
-    let mut output = ZlibEncoder::new(
-        BufWriter::new(File::create(&out_path)?),
-        Compression::best(),
-    );
-
-    let regions_order: Vec<_> = region_dates
-        .into_iter()
-        .map(|(region, dates)| {
-            let min_year = dates.iter().map(Datelike::year).min().unwrap_or(2000);
-            let max_year = dates.iter().map(Datelike::year).max().unwrap_or(2000);
-            let mut calendar = CompactCalendar::new(min_year, max_year);
-
-            for date in dates {
-                assert!(calendar.insert(date));
-            }
-
-            calendar.serialize(&mut output)?;
-            Ok::<_, Box<dyn std::error::Error>>(region)
-        })
-        .collect::<Result<_, _>>()?;
-
-    output.finish()?;
-
-    // Export path values
-    println!("cargo::rustc-env=HOLIDAYS_FILE={}", out_path.display());
-
-    println!(
-        "cargo::rustc-env=HOLIDAYS_REGIONS={}",
-        regions_order.join(",")
-    );
-
-    for path in WATCH_PATHS {
-        println!("cargo::rerun-if-changed={path}");
-    }
-
+    println!("cargo::rerun-if-changed=build.rs");
     Ok(())
 }

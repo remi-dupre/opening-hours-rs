@@ -7,7 +7,7 @@ use std::iter::{empty, Peekable};
 use std::sync::{Arc, LazyLock};
 
 use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime};
-use flate2::read::ZlibDecoder;
+use flate2::read::DeflateDecoder;
 
 use compact_calendar::CompactCalendar;
 use opening_hours_syntax::extended_time::ExtendedTime;
@@ -18,22 +18,39 @@ use crate::schedule::{Schedule, TimeRange};
 use crate::time_filter::{time_selector_intervals_at, time_selector_intervals_at_next_day};
 use crate::DateTimeRange;
 
-const EMPTY_CALENDAR: &CompactCalendar = &CompactCalendar::empty();
+/// A collection of public holidays for known regions
+pub static REGION_HOLIDAYS_PUBLIC: LazyLock<HashMap<&str, Arc<CompactCalendar>>> =
+    LazyLock::new(|| {
+        let mut reader =
+            DeflateDecoder::new(include_bytes!(env!("HOLIDAYS_PUBLIC_FILE")).as_slice());
 
-/// An array of sorted holidays for each known region
-pub static REGION_HOLIDAYS: LazyLock<HashMap<&str, CompactCalendar>> = LazyLock::new(|| {
-    let mut reader = ZlibDecoder::new(include_bytes!(env!("HOLIDAYS_FILE")) as &[_]);
+        env!("HOLIDAYS_PUBLIC_REGIONS")
+            .split(',')
+            .map(|region| {
+                let calendar = CompactCalendar::deserialize(&mut reader)
+                    .expect("unable to parse holiday data");
 
-    env!("HOLIDAYS_REGIONS")
-        .split(',')
-        .map(|region| {
-            let calendar =
-                CompactCalendar::deserialize(&mut reader).expect("unable to parse holiday data");
+                (region, Arc::new(calendar))
+            })
+            .collect()
+    });
 
-            (region, calendar)
-        })
-        .collect()
-});
+/// A collection of school holidays for known regions
+pub static REGION_HOLIDAYS_SCHOOL: LazyLock<HashMap<&str, Arc<CompactCalendar>>> =
+    LazyLock::new(|| {
+        let mut reader =
+            DeflateDecoder::new(include_bytes!(env!("HOLIDAYS_SCHOOL_FILE")).as_slice());
+
+        env!("HOLIDAYS_SCHOOL_REGIONS")
+            .split(',')
+            .map(|region| {
+                let calendar = CompactCalendar::deserialize(&mut reader)
+                    .expect("unable to parse holiday data");
+
+                (region, Arc::new(calendar))
+            })
+            .collect()
+    });
 
 /// The upper bound of dates handled by specification
 pub const DATE_LIMIT: NaiveDateTime = {
@@ -58,7 +75,7 @@ pub struct OpeningHours {
     /// Rules describing opening hours
     expr: Arc<OpeningHoursExpression>,
     /// The sorted list of holidays
-    holidays: &'static CompactCalendar,
+    holidays: Arc<CompactCalendar>,
 }
 
 impl OpeningHours {
@@ -66,13 +83,13 @@ impl OpeningHours {
     pub fn parse(data: &str) -> Result<Self, crate::ParserError> {
         Ok(OpeningHours {
             expr: Arc::new(opening_hours_syntax::parse(data)?),
-            holidays: EMPTY_CALENDAR,
+            holidays: Arc::default(),
         })
     }
 
     /// Get the list of all loaded public holidays.
-    pub fn holidays(&self) -> &'static CompactCalendar {
-        self.holidays
+    pub fn holidays(&self) -> &CompactCalendar {
+        &self.holidays
     }
 
     /// Replace loaded holidays with known holidays for the given region. If
@@ -87,11 +104,12 @@ impl OpeningHours {
     /// ```
     pub fn with_region(self, region: &str) -> Self {
         OpeningHours {
-            holidays: REGION_HOLIDAYS
+            holidays: REGION_HOLIDAYS_PUBLIC
                 .get(region.to_uppercase().as_str())
+                .cloned()
                 .unwrap_or_else(|| {
                     log::warn!(region = region; "Unknown region is ignored");
-                    EMPTY_CALENDAR
+                    Arc::default()
                 }),
             ..self
         }

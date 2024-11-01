@@ -1,36 +1,55 @@
-#!/usr/bin/env -S pipenv run python
+#!/usr/bin/env -S poetry run python
 """
 Display the list of holidays during a given interval of time.
 By default all known countries in `workalendar` will be exported.
 """
-from typing import List
 
+import asyncio
+import sys
+
+import aiohttp
 from tap import Tap
-from workalendar.registry import registry
-from workalendar.exceptions import CalendarError
+
+
+API_URL = "https://date.nager.at/api/v3"
 
 
 class Arg(Tap):
     min_year: int = 2000  # starting year
-    max_year: int = 2100  # ending year
-    regions: List[str] = None  # list of regions to import events from
+    max_year: int = 2080  # ending year
+    kind: str = "Public"
 
 
-args = Arg().parse_args()
+async def main(arg: Arg, http: aiohttp.ClientSession):
+    async with http.get(f"{API_URL}/AvailableCountries") as resp:
+        resp.raise_for_status()
+        countries = await resp.json()
+
+    for country in countries:
+        name = country["name"]
+        code = country["countryCode"]
+
+        print(f"Fetching {arg.kind.lower()} holidays for {name}", file=sys.stderr)
+
+        for year in range(arg.min_year, arg.max_year + 1):
+            async with http.get(f"{API_URL}/PublicHolidays/{year}/{code}") as resp:
+                if not resp.ok:
+                    print(f"  - skip year {year}", file=sys.stderr)
+                    continue
+
+                resp = await resp.json()
+
+            for day in resp:
+                if arg.kind.capitalize() in day["types"]:
+                    print(code, day["date"])
 
 
-if args.regions is None:
-    cals = registry.get_calendars(include_subregions=True)
-else:
-    cals = registry.get_calendars([reg.upper() for reg in args.regions])
+async def init():
+    arg = Arg().parse_args()
+
+    async with aiohttp.ClientSession() as http:
+        await main(arg, http)
 
 
-for year in range(args.min_year, args.max_year + 1):
-    for country, cal in cals.items():
-        try:
-            for date, _name in cal().holidays(year):
-                # Sometime the lib gives an overlap
-                if args.min_year <= date.year <= args.max_year:
-                    print(country, date.isoformat())
-        except (CalendarError, KeyError, NotImplementedError, ValueError):
-            pass
+if __name__ == "__main__":
+    asyncio.run(init())

@@ -2,6 +2,15 @@
 
 ## 0.9.0
 
+### General
+
+- Holidays database from [nager.date](https://date.nager.at/)
+- Some support for public holidays
+
+### Rust
+
+- `CompactCalendar` is no longer bounded.
+
 ### Python
 
 - Got rid of `unsafe` used in `OpeningHours.intervals` implementation.
