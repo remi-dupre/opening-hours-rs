@@ -1,5 +1,6 @@
 use std::cmp::{max, min, Ordering};
 use std::ops::{Range, RangeInclusive};
+use std::sync::Arc;
 
 use chrono::NaiveDateTime;
 use opening_hours_syntax::rules::RuleKind;
@@ -9,26 +10,26 @@ use opening_hours_syntax::sorted_vec::UniqueSortedVec;
 
 #[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct DateTimeRange<'c> {
+pub struct DateTimeRange {
     pub range: Range<NaiveDateTime>,
     pub kind: RuleKind,
-    pub comments: UniqueSortedVec<&'c str>,
+    pub comments: UniqueSortedVec<Arc<str>>,
 }
 
-impl<'c> DateTimeRange<'c> {
+impl DateTimeRange {
     pub(crate) fn new_with_sorted_comments(
         range: Range<NaiveDateTime>,
         kind: RuleKind,
-        comments: UniqueSortedVec<&'c str>,
+        comments: UniqueSortedVec<Arc<str>>,
     ) -> Self {
         Self { range, kind, comments }
     }
 
-    pub fn comments(&self) -> &[&'c str] {
+    pub fn comments(&self) -> &[Arc<str>] {
         &self.comments
     }
 
-    pub fn into_comments(self) -> UniqueSortedVec<&'c str> {
+    pub fn into_comments(self) -> UniqueSortedVec<Arc<str>> {
         self.comments
     }
 }

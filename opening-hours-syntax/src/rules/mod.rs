@@ -2,33 +2,26 @@ pub mod day;
 pub mod time;
 
 use std::fmt::Display;
+use std::sync::Arc;
 
 use crate::sorted_vec::UniqueSortedVec;
 
-// RuleSequence
+// OpeningHoursExpression
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
-pub struct RuleSequence {
-    pub day_selector: day::DaySelector,
-    pub time_selector: time::TimeSelector,
-    pub kind: RuleKind,
-    pub operator: RuleOperator,
-    pub comments: UniqueSortedVec<String>,
+pub struct OpeningHoursExpression {
+    pub rules: Vec<RuleSequence>,
 }
 
-impl RuleSequence {
-    /// Pretty print the rules set through given writer.
-    pub fn write_rules_seq(
-        f: &mut std::fmt::Formatter<'_>,
-        seq: &[RuleSequence],
-    ) -> std::fmt::Result {
-        let Some(first) = seq.first() else {
+impl Display for OpeningHoursExpression {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Some(first) = self.rules.first() else {
             return Ok(());
         };
 
         write!(f, "{first}")?;
 
-        for rule in &seq[1..] {
+        for rule in &self.rules[1..] {
             let separator = match rule.operator {
                 RuleOperator::Normal => "; ",
                 RuleOperator::Additional => ", ",
@@ -40,6 +33,17 @@ impl RuleSequence {
 
         Ok(())
     }
+}
+
+// RuleSequence
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct RuleSequence {
+    pub day_selector: day::DaySelector,
+    pub time_selector: time::TimeSelector,
+    pub kind: RuleKind,
+    pub operator: RuleOperator,
+    pub comments: UniqueSortedVec<Arc<str>>,
 }
 
 impl Display for RuleSequence {

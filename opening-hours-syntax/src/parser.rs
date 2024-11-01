@@ -4,6 +4,7 @@ use std::convert::TryInto;
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::ops::RangeInclusive;
+use std::sync::Arc;
 
 use chrono::Duration;
 
@@ -20,13 +21,14 @@ use crate::rules::time as ts;
 #[grammar = "grammar.pest"]
 struct OHParser;
 
-pub fn parse(data: &str) -> Result<Vec<rl::RuleSequence>> {
+pub fn parse(data: &str) -> Result<rl::OpeningHoursExpression> {
     let opening_hours_pair = OHParser::parse(Rule::input_opening_hours, data)
         .map_err(Error::from)?
         .next()
         .expect("grammar error: no opening_hours found");
 
-    build_opening_hours(opening_hours_pair)
+    let rules = build_opening_hours(opening_hours_pair)?;
+    Ok(rl::OpeningHoursExpression { rules })
 }
 
 // ---
@@ -74,6 +76,7 @@ fn build_rule_sequence(pair: Pair<Rule>, operator: rl::RuleOperator) -> Result<r
     let comments = comment
         .into_iter()
         .chain(extra_comment)
+        .map(|s| Arc::from(s.into_boxed_str()))
         .collect::<Vec<_>>()
         .into();
 

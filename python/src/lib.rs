@@ -1,10 +1,9 @@
 mod errors;
 mod types;
 
-use std::pin::Pin;
-use std::sync::Arc;
+// #[cfg(test)]
+// mod tests;
 
-use chrono::offset::Local;
 use chrono::NaiveDateTime;
 
 use pyo3::prelude::*;
@@ -13,9 +12,8 @@ use pyo3::wrap_pyfunction;
 use crate::errors::ParserError;
 use crate::types::{RangeIterator, State};
 
-fn get_time(datetime: Option<NaiveDateTime>) -> NaiveDateTime {
-    datetime.unwrap_or_else(|| Local::now().naive_local())
-}
+use self::types::get_time;
+use self::types::res_time;
 
 /// Validate that input string is a correct opening hours description.
 ///
@@ -46,7 +44,7 @@ fn validate(oh: &str) -> bool {
 #[pyclass(eq, hash, frozen)]
 #[derive(Hash, PartialEq, Eq)]
 struct OpeningHours {
-    inner: Pin<Arc<::opening_hours::OpeningHours>>,
+    inner: ::opening_hours::OpeningHours,
 }
 
 #[pymethods]
@@ -55,7 +53,7 @@ impl OpeningHours {
     #[pyo3(signature = (oh, /))]
     fn new(oh: &str) -> PyResult<Self> {
         Ok(Self {
-            inner: Arc::pin(::opening_hours::OpeningHours::parse(oh).map_err(ParserError::from)?),
+            inner: ::opening_hours::OpeningHours::parse(oh).map_err(ParserError::from)?,
         })
     }
 
@@ -157,10 +155,12 @@ impl OpeningHours {
     /// >>> OpeningHours("2099Mo-Su 12:30-17:00").next_change()
     /// datetime.datetime(2099, 1, 1, 12, 30)
     #[pyo3(signature = (time=None, /))]
-    fn next_change(&self, time: Option<NaiveDateTime>) -> NaiveDateTime {
-        self.inner
-            .next_change(get_time(time))
-            .expect("unexpected date beyond year 10 000")
+    fn next_change(&self, time: Option<NaiveDateTime>) -> Option<NaiveDateTime> {
+        res_time(
+            self.inner
+                .next_change(get_time(time))
+                .expect("unexpected date beyond year 10 000"),
+        )
     }
 
     /// Give an iterator that yields successive time intervals of consistent
@@ -185,7 +185,7 @@ impl OpeningHours {
     #[pyo3(signature = (start=None, end=None, /))]
     fn intervals(&self, start: Option<NaiveDateTime>, end: Option<NaiveDateTime>) -> RangeIterator {
         RangeIterator::new(
-            self.inner.clone(),
+            &self.inner,
             get_time(start.map(Into::into)),
             end.map(Into::into),
         )

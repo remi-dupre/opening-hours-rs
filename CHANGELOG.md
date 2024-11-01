@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.9.0
+
+### General
+
+- Holidays database from [nager.date](https://date.nager.at/)
+- Some support for public holidays
+
+### Rust
+
+- `CompactCalendar` is no longer bounded.
+
+### Python
+
+- Got rid of `unsafe` used in `OpeningHours.intervals` implementation.
+- The iterator returned by `OpeningHours.intervals` can be moved between
+  threads.
+
 
 ## 0.8.2
 

@@ -4,40 +4,57 @@ use std::collections::HashMap;
 use std::convert::TryInto;
 use std::fmt::Display;
 use std::iter::{empty, Peekable};
-use std::sync::LazyLock;
+use std::sync::{Arc, LazyLock};
 
 use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime};
-use flate2::read::ZlibDecoder;
+use flate2::read::DeflateDecoder;
 
 use compact_calendar::CompactCalendar;
 use opening_hours_syntax::extended_time::ExtendedTime;
-use opening_hours_syntax::rules::{RuleKind, RuleOperator, RuleSequence};
+use opening_hours_syntax::rules::{OpeningHoursExpression, RuleKind, RuleOperator, RuleSequence};
 
 use crate::date_filter::DateFilter;
 use crate::schedule::{Schedule, TimeRange};
 use crate::time_filter::{time_selector_intervals_at, time_selector_intervals_at_next_day};
 use crate::DateTimeRange;
 
-const EMPTY_CALENDAR: &CompactCalendar = &CompactCalendar::empty();
+/// A collection of public holidays for known regions
+pub static REGION_HOLIDAYS_PUBLIC: LazyLock<HashMap<&str, Arc<CompactCalendar>>> =
+    LazyLock::new(|| {
+        let mut reader =
+            DeflateDecoder::new(include_bytes!(env!("HOLIDAYS_PUBLIC_FILE")).as_slice());
 
-/// An array of sorted holidays for each known region
-pub static REGION_HOLIDAYS: LazyLock<HashMap<&str, CompactCalendar>> = LazyLock::new(|| {
-    let mut reader = ZlibDecoder::new(include_bytes!(env!("HOLIDAYS_FILE")) as &[_]);
+        env!("HOLIDAYS_PUBLIC_REGIONS")
+            .split(',')
+            .map(|region| {
+                let calendar = CompactCalendar::deserialize(&mut reader)
+                    .expect("unable to parse holiday data");
 
-    env!("HOLIDAYS_REGIONS")
-        .split(',')
-        .map(|region| {
-            let calendar =
-                CompactCalendar::deserialize(&mut reader).expect("unable to parse holiday data");
+                (region, Arc::new(calendar))
+            })
+            .collect()
+    });
 
-            (region, calendar)
-        })
-        .collect()
-});
+/// A collection of school holidays for known regions
+pub static REGION_HOLIDAYS_SCHOOL: LazyLock<HashMap<&str, Arc<CompactCalendar>>> =
+    LazyLock::new(|| {
+        let mut reader =
+            DeflateDecoder::new(include_bytes!(env!("HOLIDAYS_SCHOOL_FILE")).as_slice());
+
+        env!("HOLIDAYS_SCHOOL_REGIONS")
+            .split(',')
+            .map(|region| {
+                let calendar = CompactCalendar::deserialize(&mut reader)
+                    .expect("unable to parse holiday data");
+
+                (region, Arc::new(calendar))
+            })
+            .collect()
+    });
 
 /// The upper bound of dates handled by specification
 pub const DATE_LIMIT: NaiveDateTime = {
-    let Some(date) = NaiveDate::from_ymd_opt(9999, 12, 31) else {
+    let Some(date) = NaiveDate::from_ymd_opt(10_000, 1, 1) else {
         panic!("Invalid limit date")
     };
 
@@ -56,23 +73,23 @@ pub struct DateLimitExceeded;
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct OpeningHours {
     /// Rules describing opening hours
-    rules: Vec<RuleSequence>,
+    expr: Arc<OpeningHoursExpression>,
     /// The sorted list of holidays
-    holidays: &'static CompactCalendar,
+    holidays: Arc<CompactCalendar>,
 }
 
 impl OpeningHours {
     /// Init a new TimeDomain with the given set of Rules.
     pub fn parse(data: &str) -> Result<Self, crate::ParserError> {
         Ok(OpeningHours {
-            rules: opening_hours_syntax::parse(data)?,
-            holidays: EMPTY_CALENDAR,
+            expr: Arc::new(opening_hours_syntax::parse(data)?),
+            holidays: Arc::default(),
         })
     }
 
     /// Get the list of all loaded public holidays.
-    pub fn holidays(&self) -> &'static CompactCalendar {
-        self.holidays
+    pub fn holidays(&self) -> &CompactCalendar {
+        &self.holidays
     }
 
     /// Replace loaded holidays with known holidays for the given region. If
@@ -87,11 +104,12 @@ impl OpeningHours {
     /// ```
     pub fn with_region(self, region: &str) -> Self {
         OpeningHours {
-            holidays: REGION_HOLIDAYS
+            holidays: REGION_HOLIDAYS_PUBLIC
                 .get(region.to_uppercase().as_str())
+                .cloned()
                 .unwrap_or_else(|| {
                     log::warn!(region = region; "Unknown region is ignored");
-                    EMPTY_CALENDAR
+                    Arc::default()
                 }),
             ..self
         }
@@ -108,7 +126,7 @@ impl OpeningHours {
     /// Provide a lower bound to the next date when a different set of rules
     /// could match.
     fn next_change_hint(&self, date: NaiveDate) -> Option<NaiveDate> {
-        self.rules
+        (self.expr.rules)
             .iter()
             .map(|rule| rule.day_selector.next_change_hint(date, self.holidays()))
             .min()
@@ -119,7 +137,7 @@ impl OpeningHours {
         let mut prev_match = false;
         let mut prev_eval = None;
 
-        for rules_seq in &self.rules {
+        for rules_seq in &self.expr.rules {
             let curr_match = rules_seq.day_selector.filter(date, self.holidays());
             let curr_eval = rule_sequence_schedule_at(rules_seq, date, self.holidays());
 
@@ -158,7 +176,7 @@ impl OpeningHours {
     pub fn iter_from(
         &self,
         from: NaiveDateTime,
-    ) -> Result<impl Iterator<Item = DateTimeRange> + '_, DateLimitExceeded> {
+    ) -> Result<impl Iterator<Item = DateTimeRange> + Send + Sync, DateLimitExceeded> {
         self.iter_range(from, DATE_LIMIT)
     }
 
@@ -166,7 +184,7 @@ impl OpeningHours {
         &self,
         from: NaiveDateTime,
         to: NaiveDateTime,
-    ) -> Result<impl Iterator<Item = DateTimeRange> + '_, DateLimitExceeded> {
+    ) -> Result<impl Iterator<Item = DateTimeRange> + Send + Sync, DateLimitExceeded> {
         if from >= DATE_LIMIT || to > DATE_LIMIT {
             Err(DateLimitExceeded)
         } else {
@@ -220,7 +238,7 @@ impl OpeningHours {
         &self,
         from: NaiveDateTime,
         to: NaiveDateTime,
-    ) -> Result<impl Iterator<Item = DateTimeRange>, DateLimitExceeded> {
+    ) -> Result<impl Iterator<Item = DateTimeRange> + Send + Sync, DateLimitExceeded> {
         Ok(self
             .iter_from(from)?
             .take_while(move |dtr| dtr.range.start < to)
@@ -234,24 +252,24 @@ impl OpeningHours {
 
 impl Display for OpeningHours {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        RuleSequence::write_rules_seq(f, &self.rules)
+        write!(f, "{}", self.expr)
     }
 }
 
-fn rule_sequence_schedule_at<'s>(
-    rule_sequence: &'s RuleSequence,
+fn rule_sequence_schedule_at(
+    rule_sequence: &RuleSequence,
     date: NaiveDate,
     holiday: &CompactCalendar,
-) -> Option<Schedule<'s>> {
+) -> Option<Schedule> {
     let from_today = Some(date)
         .filter(|date| rule_sequence.day_selector.filter(*date, holiday))
         .map(|date| time_selector_intervals_at(&rule_sequence.time_selector, date))
-        .map(|rgs| Schedule::from_ranges(rgs, rule_sequence.kind, rule_sequence.comments.to_ref()));
+        .map(|rgs| Schedule::from_ranges(rgs, rule_sequence.kind, &rule_sequence.comments));
 
     let from_yesterday = (date.pred_opt())
         .filter(|prev| rule_sequence.day_selector.filter(*prev, holiday))
         .map(|prev| time_selector_intervals_at_next_day(&rule_sequence.time_selector, prev))
-        .map(|rgs| Schedule::from_ranges(rgs, rule_sequence.kind, rule_sequence.comments.to_ref()));
+        .map(|rgs| Schedule::from_ranges(rgs, rule_sequence.kind, &rule_sequence.comments));
 
     match (from_today, from_yesterday) {
         (Some(sched_1), Some(sched_2)) => Some(sched_1.addition(sched_2)),
@@ -261,19 +279,20 @@ fn rule_sequence_schedule_at<'s>(
 
 // TimeDomainIterator
 
-pub struct TimeDomainIterator<'d> {
-    opening_hours: &'d OpeningHours,
+pub struct TimeDomainIterator {
+    opening_hours: OpeningHours,
     curr_date: NaiveDate,
-    curr_schedule: Peekable<Box<dyn Iterator<Item = TimeRange<'d>> + 'd>>,
+    curr_schedule: Peekable<Box<dyn Iterator<Item = TimeRange> + Send + Sync>>,
     end_datetime: NaiveDateTime,
 }
 
-impl<'d> TimeDomainIterator<'d> {
+impl TimeDomainIterator {
     pub fn new(
-        opening_hours: &'d OpeningHours,
+        opening_hours: &OpeningHours,
         start_datetime: NaiveDateTime,
         end_datetime: NaiveDateTime,
     ) -> Self {
+        let opening_hours = opening_hours.clone();
         let start_date = start_datetime.date();
         let start_time = start_datetime.time().into();
 
@@ -327,8 +346,8 @@ impl<'d> TimeDomainIterator<'d> {
     }
 }
 
-impl<'d> Iterator for TimeDomainIterator<'d> {
-    type Item = DateTimeRange<'d>;
+impl Iterator for TimeDomainIterator {
+    type Item = DateTimeRange;
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(curr_tr) = self.curr_schedule.peek().cloned() {
