@@ -37,7 +37,7 @@ pub static REGION_HOLIDAYS: LazyLock<HashMap<&str, CompactCalendar>> = LazyLock:
 
 /// The upper bound of dates handled by specification
 pub const DATE_LIMIT: NaiveDateTime = {
-    let Some(date) = NaiveDate::from_ymd_opt(9999, 12, 31) else {
+    let Some(date) = NaiveDate::from_ymd_opt(10_000, 1, 1) else {
         panic!("Invalid limit date")
     };
 

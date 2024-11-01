@@ -1,8 +1,21 @@
-use chrono::NaiveDateTime;
+use chrono::{Local, NaiveDateTime};
+use opening_hours::opening_hours::DATE_LIMIT;
 use pyo3::prelude::*;
 
 use opening_hours::DateTimeRange;
 use opening_hours_syntax::rules::RuleKind;
+
+pub(crate) fn get_time(datetime: Option<NaiveDateTime>) -> NaiveDateTime {
+    datetime.unwrap_or_else(|| Local::now().naive_local())
+}
+
+pub(crate) fn res_time(datetime: NaiveDateTime) -> Option<NaiveDateTime> {
+    if datetime == DATE_LIMIT {
+        None
+    } else {
+        Some(datetime)
+    }
+}
 
 // ---
 // --- State
@@ -77,12 +90,12 @@ impl RangeIterator {
 
     fn __next__(
         mut slf: PyRefMut<Self>,
-    ) -> Option<(NaiveDateTime, NaiveDateTime, State, Vec<String>)> {
+    ) -> Option<(NaiveDateTime, Option<NaiveDateTime>, State, Vec<String>)> {
         let dt_range = slf.iter.next()?;
 
         Some((
             dt_range.range.start,
-            dt_range.range.end,
+            res_time(dt_range.range.end),
             dt_range.kind.into(),
             dt_range.comments.iter().map(|c| c.to_string()).collect(),
         ))
