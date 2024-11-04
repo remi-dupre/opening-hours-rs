@@ -66,15 +66,9 @@ impl RangeIterator {
     ) -> Self {
         let iter = {
             if let Some(end) = end {
-                Box::new(
-                    td.iter_range(start, end)
-                        .expect("unexpected date beyond year 10 000"),
-                ) as _
+                Box::new(td.iter_range(start, end)) as _
             } else {
-                Box::new(
-                    td.iter_from(start)
-                        .expect("unexpected date beyond year 10 000"),
-                ) as _
+                Box::new(td.iter_from(start)) as _
             }
         };
 

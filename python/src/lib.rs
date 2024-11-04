@@ -11,6 +11,7 @@ use pyo3::wrap_pyfunction;
 
 use crate::errors::ParserError;
 use crate::types::{RangeIterator, State};
+use ::opening_hours::OpeningHours;
 
 use self::types::get_time;
 use self::types::res_time;
@@ -26,7 +27,7 @@ use self::types::res_time;
 #[pyfunction]
 #[pyo3(text_signature = "(oh, /)")]
 fn validate(oh: &str) -> bool {
-    ::opening_hours::OpeningHours::parse(oh).is_ok()
+    oh.parse::<OpeningHours>().is_ok()
 }
 
 /// Parse input opening hours description.
@@ -41,20 +42,18 @@ fn validate(oh: &str) -> bool {
 /// >>> oh = OpeningHours("24/7")
 /// >>> oh.is_open()
 /// True
-#[pyclass(eq, hash, frozen)]
+#[pyclass(eq, hash, frozen, name = "OpeningHours")]
 #[derive(Hash, PartialEq, Eq)]
-struct OpeningHours {
-    inner: ::opening_hours::OpeningHours,
+struct PyOpeningHours {
+    inner: OpeningHours,
 }
 
 #[pymethods]
-impl OpeningHours {
+impl PyOpeningHours {
     #[new]
     #[pyo3(signature = (oh, /))]
     fn new(oh: &str) -> PyResult<Self> {
-        Ok(Self {
-            inner: ::opening_hours::OpeningHours::parse(oh).map_err(ParserError::from)?,
-        })
+        Ok(Self { inner: oh.parse().map_err(ParserError::from)? })
     }
 
     #[pyo3()]
@@ -83,10 +82,7 @@ impl OpeningHours {
     // #[pyo3(text_signature = "(self, time=None, /)")]
     #[pyo3(signature = (time=None, /))]
     fn state(&self, time: Option<NaiveDateTime>) -> State {
-        self.inner
-            .state(get_time(time.map(Into::into)))
-            .expect("unexpected date beyond year 10 000")
-            .into()
+        self.inner.state(get_time(time.map(Into::into))).into()
     }
 
     /// Check if current state is open.
@@ -208,6 +204,6 @@ impl OpeningHours {
 fn opening_hours(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     pyo3_log::init();
     m.add_function(wrap_pyfunction!(validate, m)?)?;
-    m.add_class::<OpeningHours>()?;
+    m.add_class::<PyOpeningHours>()?;
     Ok(())
 }
