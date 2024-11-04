@@ -86,12 +86,15 @@ macro_rules! datetime {
 macro_rules! schedule_at {
     ( $expression: expr, $date: expr ) => {{
         use $crate::{date, OpeningHours};
-        OpeningHours::parse($expression)?.schedule_at(date!($date))
+        $expression
+            .parse::<OpeningHours>()?
+            .schedule_at(date!($date))
     }};
     ( $expression: expr, $date: expr, $region: expr ) => {{
         use $crate::{date, Context, OpeningHours};
 
-        OpeningHours::parse($expression)?
+        $expression
+            .parse::<OpeningHours>()?
             .with_context(Context::default().with_holidays($region.holidays()))
             .schedule_at(date!($date))
     }};

@@ -9,7 +9,9 @@
 
 ### Rust
 
+- `OpeningHours` now implements `FromStr`.
 - `CompactCalendar` is no longer bounded.
+- Added module `country`.
 
 ### Python
 

@@ -8,7 +8,7 @@ use crate::{datetime, OpeningHours};
 /// https://github.com/remi-dupre/opening-hours-rs/issues/23
 #[test]
 fn gh023_handling_of_spaces() -> Result<(), Error> {
-    let oh = OpeningHours::parse("Apr 1 - Nov 3 00:00-24:00")?;
+    let oh: OpeningHours = "Apr 1 - Nov 3 00:00-24:00".parse()?;
     let start = datetime!("2018-06-11 00:00");
     let expected_end = datetime!("2018-11-04 00:00");
     assert_eq!(oh.next_change(start).unwrap(), expected_end);
@@ -18,7 +18,7 @@ fn gh023_handling_of_spaces() -> Result<(), Error> {
 /// https://github.com/remi-dupre/opening-hours-rs/issues/24
 #[test]
 fn gh024_no_date_range_end_in_intervals() -> Result<(), Error> {
-    let oh = OpeningHours::parse("2022 Jan 1-2023 Dec 31")?;
+    let oh: OpeningHours = "2022 Jan 1-2023 Dec 31".parse()?;
     let start = datetime!("2022-01-01 00:00");
     let expected_end = datetime!("2024-01-01 00:00");
     assert_eq!(oh.next_change(start).unwrap(), expected_end);
@@ -28,7 +28,7 @@ fn gh024_no_date_range_end_in_intervals() -> Result<(), Error> {
 /// https://github.com/remi-dupre/opening-hours-rs/issues/45
 #[test]
 fn gh45_infinite_loop() -> Result<(), Error> {
-    let oh = OpeningHours::parse("Jan-Dec")?;
+    let oh: OpeningHours = "Jan-Dec".parse()?;
     let start = datetime!("2024-01-01 00:00");
     assert!(oh.next_change(start).is_none());
     Ok(())

@@ -1,57 +1,22 @@
 use std::boxed::Box;
 use std::cmp::{max, min};
-use std::collections::HashMap;
 use std::convert::TryInto;
 use std::fmt::Display;
 use std::iter::{empty, Peekable};
-use std::sync::{Arc, LazyLock};
+use std::str::FromStr;
+use std::sync::Arc;
 
 use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime};
-use flate2::read::DeflateDecoder;
 
-use compact_calendar::CompactCalendar;
 use opening_hours_syntax::extended_time::ExtendedTime;
 use opening_hours_syntax::rules::{OpeningHoursExpression, RuleKind, RuleOperator, RuleSequence};
 
 use crate::context::Context;
 use crate::date_filter::DateFilter;
+use crate::error::ParserError;
 use crate::schedule::{Schedule, TimeRange};
 use crate::time_filter::{time_selector_intervals_at, time_selector_intervals_at_next_day};
 use crate::DateTimeRange;
-
-/// A collection of public holidays for known regions
-pub static REGION_HOLIDAYS_PUBLIC: LazyLock<HashMap<&str, Arc<CompactCalendar>>> =
-    LazyLock::new(|| {
-        let mut reader =
-            DeflateDecoder::new(include_bytes!(env!("HOLIDAYS_PUBLIC_FILE")).as_slice());
-
-        env!("HOLIDAYS_PUBLIC_REGIONS")
-            .split(',')
-            .map(|region| {
-                let calendar = CompactCalendar::deserialize(&mut reader)
-                    .expect("unable to parse holiday data");
-
-                (region, Arc::new(calendar))
-            })
-            .collect()
-    });
-
-/// A collection of school holidays for known regions
-pub static REGION_HOLIDAYS_SCHOOL: LazyLock<HashMap<&str, Arc<CompactCalendar>>> =
-    LazyLock::new(|| {
-        let mut reader =
-            DeflateDecoder::new(include_bytes!(env!("HOLIDAYS_SCHOOL_FILE")).as_slice());
-
-        env!("HOLIDAYS_SCHOOL_REGIONS")
-            .split(',')
-            .map(|region| {
-                let calendar = CompactCalendar::deserialize(&mut reader)
-                    .expect("unable to parse holiday data");
-
-                (region, Arc::new(calendar))
-            })
-            .collect()
-    });
 
 /// The upper bound of dates handled by specification
 pub const DATE_LIMIT: NaiveDateTime = {
@@ -68,6 +33,16 @@ pub const DATE_LIMIT: NaiveDateTime = {
 
 // OpeningHours
 
+/// A parsed opening hours expression and its evaluation context.
+///
+/// # Example
+///
+/// ```
+/// use opening_hours::OpeningHours;
+///
+/// assert!("24/7 open".parse::<OpeningHours>().is_ok());
+/// assert!("not a valid expression".parse::<OpeningHours>().is_err());
+/// ```
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct OpeningHours {
     /// Rules describing opening hours
@@ -77,14 +52,6 @@ pub struct OpeningHours {
 }
 
 impl OpeningHours {
-    /// Init a new TimeDomain with the given set of Rules.
-    pub fn parse(data: &str) -> Result<Self, crate::ParserError> {
-        Ok(OpeningHours {
-            expr: Arc::new(opening_hours_syntax::parse(data)?),
-            ctx: Context::default(),
-        })
-    }
-
     /// TODO: doc
     pub fn with_context(mut self, ctx: Context) -> Self {
         self.ctx = ctx;
@@ -224,6 +191,17 @@ impl OpeningHours {
                 let end = min(dtr.range.end, to);
                 DateTimeRange::new_with_sorted_comments(start..end, dtr.kind, dtr.comments)
             })
+    }
+}
+
+impl FromStr for OpeningHours {
+    type Err = ParserError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self {
+            expr: Arc::new(opening_hours_syntax::parse(s)?),
+            ctx: Context::default(),
+        })
     }
 }
 

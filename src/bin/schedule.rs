@@ -13,7 +13,7 @@ fn main() {
     let start_datetime = Local::now().naive_local();
     let start_date = start_datetime.date();
 
-    let oh = match OpeningHours::parse(&expression) {
+    let oh = match expression.parse::<OpeningHours>() {
         Ok(val) => val.with_context(Context::default().with_holidays(COUNTRY.holidays())),
         Err(err) => {
             println!("{}", err);

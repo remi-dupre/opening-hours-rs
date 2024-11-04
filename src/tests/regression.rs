@@ -12,7 +12,7 @@ fn s000_idunn_interval_stops_next_day() -> Result<(), Error> {
     use crate::DateTimeRange;
     use chrono::Duration;
 
-    let oh = OpeningHours::parse("Tu-Su 09:30-18:00; Th 09:30-21:45")?;
+    let oh = "Tu-Su 09:30-18:00; Th 09:30-21:45".parse::<OpeningHours>()?;
     let start = datetime!("2018-06-11 00:00");
     let end = start + Duration::days(1);
 
@@ -50,7 +50,7 @@ fn s002_idunn_override_weekday_keep_unmatched() -> Result<(), Error> {
 
 #[test]
 fn s003_idunn_space_separator() {
-    assert!(OpeningHours::parse("Jan-Feb 10:00-20:00").is_ok());
+    assert!("Jan-Feb 10:00-20:00".parse::<OpeningHours>().is_ok());
 }
 
 #[test]
@@ -91,7 +91,8 @@ fn s005_idunn_days_cycle() -> Result<(), Error> {
 #[test]
 fn s006_idunn_month_cycle() -> Result<(), Error> {
     assert_eq!(
-        OpeningHours::parse("Oct-Mar 07:30-19:30; Apr-Sep 07:00-21:00")?
+        "Oct-Mar 07:30-19:30; Apr-Sep 07:00-21:00"
+            .parse::<OpeningHours>()?
             .next_change(datetime!("2019-02-10 11:00"))
             .unwrap(),
         datetime!("2019-02-10 19:30")
@@ -102,29 +103,34 @@ fn s006_idunn_month_cycle() -> Result<(), Error> {
 
 #[test]
 fn s007_idunn_date_separator() {
-    assert!(OpeningHours::parse(
+    assert!(
         "Mo,Th,Sa,Su 09:00-18:00; We,Fr 09:00-21:45; Tu off; Jan 1,May 1,Dec 25: off"
-    )
-    .is_ok());
+            .parse::<OpeningHours>()
+            .is_ok()
+    );
 }
 
 #[test]
 fn s008_pj_no_open_before_separator() {
-    assert!(OpeningHours::parse("Mo-Su 00:00-01:00, 07:30-24:00 ; PH off").is_ok());
+    assert!("Mo-Su 00:00-01:00, 07:30-24:00 ; PH off"
+        .parse::<OpeningHours>()
+        .is_ok());
 }
 
 #[test]
 fn s009_pj_no_open_before_separator() {
-    assert!(OpeningHours::parse(
+    assert!(
         "Mo-Su 00:00-01:00, 07:30-24:00 ; PH off ; 2021 Mar 28 00:00-01:00"
-    )
-    .is_ok());
+            .parse::<OpeningHours>()
+            .is_ok()
+    );
 }
 
 #[test]
 fn s010_pj_slow_after_24_7() -> Result<(), Error> {
     exec_with_timeout(Duration::from_millis(100), || {
-        assert!(OpeningHours::parse("24/7 open ; 2021Jan-Feb off")?
+        assert!("24/7 open ; 2021Jan-Feb off"
+            .parse::<OpeningHours>()?
             .next_change(datetime!("2021-07-09 19:30"))
             .is_none());
 
@@ -132,7 +138,8 @@ fn s010_pj_slow_after_24_7() -> Result<(), Error> {
     })?;
 
     exec_with_timeout(Duration::from_millis(100), || {
-        assert!(OpeningHours::parse("24/7 open ; 2021 Jan 01-Feb 10 off")?
+        assert!("24/7 open ; 2021 Jan 01-Feb 10 off"
+            .parse::<OpeningHours>()?
             .next_change(datetime!("2021-07-09 19:30"))
             .is_none());
 
@@ -144,7 +151,7 @@ fn s010_pj_slow_after_24_7() -> Result<(), Error> {
 
 #[test]
 fn s011_fuzz_extreme_year() -> Result<(), Error> {
-    let oh = OpeningHours::parse("2000")?;
+    let oh: OpeningHours = "2000".parse()?;
 
     let dt = NaiveDateTime::new(
         NaiveDate::from_ymd_opt(-50_000, 1, 1).unwrap(),
@@ -159,7 +166,8 @@ fn s011_fuzz_extreme_year() -> Result<(), Error> {
 #[test]
 fn s012_fuzz_slow_sh() -> Result<(), Error> {
     exec_with_timeout(Duration::from_millis(100), || {
-        assert!(OpeningHours::parse("SH")?
+        assert!("SH"
+            .parse::<OpeningHours>()?
             .next_change(datetime!("2020-01-01 00:00"))
             .is_none());
 
@@ -170,7 +178,8 @@ fn s012_fuzz_slow_sh() -> Result<(), Error> {
 #[test]
 fn s013_fuzz_slow_weeknum() -> Result<(), Error> {
     exec_with_timeout(Duration::from_millis(200), || {
-        assert!(OpeningHours::parse("Novweek09")?
+        assert!("Novweek09"
+            .parse::<OpeningHours>()?
             .next_change(datetime!("2020-01-01 00:00"))
             .is_none());
 
@@ -180,7 +189,8 @@ fn s013_fuzz_slow_weeknum() -> Result<(), Error> {
 
 #[test]
 fn s014_fuzz_feb30_before_leap_year() -> Result<(), Error> {
-    OpeningHours::parse("Feb30")?
+    "Feb30"
+        .parse::<OpeningHours>()?
         .next_change(datetime!("4419-03-01 00:00"))
         .unwrap();
 
@@ -190,7 +200,8 @@ fn s014_fuzz_feb30_before_leap_year() -> Result<(), Error> {
 #[test]
 fn s015_fuzz_31dec_may_be_week_01() -> Result<(), Error> {
     assert_eq!(
-        OpeningHours::parse("week04")?
+        "week04"
+            .parse::<OpeningHours>()?
             .next_change(datetime!("2024-12-31 12:00"))
             .unwrap(),
         datetime!("2025-01-20 00:00")
@@ -204,11 +215,14 @@ fn s016_fuzz_week01_sh() -> Result<(), Error> {
     let dt = datetime!("2010-01-03 00:55"); // still week 53 of 2009
 
     assert_eq!(
-        OpeningHours::parse("week01")?.next_change(dt).unwrap(),
+        "week01".parse::<OpeningHours>()?.next_change(dt).unwrap(),
         datetime!("2011-01-03 00:00"),
     );
 
-    assert!(OpeningHours::parse("week01SH")?.next_change(dt).is_none());
+    assert!("week01SH"
+        .parse::<OpeningHours>()?
+        .next_change(dt)
+        .is_none());
     Ok(())
 }
 
@@ -216,14 +230,14 @@ fn s016_fuzz_week01_sh() -> Result<(), Error> {
 fn s017_fuzz_open_range_timeout() -> Result<(), Error> {
     exec_with_timeout(Duration::from_millis(100), || {
         assert_eq!(
-            dbg!(OpeningHours::parse("May2+")?)
+            dbg!("May2+".parse::<OpeningHours>()?)
                 .next_change(datetime!("2020-01-01 12:00"))
                 .unwrap(),
             datetime!("2020-05-02 00:00")
         );
 
         assert_eq!(
-            dbg!(OpeningHours::parse("May2+")?)
+            dbg!("May2+".parse::<OpeningHours>()?)
                 .next_change(datetime!("2020-05-15 12:00"))
                 .unwrap(),
             datetime!("2021-01-01 00:00")

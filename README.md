@@ -43,7 +43,7 @@ use opening_hours::OpeningHours;
 const OH: &str = "Mo-Fr 10:00-18:00; Sa-Su 10:00-12:00";
 
 fn main() {
-    let oh = OpeningHours::parse(&OH).unwrap();
+    let oh: OpeningHours = OH.parse().unwrap();
     let date = Local::now().naive_local();
     println!("Current status is {:?}", oh.state(date));
     println!("This will change at {:?}", oh.next_change(date).unwrap());
