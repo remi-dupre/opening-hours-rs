@@ -21,11 +21,12 @@ members = ["compact-calendar", "fuzz", "opening-hours-syntax", "python"]
 disable-test-timeouts = []
 
 [dependencies]
-chrono = "0.4"
 compact-calendar = { path = "compact-calendar", version = "0.9.0" }
+opening-hours-syntax = { path = "opening-hours-syntax", version = "0.9.0" }
+chrono = "0.4"
 flate2 = "1.0"
 log = { version = "0.4", features = [ "kv" ] }
-opening-hours-syntax = { path = "opening-hours-syntax", version = "0.9.0" }
+thiserror = "1.0"
 
 [build-dependencies]
 compact-calendar = { path = "compact-calendar", version = "0.9.0" }

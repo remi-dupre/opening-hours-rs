@@ -2,9 +2,11 @@ use std::env;
 
 use chrono::{Duration, Local};
 
+use opening_hours::context::Context;
+use opening_hours::country::Country;
 use opening_hours::OpeningHours;
 
-const REGION: &str = "FR";
+const COUNTRY: Country = Country::FR;
 
 fn main() {
     let expression = env::args().nth(1).expect("Usage: ./schedule <EXPRESSION>");
@@ -12,7 +14,7 @@ fn main() {
     let start_date = start_datetime.date();
 
     let oh = match OpeningHours::parse(&expression) {
-        Ok(val) => val.with_region(REGION),
+        Ok(val) => val.with_context(Context::default().with_holidays(COUNTRY.holidays())),
         Err(err) => {
             println!("{}", err);
             return;
@@ -23,8 +25,7 @@ fn main() {
 
     println!(" - expression: {expression:?}");
     println!(" - date: {start_date:?}");
-    println!(" - loaded holidays for {REGION}: {}", oh.holidays().count());
-    println!(" - current status: {:?}", oh.state(start_datetime).unwrap());
+    println!(" - current status: {:?}", oh.state(start_datetime));
     println!(" - next change: {next_change:?}");
 
     for day in 0..7 {

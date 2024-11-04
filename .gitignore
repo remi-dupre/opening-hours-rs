@@ -1,4 +1,5 @@
-**/target
+docs
 fuzz/artifacts
 fuzz/corpus
-python/docs
+**/target
+__pycache__

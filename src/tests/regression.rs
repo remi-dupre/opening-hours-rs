@@ -4,7 +4,6 @@ use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use opening_hours_syntax::error::Error;
 use opening_hours_syntax::rules::RuleKind::*;
 
-use crate::opening_hours::DATE_LIMIT;
 use crate::tests::exec_with_timeout;
 use crate::{datetime, schedule_at, OpeningHours};
 
@@ -18,7 +17,7 @@ fn s000_idunn_interval_stops_next_day() -> Result<(), Error> {
     let end = start + Duration::days(1);
 
     assert_eq!(
-        oh.iter_range(start, end).unwrap().collect::<Vec<_>>(),
+        oh.iter_range(start, end).collect::<Vec<_>>(),
         vec![DateTimeRange {
             range: start..end,
             kind: Closed,
@@ -125,17 +124,17 @@ fn s009_pj_no_open_before_separator() {
 #[test]
 fn s010_pj_slow_after_24_7() -> Result<(), Error> {
     exec_with_timeout(Duration::from_millis(100), || {
-        OpeningHours::parse("24/7 open ; 2021Jan-Feb off")?
+        assert!(OpeningHours::parse("24/7 open ; 2021Jan-Feb off")?
             .next_change(datetime!("2021-07-09 19:30"))
-            .unwrap();
+            .is_none());
 
         Ok::<(), Error>(())
     })?;
 
     exec_with_timeout(Duration::from_millis(100), || {
-        OpeningHours::parse("24/7 open ; 2021 Jan 01-Feb 10 off")?
+        assert!(OpeningHours::parse("24/7 open ; 2021 Jan 01-Feb 10 off")?
             .next_change(datetime!("2021-07-09 19:30"))
-            .unwrap();
+            .is_none());
 
         Ok::<(), Error>(())
     })?;
@@ -153,16 +152,16 @@ fn s011_fuzz_extreme_year() -> Result<(), Error> {
     );
 
     assert!(oh.is_closed(dt));
-    assert_eq!(oh.next_change(dt).unwrap(), DATE_LIMIT);
+    assert!(oh.next_change(dt).is_none());
     Ok(())
 }
 
 #[test]
 fn s012_fuzz_slow_sh() -> Result<(), Error> {
     exec_with_timeout(Duration::from_millis(100), || {
-        OpeningHours::parse("SH")?
+        assert!(OpeningHours::parse("SH")?
             .next_change(datetime!("2020-01-01 00:00"))
-            .unwrap();
+            .is_none());
 
         Ok(())
     })
@@ -171,9 +170,9 @@ fn s012_fuzz_slow_sh() -> Result<(), Error> {
 #[test]
 fn s013_fuzz_slow_weeknum() -> Result<(), Error> {
     exec_with_timeout(Duration::from_millis(200), || {
-        OpeningHours::parse("Novweek09")?
+        assert!(OpeningHours::parse("Novweek09")?
             .next_change(datetime!("2020-01-01 00:00"))
-            .unwrap();
+            .is_none());
 
         Ok(())
     })
@@ -209,11 +208,7 @@ fn s016_fuzz_week01_sh() -> Result<(), Error> {
         datetime!("2011-01-03 00:00"),
     );
 
-    assert_eq!(
-        OpeningHours::parse("week01SH")?.next_change(dt).unwrap(),
-        DATE_LIMIT
-    );
-
+    assert!(OpeningHours::parse("week01SH")?.next_change(dt).is_none());
     Ok(())
 }
 

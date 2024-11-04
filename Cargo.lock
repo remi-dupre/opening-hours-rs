@@ -507,6 +507,7 @@ dependencies = [
  "flate2",
  "log",
  "opening-hours-syntax",
+ "thiserror",
 ]
 
 [[package]]

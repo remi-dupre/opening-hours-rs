@@ -30,6 +30,6 @@ fn gh024_no_date_range_end_in_intervals() -> Result<(), Error> {
 fn gh45_infinite_loop() -> Result<(), Error> {
     let oh = OpeningHours::parse("Jan-Dec")?;
     let start = datetime!("2024-01-01 00:00");
-    assert!(oh.next_change(start).is_ok());
+    assert!(oh.next_change(start).is_none());
     Ok(())
 }

@@ -387,10 +387,7 @@ fn build_holiday(pair: Pair<Rule>) -> Result<ds::WeekDayRange> {
 
     let kind = match pairs.next().expect("empty holiday").as_rule() {
         Rule::public_holiday => ds::HolidayKind::Public,
-        Rule::school_holiday => {
-            log::warn!("School holidays are not supported, thus ignored");
-            ds::HolidayKind::School
-        }
+        Rule::school_holiday => ds::HolidayKind::School,
         other => unexpected_token(other, Rule::holiday),
     };
 
