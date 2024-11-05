@@ -117,9 +117,8 @@ dusk = @{ "dusk" }
 // Weekday selector
 
 weekday_selector = {
-      holiday_sequence ~ ( "," ~ weekday_sequence )?
-    | weekday_sequence ~ ( "," ~ holiday_sequence )?
-    | holiday_sequence ~ space ~ weekday_sequence
+      holiday_sequence ~ ( ( "," | space ) ~ weekday_sequence )?
+    | weekday_sequence ~ ( ( "," | space ) ~ holiday_sequence )?
 }
 
 weekday_sequence = { weekday_range ~ ( "," ~ weekday_range )* }
