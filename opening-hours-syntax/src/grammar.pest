@@ -21,7 +21,8 @@ any_rule_separator = {
     | fallback_rule_separator
 }
 
-normal_rule_separator = @{ ";" ~ space }
+// Relaxed: the space is normally mandatory
+normal_rule_separator = @{ ";" ~ space? }
 
 additional_rule_separator = @{ "," ~ space }
 
@@ -72,19 +73,19 @@ small_range_selectors = {
     | time_selector
 }
 
-// NOTE: In specification, only ":" is allowed, but other forms are quite
-//       common.
+// Relaxed: only ":" is normally allowed.
 separator_for_readability = _{ " " | ": " | ":" }
 
 // Time selector
 
 time_selector = { timespan ~ ( "," ~ timespan )* }
 
+// Relaxed: spaces are normally not allowed.
 timespan = {
-      time ~ "-" ~ extended_time ~ "/" ~ hour_minutes
-    | time ~ "-" ~ extended_time ~ "/" ~ minute
-    | time ~ "-" ~ extended_time ~ "+"
-    | time ~ "-" ~ extended_time
+      time ~ space? ~ "-" ~ extended_time ~ space? ~ "/" ~ space? ~ hour_minutes
+    | time ~ space? ~ "-" ~ extended_time ~ space? ~ "/" ~ space? ~ minute
+    | time ~ space? ~ "-" ~ space? ~ extended_time ~ "+"
+    | time ~ space? ~ "-" ~ space? ~ extended_time
     | time ~ "+"
     | time
 }
@@ -210,14 +211,18 @@ plus = @{ "+" }
 
 minus = @{ "-" }
 
+// Relaxed: single digits are normaly not allowed
 hour = @{
-      '0'..'1' ~ '0'..'9'  // 00 -> 19
-    |      "2" ~ '0'..'4'  // 20 -> 24
+      '0'..'1' ~ '0'..'9'     // 00 -> 19
+    |      "2" ~ '0'..'4'     // 20 -> 24
+    | '0'..'9' ~ !('0'..'9')  // 0 -> 9 (relaxed)
 }
 
+// Relaxed: single digits are normaly not allowed
 extended_hour = @{
      '0'..'3' ~ '0'..'9'  // 00 -> 39
     |     "4" ~ '0'..'8'  // 40 -> 48
+    | '0'..'9' ~ !('0'..'9')  // 0 -> 9 (relaxed)
 }
 
 minute = @{ '0'..'5' ~ '0'..'9' }

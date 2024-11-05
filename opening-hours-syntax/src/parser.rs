@@ -4,7 +4,7 @@ use std::convert::TryInto;
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::ops::RangeInclusive;
-use std::sync::Arc;
+use std::sync::{Arc, Once};
 
 use chrono::Duration;
 
@@ -16,6 +16,8 @@ use crate::extended_time::ExtendedTime;
 use crate::rules as rl;
 use crate::rules::day as ds;
 use crate::rules::time as ts;
+
+static WARN_EASTER: Once = Once::new();
 
 #[derive(Parser)]
 #[grammar = "grammar.pest"]
@@ -242,7 +244,11 @@ fn build_timespan(pair: Pair<Rule>) -> Result<ts::TimeSpan> {
     let start = build_time(pairs.next().expect("empty timespan"));
 
     let end = match pairs.next() {
-        None => return Err(Error::Unsupported("point in time")),
+        None => {
+            // TODO: opening_hours.js handles this better: it will set the
+            //       state to unknown and add a warning comment.
+            ts::Time::Fixed(ExtendedTime::new(24, 0))
+        }
         Some(pair) if pair.as_rule() == Rule::timespan_plus => {
             return Err(Error::Unsupported("point in time"))
         }
@@ -565,7 +571,7 @@ fn build_date_from(pair: Pair<Rule>) -> ds::Date {
 
     match pairs.peek().expect("empty date (from)").as_rule() {
         Rule::variable_date => {
-            log::warn!("Easter is not supported yet");
+            WARN_EASTER.call_once(|| log::warn!("Easter is not supported yet"));
             ds::Date::Easter { year }
         }
         Rule::month => ds::Date::Fixed {
@@ -657,15 +663,7 @@ fn build_plus_or_minus(pair: Pair<Rule>) -> PlusOrMinus {
 
 fn build_minute(pair: Pair<Rule>) -> Duration {
     assert_eq!(pair.as_rule(), Rule::minute);
-
-    let minutes = pair
-        .into_inner()
-        .next()
-        .expect("empty minute")
-        .as_str()
-        .parse()
-        .expect("invalid minute");
-
+    let minutes = pair.as_str().parse().expect("invalid minute");
     Duration::minutes(minutes)
 }
 

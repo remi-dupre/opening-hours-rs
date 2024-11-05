@@ -7,6 +7,14 @@ fn parse_24_7() {
 }
 
 #[test]
+fn parse_open_ended() {
+    assert_eq!(
+        "12:00+".parse::<OpeningHours>().is_ok(),
+        "12:00-24:00".parse::<OpeningHours>().is_ok(),
+    );
+}
+
+#[test]
 fn parse_invalid() {
     assert!("this is not a valid expression"
         .parse::<OpeningHours>()
@@ -22,6 +30,17 @@ fn parse_sample() {
     for raw_oh in sample() {
         assert!(raw_oh.parse::<OpeningHours>().is_ok());
     }
+}
+
+#[test]
+fn parse_relaxed() {
+    assert!("4:00-8:00".parse::<OpeningHours>().is_ok());
+    assert!("04:00 - 08:00".parse::<OpeningHours>().is_ok());
+    assert!("4:00 - 8:00".parse::<OpeningHours>().is_ok());
+
+    assert!("Mo-Fr 10:00-18:00;Sa-Su 10:00-12:00"
+        .parse::<OpeningHours>()
+        .is_ok());
 }
 
 #[test]
