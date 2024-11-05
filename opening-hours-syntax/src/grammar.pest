@@ -142,7 +142,7 @@ school_holiday = @{ "SH" }
 
 nth_entry = {
       nth ~ "-" ~ nth
-    | nth_minus ~ nth         // TODO: "nth last day of the month"
+    | nth_minus ~ nth
     | nth
 }
 

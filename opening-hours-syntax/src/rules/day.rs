@@ -258,7 +258,8 @@ pub enum WeekDayRange {
     Fixed {
         range: RangeInclusive<Weekday>,
         offset: i64,
-        nth: [bool; 5],
+        nth_from_start: [bool; 5],
+        nth_from_end: [bool; 5],
     },
     Holiday {
         kind: HolidayKind,
@@ -269,19 +270,27 @@ pub enum WeekDayRange {
 impl Display for WeekDayRange {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Fixed { range, offset, nth } => {
+            Self::Fixed { range, offset, nth_from_start, nth_from_end } => {
                 write!(f, "{}", wday_str(*range.start()))?;
 
                 if range.start() != range.end() {
                     write!(f, "-{}", wday_str(*range.end()))?;
                 }
 
-                if nth.contains(&false) {
-                    let mut weeknum_iter = nth
+                if nth_from_start.contains(&false) || nth_from_end.contains(&false) {
+                    let pos_weeknum_iter = nth_from_start
                         .iter()
                         .enumerate()
                         .filter(|(_, x)| **x)
-                        .map(|(idx, _)| idx + 1);
+                        .map(|(idx, _)| (idx + 1) as isize);
+
+                    let neg_weeknum_iter = nth_from_end
+                        .iter()
+                        .enumerate()
+                        .filter(|(_, x)| **x)
+                        .map(|(idx, _)| -(idx as isize) - 1);
+
+                    let mut weeknum_iter = pos_weeknum_iter.chain(neg_weeknum_iter);
 
                     write!(f, "[{}", weeknum_iter.next().unwrap())?;
 

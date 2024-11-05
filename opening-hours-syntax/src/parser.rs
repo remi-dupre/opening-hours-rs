@@ -23,6 +23,12 @@ static WARN_EASTER: Once = Once::new();
 #[grammar = "grammar.pest"]
 struct OHParser;
 
+/// Just used while collecting parsed expression
+enum Sign {
+    Neg,
+    Pos,
+}
+
 pub fn parse(data: &str) -> Result<rl::OpeningHoursExpression> {
     let opening_hours_pair = OHParser::parse(Rule::input_opening_hours, data)
         .map_err(Error::from)?
@@ -364,16 +370,25 @@ fn build_weekday_range(pair: Pair<Rule>) -> Result<ds::WeekDayRange> {
         }
     };
 
-    let mut nth = [false; 5];
+    let mut nth_from_start = [false; 5];
+    let mut nth_from_end = [false; 5];
 
     while pairs.peek().map(|x| x.as_rule()) == Some(Rule::nth_entry) {
-        for i in build_nth_entry(pairs.next().unwrap())? {
-            nth[usize::from(i - 1)] = true;
+        let (sign, indices) = build_nth_entry(pairs.next().unwrap())?;
+
+        let nth_array = match sign {
+            Sign::Neg => &mut nth_from_end,
+            Sign::Pos => &mut nth_from_start,
+        };
+
+        for i in indices {
+            nth_array[usize::from(i - 1)] = true;
         }
     }
 
-    if nth.iter().all(|x| !x) {
-        nth = [true; 5]
+    if !nth_from_start.contains(&true) && !nth_from_end.contains(&true) {
+        nth_from_start = [true; 5];
+        nth_from_end = [true; 5];
     }
 
     let offset = {
@@ -384,7 +399,12 @@ fn build_weekday_range(pair: Pair<Rule>) -> Result<ds::WeekDayRange> {
         }
     };
 
-    Ok(ds::WeekDayRange::Fixed { range: start..=end, nth, offset })
+    Ok(ds::WeekDayRange::Fixed {
+        range: start..=end,
+        offset,
+        nth_from_start,
+        nth_from_end,
+    })
 }
 
 fn build_holiday(pair: Pair<Rule>) -> Result<ds::WeekDayRange> {
@@ -398,24 +418,25 @@ fn build_holiday(pair: Pair<Rule>) -> Result<ds::WeekDayRange> {
     };
 
     let offset = pairs.next().map(build_day_offset).unwrap_or(Ok(0))?;
-
     Ok(ds::WeekDayRange::Holiday { kind, offset })
 }
 
-fn build_nth_entry(pair: Pair<Rule>) -> Result<RangeInclusive<u8>> {
+fn build_nth_entry(pair: Pair<Rule>) -> Result<(Sign, RangeInclusive<u8>)> {
     assert_eq!(pair.as_rule(), Rule::nth_entry);
     let mut pairs = pair.into_inner();
 
-    if pairs.peek().map(|x| x.as_rule()) == Some(Rule::nth_minus) {
-        return Err(Error::Unsupported(
-            "nth day relative to the end of the month",
-        ));
-    }
+    let sign = {
+        if pairs.peek().map(|x| x.as_rule()) == Some(Rule::nth_minus) {
+            pairs.next();
+            Sign::Neg
+        } else {
+            Sign::Pos
+        }
+    };
 
     let start = build_nth(pairs.next().expect("empty nth entry"));
     let end = pairs.next().map(build_nth).unwrap_or(start);
-
-    Ok(start..=end)
+    Ok((sign, start..=end))
 }
 
 fn build_nth(pair: Pair<Rule>) -> u8 {

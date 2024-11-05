@@ -8,6 +8,7 @@ use opening_hours_syntax::rules::day::{self as ds, Month};
 
 use crate::context::Context;
 use crate::opening_hours::DATE_LIMIT;
+use crate::utils::dates::count_days_in_month;
 use crate::utils::range::{RangeExt, WrappingRange};
 
 /// Get the first valid date before give "yyyy/mm/dd", for example if
@@ -296,11 +297,15 @@ impl DateFilter for ds::MonthdayRange {
 impl DateFilter for ds::WeekDayRange {
     fn filter(&self, date: NaiveDate, ctx: &Context) -> bool {
         match self {
-            ds::WeekDayRange::Fixed { range, nth, offset } => {
+            ds::WeekDayRange::Fixed { range, offset, nth_from_start, nth_from_end } => {
                 let date = date - Duration::days(*offset);
-                let date_nth = (date.day() as u8 - 1) / 7;
+                let pos_from_start = (date.day() as u8 - 1) / 7;
+                let pos_from_end = (count_days_in_month(date) - date.day() as u8) / 7;
                 let range_u8 = (*range.start() as u8)..=(*range.end() as u8);
-                range_u8.wrapping_contains(&(date.weekday() as u8)) && nth[usize::from(date_nth)]
+
+                range_u8.wrapping_contains(&(date.weekday() as u8))
+                    && (nth_from_start[usize::from(pos_from_start)]
+                        || nth_from_end[usize::from(pos_from_end)])
             }
             ds::WeekDayRange::Holiday { kind, offset } => {
                 let calendar = match kind {
@@ -333,7 +338,12 @@ impl DateFilter for ds::WeekDayRange {
                         .unwrap_or_else(|| DATE_LIMIT.date())
                 }
             }),
-            ds::WeekDayRange::Fixed { range: _, offset: _, nth: _ } => None, // TODO
+            ds::WeekDayRange::Fixed {
+                range: _,
+                offset: _,
+                nth_from_start: _,
+                nth_from_end: _,
+            } => None, // TODO
         }
     }
 }
