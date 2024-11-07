@@ -9,8 +9,11 @@
 Usage
 -----
 
-The package is published for Python 3.7 and above, but you might be able to install it
-with older version of Python if you install the Rust toolchain.
+The pre-compiled package is published for Python 3.9 and above and new releases
+will adapt to [officially supported Python versions][python-versions].
+
+If you want to install this library with older version of Python, **you will
+need the Rust toolchain** (`rustc` and `cargo`).
 
 Install `opening-hours-py` from PyPI, for example using pip:
 
@@ -36,27 +39,27 @@ Developement
 -------------
 
 To build the library by yourself you will require a recent version of Rust,
-[`rustup`](https://www.rust-lang.org/tools/install) is usually the recommanded
+[`rustup`](https://www.rust-lang.org/tools/install) is usually the recommended
 tool to manage the installation.
 
-Then you can use poetry to install Python dependancies and run `maturin` (the
-building tool used to create the binding) from a virtualenv.
+Then you can use poetry to install Python dependencies and run `maturin` (the
+building tool used to create the bindings) from a virtualenv.
 
 ```bash
-git clone https://github.com/remi-dupre/opening-hours-rs.git
-cd opening-hours-rs
+$ git clone https://github.com/remi-dupre/opening-hours-rs.git
+$ cd opening-hours-rs
 
 # Install Python dependancies
-poetry install
+$ poetry install
 
 # Enter the virtualenv
-poetry shell
+$ poetry shell
 
 # Build developpement bindings, add `--release` for an optimized version
-maturin develop
+$ maturin develop
 
 # Now the library is available as long as you don't leave the virtualenv
-python
+$ python
 >>> from opening_hours import OpeningHours
 >>> oh = OpeningHours("24/7")
 >>> oh.state()
@@ -66,3 +69,4 @@ python
 
 [pypi]: https://pypi.org/project/opening-hours-py/
 [docs]: https://remi-dupre.github.io/opening-hours-rs/opening_hours.html
+[python-versions]: https://devguide.python.org/versions/#supported-versions

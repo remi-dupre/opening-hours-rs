@@ -1,9 +1,6 @@
 mod errors;
 mod types;
 
-// #[cfg(test)]
-// mod tests;
-
 use chrono::NaiveDateTime;
 
 use pyo3::prelude::*;
@@ -27,7 +24,7 @@ use self::types::res_time;
 #[pyfunction]
 #[pyo3(text_signature = "(oh, /)")]
 fn validate(oh: &str) -> bool {
-    oh.parse::<OpeningHours>().is_ok()
+    OpeningHours::parse(oh).is_ok()
 }
 
 /// Parse input opening hours description.

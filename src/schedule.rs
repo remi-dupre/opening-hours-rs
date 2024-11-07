@@ -1,6 +1,5 @@
-use std::boxed::Box;
 use std::cmp::{max, min};
-use std::iter::once;
+use std::iter::Peekable;
 use std::mem::take;
 use std::ops::Range;
 use std::sync::Arc;
@@ -9,6 +8,7 @@ use opening_hours_syntax::extended_time::ExtendedTime;
 use opening_hours_syntax::rules::RuleKind;
 use opening_hours_syntax::sorted_vec::UniqueSortedVec;
 
+/// TODO: doc
 #[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TimeRange {
@@ -28,29 +28,28 @@ impl TimeRange {
 }
 
 /// Describe a full schedule for a day, keeping track of open, closed and
-/// unknown periods
-///
-/// Internal arrays always keep a sequence of non-overlaping, increasing time
-/// ranges.
+/// unknown periods.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Schedule {
+    /// Always keep a sequence of non-overlaping, increasing time ranges.
     pub(crate) inner: Vec<TimeRange>,
 }
 
-impl IntoIterator for Schedule {
-    type Item = TimeRange;
-    type IntoIter = <Vec<Self::Item> as IntoIterator>::IntoIter;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.inner.into_iter()
-    }
-}
-
 impl Schedule {
+    /// Creates a new empty schedule, which represents an always closed period.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use opening_hours::schedule::Schedule;
+    ///
+    /// assert!(Schedule::empty().is_empty());
+    /// ```
     pub fn empty() -> Self {
-        Self { inner: Vec::new() }
+        Self::default()
     }
 
+    /// TODO: doc
     pub fn from_ranges(
         ranges: impl IntoIterator<Item = Range<ExtendedTime>>,
         kind: RuleKind,
@@ -65,55 +64,27 @@ impl Schedule {
         }
     }
 
+    /// TODO: doc
     pub fn is_empty(&self) -> bool {
         self.inner.is_empty()
     }
 
-    // NOTE: It is most likely that implementing a custom struct for this
-    //       iterator could give some performances: it would avoid Boxing,
-    //       resulting trait object and allows to implement `peek()`
-    //       without any wrapper.
-    pub fn into_iter_filled(self) -> Box<dyn Iterator<Item = TimeRange> + Send + Sync> {
-        let time_points = self.inner.into_iter().flat_map(|tr| {
-            [
-                (tr.range.start, tr.kind, tr.comments),
-                (tr.range.end, RuleKind::Closed, UniqueSortedVec::new()),
-            ]
-        });
-
-        // Add dummy time points to extend intervals to day bounds
-        let bound = |hour| {
-            (
-                ExtendedTime::new(hour, 0),
-                RuleKind::Closed,
-                UniqueSortedVec::new(),
-            )
-        };
-
-        let start = once(bound(0));
-        let end = once(bound(24));
-        let mut time_points = start.chain(time_points).chain(end).peekable();
-
-        // Zip consecutive time points
-        Box::new(
-            std::iter::from_fn(move || {
-                let (start, kind, comment) = time_points.next()?;
-                let (end, _, _) = time_points.peek()?;
-                Some(TimeRange::new(start..*end, kind, comment))
-            })
-            .filter(|tr| tr.range.start != tr.range.end),
-        )
+    /// TODO: doc
+    pub fn into_iter_filled(self) -> FilledScheduleIterator {
+        FilledScheduleIterator::new(self)
     }
 
-    // TODO: this is implemented with quadratic time where it could probably be
-    //       linear.
+    /// TODO: doc
     pub fn addition(self, mut other: Self) -> Self {
+        // TODO: this is implemented with quadratic time where it could probably
+        //       be linear.
         match other.inner.pop() {
             None => self,
             Some(tr) => self.insert(tr).addition(other),
         }
     }
 
+    /// TODO: doc
     fn insert(self, mut ins_tr: TimeRange) -> Self {
         // Build sets of intervals before and after the inserted interval
 
@@ -187,6 +158,104 @@ impl Schedule {
     }
 }
 
+impl IntoIterator for Schedule {
+    type Item = TimeRange;
+    type IntoIter = <Vec<TimeRange> as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.inner.into_iter()
+    }
+}
+
+/// Return value for [`Schedule::into_iter_filled`].
+#[derive(Debug)]
+pub struct FilledScheduleIterator {
+    last_end: ExtendedTime,
+    ranges: Peekable<<Schedule as IntoIterator>::IntoIter>,
+}
+
+impl FilledScheduleIterator {
+    /// The value that will fill holes
+    const HOLES_STATE: RuleKind = RuleKind::Closed;
+
+    /// First minute of the schedule
+    const START_TIME: ExtendedTime = ExtendedTime::new(0, 0);
+
+    /// Last minute of the schedule
+    const END_TIME: ExtendedTime = ExtendedTime::new(24, 0);
+
+    /// Create a new iterator from a schedule
+    fn new(schedule: Schedule) -> Self {
+        Self {
+            last_end: Self::START_TIME,
+            ranges: schedule.into_iter().peekable(),
+        }
+    }
+
+    /// Must be called before a value is yielded
+    fn pre_yield(&mut self, value: TimeRange) -> Option<TimeRange> {
+        assert!(
+            value.range.start < value.range.end,
+            "infinite loop detected"
+        );
+
+        self.last_end = value.range.end;
+        Some(value)
+    }
+}
+
+impl Iterator for FilledScheduleIterator {
+    type Item = TimeRange;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.last_end >= Self::END_TIME {
+            return None;
+        }
+
+        let mut yielded_range = {
+            let next_start = self.ranges.peek().map(|tr| tr.range.start);
+
+            if next_start == Some(self.last_end) {
+                self.ranges.next().unwrap()
+            } else {
+                TimeRange::new(
+                    self.last_end..next_start.unwrap_or(self.last_end),
+                    Self::HOLES_STATE,
+                    UniqueSortedVec::new(),
+                )
+            }
+        };
+
+        while let Some(next_range) = self.ranges.peek() {
+            if next_range.range.start > yielded_range.range.end {
+                if yielded_range.kind == Self::HOLES_STATE {
+                    // Just extend the closed range with this hole
+                    yielded_range.range.end = next_range.range.start;
+                } else {
+                    // The range before the hole is not closed
+                    return self.pre_yield(yielded_range);
+                }
+            }
+
+            if yielded_range.kind != next_range.kind {
+                return self.pre_yield(yielded_range);
+            }
+
+            let next_range = self.ranges.next().unwrap();
+            yielded_range.range.end = next_range.range.end;
+            yielded_range.comments = yielded_range.comments.union(next_range.comments);
+        }
+
+        if yielded_range.kind == Self::HOLES_STATE {
+            yielded_range.range.end = Self::END_TIME;
+        }
+
+        self.pre_yield(yielded_range)
+    }
+}
+
+/// Macro to ease the creation of schedules during for unit tests.
+#[cfg(test)]
 #[macro_export]
 macro_rules! schedule {
     (

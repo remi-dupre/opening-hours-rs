@@ -4,6 +4,8 @@ use std::num::TryFromIntError;
 
 use chrono::{NaiveTime, Timelike};
 
+// TODO: doc everywhere
+
 #[derive(Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ExtendedTime {
     hour: u8,
@@ -23,12 +25,10 @@ impl Debug for ExtendedTime {
 }
 
 impl ExtendedTime {
+    // TODO: there should be an _opt version of this
     #[inline]
-    pub fn new(hour: u8, minute: u8) -> Self {
-        if minute >= 60 {
-            panic!("Invalid time: minute is {}", minute)
-        }
-
+    pub const fn new(hour: u8, minute: u8) -> Self {
+        assert!(minute < 60);
         Self { hour, minute }
     }
 

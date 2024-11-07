@@ -1,4 +1,3 @@
-use std::boxed::Box;
 use std::cmp::Ord;
 use std::convert::TryInto;
 use std::fmt::Debug;
@@ -344,15 +343,11 @@ fn build_weekday_selector(pair: Pair<Rule>) -> Result<Vec<ds::WeekDayRange>> {
     assert_eq!(pair.as_rule(), Rule::weekday_selector);
 
     pair.into_inner()
-        .flat_map(
-            |pair| -> Box<dyn Iterator<Item = Result<ds::WeekDayRange>>> {
-                match pair.as_rule() {
-                    Rule::weekday_sequence => Box::new(pair.into_inner().map(build_weekday_range)),
-                    Rule::holiday_sequence => Box::new(pair.into_inner().map(build_holiday)),
-                    other => unexpected_token(other, Rule::weekday_sequence),
-                }
-            },
-        )
+        .flat_map(|pair| match pair.as_rule() {
+            Rule::weekday_sequence => pair.into_inner().map(build_weekday_range as fn(_) -> _),
+            Rule::holiday_sequence => pair.into_inner().map(build_holiday as _),
+            other => unexpected_token(other, Rule::weekday_sequence),
+        })
         .collect()
 }
 

@@ -1,8 +1,7 @@
-use std::boxed::Box;
 use std::cmp::{max, min};
 use std::convert::TryInto;
 use std::fmt::Display;
-use std::iter::{empty, Peekable};
+use std::iter::Peekable;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -14,7 +13,7 @@ use opening_hours_syntax::rules::{OpeningHoursExpression, RuleKind, RuleOperator
 use crate::context::Context;
 use crate::date_filter::DateFilter;
 use crate::error::ParserError;
-use crate::schedule::{Schedule, TimeRange};
+use crate::schedule::{FilledScheduleIterator, Schedule};
 use crate::time_filter::{time_selector_intervals_at, time_selector_intervals_at_next_day};
 use crate::DateTimeRange;
 
@@ -35,14 +34,8 @@ pub const DATE_LIMIT: NaiveDateTime = {
 
 /// A parsed opening hours expression and its evaluation context.
 ///
-/// # Example
-///
-/// ```
-/// use opening_hours::OpeningHours;
-///
-/// assert!("24/7 open".parse::<OpeningHours>().is_ok());
-/// assert!("not a valid expression".parse::<OpeningHours>().is_err());
-/// ```
+/// Note that all big inner structures are immutable and wrapped by an `Arc`
+/// so this is safe and fast to clone.
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct OpeningHours {
     /// Rules describing opening hours
@@ -52,13 +45,45 @@ pub struct OpeningHours {
 }
 
 impl OpeningHours {
-    /// TODO: doc
+    // --
+    // -- Builder Methods
+    // --
+
+    /// Parse a raw opening hours expression.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use opening_hours::OpeningHours;
+    ///
+    /// assert!(OpeningHours::parse("24/7 open").is_ok());
+    /// assert!(OpeningHours::parse("not a valid expression").is_err());
+    /// ```
+    pub fn parse(raw_oh: &str) -> Result<Self, ParserError> {
+        let expr = Arc::new(opening_hours_syntax::parse(raw_oh)?);
+        Ok(Self { expr, ctx: Context::default() })
+    }
+
+    /// Set a new evaluation context for this expression.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use opening_hours::OpeningHours;
+    /// use opening_hours::context::Context;
+    ///
+    /// let oh = OpeningHours::parse("Mo-Fr open")
+    ///     .unwrap()
+    ///     .with_context(Context::default());
+    /// ```
     pub fn with_context(mut self, ctx: Context) -> Self {
         self.ctx = ctx;
         self
     }
 
-    // Low level implementations.
+    // --
+    // -- Low level implementations.
+    // --
     //
     // Following functions are used to build the TimeDomainIterator which is
     // used to implement all other functions.
@@ -117,14 +142,6 @@ impl OpeningHours {
         prev_eval.unwrap_or_else(Schedule::empty)
     }
 
-    // TODO: doc
-    pub fn iter_from(
-        &self,
-        from: NaiveDateTime,
-    ) -> impl Iterator<Item = DateTimeRange> + Send + Sync {
-        self.iter_range(from, DATE_LIMIT)
-    }
-
     /// TODO: doc
     pub fn iter_range(
         &self,
@@ -133,6 +150,7 @@ impl OpeningHours {
     ) -> impl Iterator<Item = DateTimeRange> + Send + Sync {
         let from = std::cmp::min(DATE_LIMIT, from);
         let to = std::cmp::min(DATE_LIMIT, to);
+
         TimeDomainIterator::new(self, from, to)
             .take_while(move |dtr| dtr.range.start < to)
             .map(move |dtr| {
@@ -142,7 +160,17 @@ impl OpeningHours {
             })
     }
 
-    // High level implementations
+    // TODO: doc
+    pub fn iter_from(
+        &self,
+        from: NaiveDateTime,
+    ) -> impl Iterator<Item = DateTimeRange> + Send + Sync {
+        self.iter_range(from, DATE_LIMIT)
+    }
+
+    // --
+    // -- High level implementations
+    // --
 
     /// TODO: doc
     pub fn next_change(&self, current_time: NaiveDateTime) -> Option<NaiveDateTime> {
@@ -177,31 +205,13 @@ impl OpeningHours {
     pub fn is_unknown(&self, current_time: NaiveDateTime) -> bool {
         self.state(current_time) == RuleKind::Unknown
     }
-
-    /// TODO: doc
-    pub fn intervals(
-        &self,
-        from: NaiveDateTime,
-        to: NaiveDateTime,
-    ) -> impl Iterator<Item = DateTimeRange> + Send + Sync {
-        self.iter_from(from)
-            .take_while(move |dtr| dtr.range.start < to)
-            .map(move |dtr| {
-                let start = max(dtr.range.start, from);
-                let end = min(dtr.range.end, to);
-                DateTimeRange::new_with_sorted_comments(start..end, dtr.kind, dtr.comments)
-            })
-    }
 }
 
 impl FromStr for OpeningHours {
     type Err = ParserError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Self {
-            expr: Arc::new(opening_hours_syntax::parse(s)?),
-            ctx: Context::default(),
-        })
+        Self::parse(s)
     }
 }
 
@@ -237,7 +247,7 @@ fn rule_sequence_schedule_at(
 pub struct TimeDomainIterator {
     opening_hours: OpeningHours,
     curr_date: NaiveDate,
-    curr_schedule: Peekable<Box<dyn Iterator<Item = TimeRange> + Send + Sync>>,
+    curr_schedule: Peekable<FilledScheduleIterator>,
     end_datetime: NaiveDateTime,
 }
 
@@ -252,14 +262,14 @@ impl TimeDomainIterator {
         let start_date = start_datetime.date();
         let start_time = start_datetime.time().into();
 
-        let mut curr_schedule = {
-            if start_datetime < end_datetime {
-                opening_hours.schedule_at(start_date).into_iter_filled()
-            } else {
-                Box::new(empty())
-            }
+        let mut curr_schedule = opening_hours
+            .schedule_at(start_date)
+            .into_iter_filled()
+            .peekable();
+
+        if start_datetime >= end_datetime {
+            (&mut curr_schedule).for_each(|_| {});
         }
-        .peekable();
 
         while curr_schedule
             .peek()
@@ -295,7 +305,7 @@ impl TimeDomainIterator {
                         .opening_hours
                         .schedule_at(self.curr_date)
                         .into_iter_filled()
-                        .peekable()
+                        .peekable();
                 }
             }
         }

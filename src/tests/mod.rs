@@ -5,6 +5,7 @@ mod next_change;
 mod parser;
 mod regression;
 mod rules;
+mod schedule;
 mod time_selector;
 mod week_selector;
 mod weekday_selector;
