@@ -8,8 +8,8 @@ use opening_hours_syntax::extended_time::ExtendedTime;
 use opening_hours_syntax::rules::RuleKind;
 use opening_hours_syntax::sorted_vec::UniqueSortedVec;
 
-/// TODO: doc
-#[non_exhaustive]
+/// Represent an interval of time in a schedule annotated with a state and
+/// comments.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TimeRange {
     pub range: Range<ExtendedTime>,
@@ -18,6 +18,7 @@ pub struct TimeRange {
 }
 
 impl TimeRange {
+    /// Small helper to create a new range.
     pub(crate) fn new(
         range: Range<ExtendedTime>,
         kind: RuleKind,
@@ -38,33 +39,74 @@ pub struct Schedule {
 impl Schedule {
     /// Creates a new empty schedule, which represents an always closed period.
     ///
-    /// # Example
-    ///
     /// ```
     /// use opening_hours::schedule::Schedule;
     ///
-    /// assert!(Schedule::empty().is_empty());
+    /// assert!(Schedule::new().is_empty());
     /// ```
-    pub fn empty() -> Self {
+    pub fn new() -> Self {
         Self::default()
     }
 
-    /// TODO: doc
+    /// Create a new schedule from a list of ranges of same kind and comment.
+    ///
+    /// ```
+    /// use opening_hours::schedule::Schedule;
+    /// use opening_hours_syntax::{ExtendedTime, RuleKind};
+    ///
+    /// let sch1 = Schedule::from_ranges(
+    ///     [
+    ///         ExtendedTime::new(10, 0)..ExtendedTime::new(14, 0),
+    ///         ExtendedTime::new(12, 0)..ExtendedTime::new(16, 0),
+    ///     ],
+    ///     RuleKind::Open,
+    ///     &Default::default(),
+    /// );
+    ///
+    /// let sch2 = Schedule::from_ranges(
+    ///     [ExtendedTime::new(10, 0)..ExtendedTime::new(16, 0)],
+    ///     RuleKind::Open,
+    ///     &Default::default(),
+    /// );
+    ///
+    /// assert_eq!(sch1, sch2);
+    /// ```
     pub fn from_ranges(
         ranges: impl IntoIterator<Item = Range<ExtendedTime>>,
         kind: RuleKind,
         comments: &UniqueSortedVec<Arc<str>>,
     ) -> Self {
-        Schedule {
-            inner: ranges
-                .into_iter()
-                .inspect(|range| assert!(range.start < range.end))
-                .map(|range| TimeRange::new(range, kind, comments.clone()))
-                .collect(),
+        let mut inner: Vec<_> = ranges
+            .into_iter()
+            .filter(|range| range.start < range.end)
+            .map(|range| TimeRange { range, kind, comments: comments.clone() })
+            .collect();
+
+        // Ensure ranges are disjoint and in increasing order
+        inner.sort_unstable_by_key(|rng| rng.range.start);
+        let mut i = 0;
+
+        while i + 1 < inner.len() {
+            if inner[i].range.end >= inner[i + 1].range.start {
+                inner[i].range.end = inner[i + 1].range.end;
+                let comments_left = std::mem::take(&mut inner[i].comments);
+                let comments_right = inner.remove(i + 1).comments;
+                inner[i].comments = comments_left.union(comments_right);
+            } else {
+                i += 1;
+            }
         }
+
+        Self { inner }
     }
 
-    /// TODO: doc
+    /// Check if a schedule is empty.
+    ///
+    /// ```
+    /// use opening_hours::schedule::Schedule;
+    ///
+    /// assert!(Schedule::new().is_empty());
+    /// ```
     pub fn is_empty(&self) -> bool {
         self.inner.is_empty()
     }
@@ -138,7 +180,6 @@ impl Schedule {
             ins_tr.comments = tr.comments.union(ins_tr.comments);
         }
 
-        #[allow(clippy::suspicious_operation_groupings)]
         while after
             .peek()
             .map(|tr| ins_tr.range.end == tr.range.start && tr.kind == ins_tr.kind)
@@ -209,6 +250,7 @@ impl Iterator for FilledScheduleIterator {
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.last_end >= Self::END_TIME {
+            // Iteration ended
             return None;
         }
 
@@ -216,8 +258,10 @@ impl Iterator for FilledScheduleIterator {
             let next_start = self.ranges.peek().map(|tr| tr.range.start);
 
             if next_start == Some(self.last_end) {
+                // Start from an interval
                 self.ranges.next().unwrap()
             } else {
+                // Start from a hole
                 TimeRange::new(
                     self.last_end..next_start.unwrap_or(self.last_end),
                     Self::HOLES_STATE,
@@ -238,6 +282,7 @@ impl Iterator for FilledScheduleIterator {
             }
 
             if yielded_range.kind != next_range.kind {
+                // The next range has a different state
                 return self.pre_yield(yielded_range);
             }
 
@@ -247,12 +292,15 @@ impl Iterator for FilledScheduleIterator {
         }
 
         if yielded_range.kind == Self::HOLES_STATE {
+            // Extend with the last hole
             yielded_range.range.end = Self::END_TIME;
         }
 
         self.pre_yield(yielded_range)
     }
 }
+
+impl std::iter::FusedIterator for FilledScheduleIterator {}
 
 /// Macro to ease the creation of schedules during for unit tests.
 #[cfg(test)]

@@ -122,7 +122,7 @@ impl OpeningHours {
                 RuleOperator::Additional => (
                     prev_match || curr_match,
                     match (prev_eval, curr_eval) {
-                        (Some(prev), Some(curr)) => Some(prev.addition(curr)),
+                        (Some(prev), Some(curr)) => Some(prev.merge(curr)),
                         (prev, curr) => prev.or(curr),
                     },
                 ),
@@ -139,7 +139,7 @@ impl OpeningHours {
             prev_eval = new_eval;
         }
 
-        prev_eval.unwrap_or_else(Schedule::empty)
+        prev_eval.unwrap_or_else(Schedule::new)
     }
 
     /// TODO: doc
@@ -237,7 +237,7 @@ fn rule_sequence_schedule_at(
         .map(|rgs| Schedule::from_ranges(rgs, rule_sequence.kind, &rule_sequence.comments));
 
     match (from_today, from_yesterday) {
-        (Some(sched_1), Some(sched_2)) => Some(sched_1.addition(sched_2)),
+        (Some(sched_1), Some(sched_2)) => Some(sched_1.merge(sched_2)),
         (today, yesterday) => today.or(yesterday),
     }
 }
@@ -297,7 +297,7 @@ impl TimeDomainIterator {
                     .next_change_hint(self.curr_date)
                     .unwrap_or_else(|| self.curr_date.succ_opt().expect("reached invalid date"));
 
-                assert!(next_change_hint > self.curr_date);
+                assert!(next_change_hint > self.curr_date, "infinite loop detected");
                 self.curr_date = next_change_hint;
 
                 if self.curr_date < self.end_datetime.date() {

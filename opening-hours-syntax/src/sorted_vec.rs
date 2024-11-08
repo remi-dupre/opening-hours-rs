@@ -57,6 +57,14 @@ impl<T: Ord> UniqueSortedVec<T> {
         match (self.as_slice(), other.as_slice()) {
             (_, []) => self,
             ([], _) => other,
+            ([.., tail_x], [head_y, ..]) if tail_x < head_y => {
+                self.0.extend(other.0);
+                self
+            }
+            ([head_x, ..], [.., tail_y]) if tail_y < head_x => {
+                other.0.extend(self.0);
+                other
+            }
             ([.., tail_x], [.., tail_y]) => {
                 let last = match tail_x.cmp(tail_y) {
                     Ordering::Greater => self.0.pop().unwrap(),

@@ -12,4 +12,6 @@ pub mod rules;
 pub mod sorted_vec;
 
 pub use error::{Error, Result};
+pub use extended_time::ExtendedTime;
 pub use parser::parse;
+pub use rules::RuleKind;
