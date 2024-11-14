@@ -17,7 +17,7 @@ class RangeIterator:
     def __iter__(self) -> Self:
         ...
 
-    def __next__(self) -> tuple[datetime, datetime]:
+    def __next__(self) -> tuple[datetime, datetime, str, list]:
         ...
 
 class OpeningHours:
