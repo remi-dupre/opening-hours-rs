@@ -296,7 +296,8 @@ impl TimeDomainIterator {
                 assert!(next_change_hint > self.curr_date, "infinite loop detected");
                 self.curr_date = next_change_hint;
 
-                if self.curr_date < self.end_datetime.date() {
+                if self.curr_date <= self.end_datetime.date() && self.curr_date < DATE_LIMIT.date()
+                {
                     self.curr_schedule = self
                         .opening_hours
                         .schedule_at(self.curr_date)

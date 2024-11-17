@@ -317,7 +317,7 @@ impl std::iter::FusedIterator for IntoIter {}
 /// ```
 /// use opening_hours_syntax::{ExtendedTime, RuleKind};
 ///
-/// opening_hour::schedule! {
+/// opening_hours::schedule! {
 ///      9,00 => RuleKind::Open => 12,00;
 ///     14,00 => RuleKind::Open => 18,00
 ///           => RuleKind::Unknown, "Closes when stock is depleted" => 20,00;

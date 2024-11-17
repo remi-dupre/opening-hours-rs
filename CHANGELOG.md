@@ -20,6 +20,14 @@
   threads.
 
 
+## 0.8.3
+
+### Fixes
+
+- Fix [#52](https://github.com/remi-dupre/opening-hours-rs/pull/52): intervals
+  were stopping at midnight before the last day.
+
+
 ## 0.8.2
 
 ### Fixes
