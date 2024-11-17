@@ -4,22 +4,23 @@ use std::mem::take;
 use std::ops::Range;
 use std::sync::Arc;
 
-use opening_hours_syntax::extended_time::ExtendedTime;
-use opening_hours_syntax::rules::RuleKind;
 use opening_hours_syntax::sorted_vec::UniqueSortedVec;
+use opening_hours_syntax::{ExtendedTime, RuleKind};
 
-/// Represent an interval of time in a schedule annotated with a state and
-/// comments.
+/// An period of time in a schedule annotated with a state and comments.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TimeRange {
+    /// Active period for this range
     pub range: Range<ExtendedTime>,
+    /// State of the schedule while this period is active
     pub kind: RuleKind,
+    /// Comments raised while this period is active
     pub comments: UniqueSortedVec<Arc<str>>,
 }
 
 impl TimeRange {
     /// Small helper to create a new range.
-    pub(crate) fn new(
+    pub fn new(
         range: Range<ExtendedTime>,
         kind: RuleKind,
         comments: UniqueSortedVec<Arc<str>>,
@@ -28,6 +29,7 @@ impl TimeRange {
     }
 }
 
+// TODO: document iteration
 /// Describe a full schedule for a day, keeping track of open, closed and
 /// unknown periods.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -111,12 +113,7 @@ impl Schedule {
         self.inner.is_empty()
     }
 
-    /// TODO: doc
-    pub fn into_iter_filled(self) -> FilledScheduleIterator {
-        FilledScheduleIterator::new(self)
-    }
-
-    /// TODO: doc
+    /// Merge two schedules together.
     pub fn addition(self, mut other: Self) -> Self {
         // TODO: this is implemented with quadratic time where it could probably
         //       be linear.
@@ -126,7 +123,7 @@ impl Schedule {
         }
     }
 
-    /// TODO: doc
+    /// Insert a new time range in a schedule.
     fn insert(self, mut ins_tr: TimeRange) -> Self {
         // Build sets of intervals before and after the inserted interval
 
@@ -201,21 +198,21 @@ impl Schedule {
 
 impl IntoIterator for Schedule {
     type Item = TimeRange;
-    type IntoIter = <Vec<TimeRange> as IntoIterator>::IntoIter;
+    type IntoIter = IntoIter;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.inner.into_iter()
+        IntoIter::new(self)
     }
 }
 
 /// Return value for [`Schedule::into_iter_filled`].
 #[derive(Debug)]
-pub struct FilledScheduleIterator {
+pub struct IntoIter {
     last_end: ExtendedTime,
-    ranges: Peekable<<Schedule as IntoIterator>::IntoIter>,
+    ranges: Peekable<std::vec::IntoIter<TimeRange>>,
 }
 
-impl FilledScheduleIterator {
+impl IntoIter {
     /// The value that will fill holes
     const HOLES_STATE: RuleKind = RuleKind::Closed;
 
@@ -225,15 +222,15 @@ impl FilledScheduleIterator {
     /// Last minute of the schedule
     const END_TIME: ExtendedTime = ExtendedTime::new(24, 0);
 
-    /// Create a new iterator from a schedule
+    /// Create a new iterator from a schedule.
     fn new(schedule: Schedule) -> Self {
         Self {
             last_end: Self::START_TIME,
-            ranges: schedule.into_iter().peekable(),
+            ranges: schedule.inner.into_iter().peekable(),
         }
     }
 
-    /// Must be called before a value is yielded
+    /// Must be called before a value is yielded.
     fn pre_yield(&mut self, value: TimeRange) -> Option<TimeRange> {
         assert!(
             value.range.start < value.range.end,
@@ -245,7 +242,7 @@ impl FilledScheduleIterator {
     }
 }
 
-impl Iterator for FilledScheduleIterator {
+impl Iterator for IntoIter {
     type Item = TimeRange;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -300,10 +297,33 @@ impl Iterator for FilledScheduleIterator {
     }
 }
 
-impl std::iter::FusedIterator for FilledScheduleIterator {}
+impl std::iter::FusedIterator for IntoIter {}
 
-/// Macro to ease the creation of schedules during for unit tests.
-#[cfg(test)]
+/// Macro that allows to quickly create a complex schedule.
+///
+/// ## Syntax
+///
+/// You can define multiple sequences of time as follows :
+///
+/// ```plain
+/// {time_0} => {state_1} => {time_2} => {state_2} => ... => {state_n} => {time_n};
+/// ```
+///
+/// Where the time values are written `{hour},{minutes}` and states are a
+/// [`RuleKind`] value, optionally followed by a list of comment literals.
+///
+/// ## Example
+///
+/// ```
+/// use opening_hours_syntax::{ExtendedTime, RuleKind};
+///
+/// opening_hour::schedule! {
+///      9,00 => RuleKind::Open => 12,00;
+///     14,00 => RuleKind::Open => 18,00
+///           => RuleKind::Unknown, "Closes when stock is depleted" => 20,00;
+///     22,00 => RuleKind::Closed, "Maintenance team only" => 26,00;
+/// };
+/// ```
 #[macro_export]
 macro_rules! schedule {
     (
@@ -317,7 +337,7 @@ macro_rules! schedule {
         use opening_hours_syntax::extended_time::ExtendedTime;
 
         #[allow(unused_mut)]
-        let mut inner = Vec::new();
+        let mut schedule = Schedule::new();
 
         $(
             let mut prev = ExtendedTime::new($hh1, $mm1);
@@ -325,13 +345,14 @@ macro_rules! schedule {
             $(
                 let curr = ExtendedTime::new($hh2, $mm2);
                 let comments = vec![$(std::sync::Arc::from($comment)),*].into();
-                inner.push(TimeRange::new(prev..curr, $kind, comments));
+                let next_schedule = Schedule::from_ranges([prev..curr], $kind, &comments);
+                schedule = schedule.addition(next_schedule);
 
                 #[allow(unused_assignments)]
                 { prev = curr }
             )+
         )*
 
-        Schedule { inner }
+        schedule
     }};
 }

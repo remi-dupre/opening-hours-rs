@@ -130,10 +130,6 @@ impl<T: Ord> From<UniqueSortedVec<T>> for Vec<T> {
     }
 }
 
-// ---
-// --- Dummy trait implementations.
-// ---
-
 impl<T: Ord> Deref for UniqueSortedVec<T> {
     type Target = Vec<T>;
 

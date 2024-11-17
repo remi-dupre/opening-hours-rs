@@ -13,7 +13,7 @@ use opening_hours_syntax::rules::{OpeningHoursExpression, RuleKind, RuleOperator
 use crate::context::Context;
 use crate::date_filter::DateFilter;
 use crate::error::ParserError;
-use crate::schedule::{FilledScheduleIterator, Schedule};
+use crate::schedule::{IntoIter, Schedule};
 use crate::time_filter::{time_selector_intervals_at, time_selector_intervals_at_next_day};
 use crate::DateTimeRange;
 
@@ -122,7 +122,7 @@ impl OpeningHours {
                 RuleOperator::Additional => (
                     prev_match || curr_match,
                     match (prev_eval, curr_eval) {
-                        (Some(prev), Some(curr)) => Some(prev.merge(curr)),
+                        (Some(prev), Some(curr)) => Some(prev.addition(curr)),
                         (prev, curr) => prev.or(curr),
                     },
                 ),
@@ -237,7 +237,7 @@ fn rule_sequence_schedule_at(
         .map(|rgs| Schedule::from_ranges(rgs, rule_sequence.kind, &rule_sequence.comments));
 
     match (from_today, from_yesterday) {
-        (Some(sched_1), Some(sched_2)) => Some(sched_1.merge(sched_2)),
+        (Some(sched_1), Some(sched_2)) => Some(sched_1.addition(sched_2)),
         (today, yesterday) => today.or(yesterday),
     }
 }
@@ -247,7 +247,7 @@ fn rule_sequence_schedule_at(
 pub struct TimeDomainIterator {
     opening_hours: OpeningHours,
     curr_date: NaiveDate,
-    curr_schedule: Peekable<FilledScheduleIterator>,
+    curr_schedule: Peekable<IntoIter>,
     end_datetime: NaiveDateTime,
 }
 
@@ -261,11 +261,7 @@ impl TimeDomainIterator {
         let opening_hours = opening_hours.clone();
         let start_date = start_datetime.date();
         let start_time = start_datetime.time().into();
-
-        let mut curr_schedule = opening_hours
-            .schedule_at(start_date)
-            .into_iter_filled()
-            .peekable();
+        let mut curr_schedule = opening_hours.schedule_at(start_date).into_iter().peekable();
 
         if start_datetime >= end_datetime {
             (&mut curr_schedule).for_each(|_| {});
@@ -304,7 +300,7 @@ impl TimeDomainIterator {
                     self.curr_schedule = self
                         .opening_hours
                         .schedule_at(self.curr_date)
-                        .into_iter_filled()
+                        .into_iter()
                         .peekable();
                 }
             }

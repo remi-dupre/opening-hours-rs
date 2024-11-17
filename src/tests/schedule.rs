@@ -6,8 +6,8 @@ use opening_hours_syntax::rules::RuleKind;
 use crate::schedule::{Schedule, TimeRange};
 
 #[test]
-fn test_filled_iter_on_empty_schedule() {
-    let mut intervals = Schedule::default().into_iter_filled();
+fn test_iter_on_empty_schedule() {
+    let mut intervals = Schedule::default().into_iter();
 
     assert_eq!(
         intervals.next(),
@@ -22,7 +22,7 @@ fn test_filled_iter_on_empty_schedule() {
 }
 
 #[test]
-fn test_filled_iter_on_complex_schedule() {
+fn test_iter_on_complex_schedule() {
     let mut intervals = {
         Schedule::from_ranges(
             [
@@ -47,7 +47,7 @@ fn test_filled_iter_on_complex_schedule() {
             RuleKind::Closed,
             &Default::default(),
         ))
-        .into_iter_filled()
+        .into_iter()
     };
 
     assert_eq!(
