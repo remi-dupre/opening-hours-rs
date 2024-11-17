@@ -330,7 +330,7 @@ impl Iterator for TimeDomainIterator {
                 .curr_schedule
                 .peek()
                 .map(|tr| tr.range.start)
-                .unwrap_or_else(|| ExtendedTime::new(0, 0));
+                .unwrap_or_else(|| ExtendedTime::new(0, 0).unwrap());
 
             let end = std::cmp::min(
                 self.end_datetime,

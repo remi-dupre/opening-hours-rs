@@ -13,8 +13,8 @@ pub(crate) fn time_selector_intervals_at(
 ) -> impl Iterator<Item = Range<ExtendedTime>> + '_ {
     ranges_union(
         time_selector_as_naive(time_selector, date).filter_map(|range| {
-            let dstart = ExtendedTime::new(0, 0);
-            let dend = ExtendedTime::new(24, 0);
+            let dstart = ExtendedTime::new(0, 0).unwrap();
+            let dend = ExtendedTime::new(24, 0).unwrap();
             range_intersection(range, dstart..dend)
         }),
     )
@@ -27,8 +27,8 @@ pub(crate) fn time_selector_intervals_at_next_day(
     ranges_union(
         time_selector_as_naive(time_selector, date)
             .filter_map(|range| {
-                let dstart = ExtendedTime::new(24, 0);
-                let dend = ExtendedTime::new(48, 0);
+                let dstart = ExtendedTime::new(24, 0).unwrap();
+                let dend = ExtendedTime::new(48, 0).unwrap();
                 range_intersection(range, dstart..dend)
             })
             .map(|range| {
@@ -96,7 +96,7 @@ impl AsNaive for ts::VariableTime {
         self.event
             .as_naive(date)
             .add_minutes(self.offset)
-            .unwrap_or_else(|_| ExtendedTime::new(0, 0))
+            .unwrap_or_else(|| ExtendedTime::new(0, 0).unwrap())
     }
 }
 
@@ -106,10 +106,10 @@ impl AsNaive for ts::TimeEvent {
     fn as_naive(&self, _date: NaiveDate) -> Self::Output {
         // TODO: real computation based on the day (and position/timezone?)
         match self {
-            Self::Dawn => ExtendedTime::new(6, 0),
-            Self::Sunrise => ExtendedTime::new(7, 0),
-            Self::Sunset => ExtendedTime::new(19, 0),
-            Self::Dusk => ExtendedTime::new(20, 0),
+            Self::Dawn => ExtendedTime::new(6, 0).unwrap(),
+            Self::Sunrise => ExtendedTime::new(7, 0).unwrap(),
+            Self::Sunset => ExtendedTime::new(19, 0).unwrap(),
+            Self::Dusk => ExtendedTime::new(20, 0).unwrap(),
         }
     }
 }

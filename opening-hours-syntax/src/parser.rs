@@ -246,18 +246,18 @@ fn build_timespan(pair: Pair<Rule>) -> Result<ts::TimeSpan> {
     assert_eq!(pair.as_rule(), Rule::timespan);
     let mut pairs = pair.into_inner();
 
-    let start = build_time(pairs.next().expect("empty timespan"));
+    let start = build_time(pairs.next().expect("empty timespan"))?;
 
     let end = match pairs.next() {
         None => {
             // TODO: opening_hours.js handles this better: it will set the
             //       state to unknown and add a warning comment.
-            ts::Time::Fixed(ExtendedTime::new(24, 0))
+            ts::Time::Fixed(ExtendedTime::new(24, 0).unwrap())
         }
         Some(pair) if pair.as_rule() == Rule::timespan_plus => {
             return Err(Error::Unsupported("point in time"))
         }
-        Some(pair) => build_extended_time(pair),
+        Some(pair) => build_extended_time(pair)?,
     };
 
     let (open_end, repeats) = match pairs.peek().map(|x| x.as_rule()) {
@@ -274,29 +274,29 @@ fn build_timespan(pair: Pair<Rule>) -> Result<ts::TimeSpan> {
     Ok(ts::TimeSpan { range: start..end, repeats, open_end })
 }
 
-fn build_time(pair: Pair<Rule>) -> ts::Time {
+fn build_time(pair: Pair<Rule>) -> Result<ts::Time> {
     assert_eq!(pair.as_rule(), Rule::time);
     let inner = pair.into_inner().next().expect("empty time");
 
-    match inner.as_rule() {
-        Rule::hour_minutes => ts::Time::Fixed(build_hour_minutes(inner)),
-        Rule::variable_time => ts::Time::Variable(build_variable_time(inner)),
+    Ok(match inner.as_rule() {
+        Rule::hour_minutes => ts::Time::Fixed(build_hour_minutes(inner)?),
+        Rule::variable_time => ts::Time::Variable(build_variable_time(inner)?),
         other => unexpected_token(other, Rule::time),
-    }
+    })
 }
 
-fn build_extended_time(pair: Pair<Rule>) -> ts::Time {
+fn build_extended_time(pair: Pair<Rule>) -> Result<ts::Time> {
     assert_eq!(pair.as_rule(), Rule::extended_time);
     let inner = pair.into_inner().next().expect("empty extended time");
 
-    match inner.as_rule() {
-        Rule::extended_hour_minutes => ts::Time::Fixed(build_extended_hour_minutes(inner)),
-        Rule::variable_time => ts::Time::Variable(build_variable_time(inner)),
+    Ok(match inner.as_rule() {
+        Rule::extended_hour_minutes => ts::Time::Fixed(build_extended_hour_minutes(inner)?),
+        Rule::variable_time => ts::Time::Variable(build_variable_time(inner)?),
         other => unexpected_token(other, Rule::extended_time),
-    }
+    })
 }
 
-fn build_variable_time(pair: Pair<Rule>) -> ts::VariableTime {
+fn build_variable_time(pair: Pair<Rule>) -> Result<ts::VariableTime> {
     assert_eq!(pair.as_rule(), Rule::variable_time);
     let mut pairs = pair.into_inner();
 
@@ -306,7 +306,7 @@ fn build_variable_time(pair: Pair<Rule>) -> ts::VariableTime {
         if pairs.peek().is_some() {
             let sign = build_plus_or_minus(pairs.next().unwrap());
 
-            let mins: i16 = build_hour_minutes(pairs.next().expect("missing hour minutes"))
+            let mins: i16 = build_hour_minutes(pairs.next().expect("missing hour minutes"))?
                 .mins_from_midnight()
                 .try_into()
                 .expect("offset overflow");
@@ -320,7 +320,7 @@ fn build_variable_time(pair: Pair<Rule>) -> ts::VariableTime {
         }
     };
 
-    ts::VariableTime { event, offset }
+    Ok(ts::VariableTime { event, offset })
 }
 
 fn build_event(pair: Pair<Rule>) -> ts::TimeEvent {
@@ -683,7 +683,7 @@ fn build_minute(pair: Pair<Rule>) -> Duration {
     Duration::minutes(minutes)
 }
 
-fn build_hour_minutes(pair: Pair<Rule>) -> ExtendedTime {
+fn build_hour_minutes(pair: Pair<Rule>) -> Result<ExtendedTime> {
     assert_eq!(pair.as_rule(), Rule::hour_minutes);
     let mut pairs = pair.into_inner();
 
@@ -701,7 +701,28 @@ fn build_hour_minutes(pair: Pair<Rule>) -> ExtendedTime {
         .parse()
         .expect("invalid minutes");
 
-    ExtendedTime::new(hour, minutes)
+    ExtendedTime::new(hour, minutes).ok_or_else(|| Error::InvalidExtendTime { hour, minutes })
+}
+
+fn build_extended_hour_minutes(pair: Pair<Rule>) -> Result<ExtendedTime> {
+    assert_eq!(pair.as_rule(), Rule::extended_hour_minutes);
+    let mut pairs = pair.into_inner();
+
+    let hour = pairs
+        .next()
+        .expect("missing hour")
+        .as_str()
+        .parse()
+        .expect("invalid hour");
+
+    let minutes = pairs
+        .next()
+        .expect("missing minutes")
+        .as_str()
+        .parse()
+        .expect("invalid minutes");
+
+    ExtendedTime::new(hour, minutes).ok_or_else(|| Error::InvalidExtendTime { hour, minutes })
 }
 
 fn build_hour_minutes_as_duration(pair: Pair<Rule>) -> Duration {
@@ -723,27 +744,6 @@ fn build_hour_minutes_as_duration(pair: Pair<Rule>) -> Duration {
         .expect("invalid minutes");
 
     Duration::hours(hour) + Duration::minutes(minutes)
-}
-
-fn build_extended_hour_minutes(pair: Pair<Rule>) -> ExtendedTime {
-    assert_eq!(pair.as_rule(), Rule::extended_hour_minutes);
-    let mut pairs = pair.into_inner();
-
-    let hour = pairs
-        .next()
-        .expect("missing hour")
-        .as_str()
-        .parse()
-        .expect("invalid hour");
-
-    let minutes = pairs
-        .next()
-        .expect("missing minutes")
-        .as_str()
-        .parse()
-        .expect("invalid minutes");
-
-    ExtendedTime::new(hour, minutes)
 }
 
 fn build_wday(pair: Pair<Rule>) -> ds::Weekday {

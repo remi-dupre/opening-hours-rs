@@ -29,8 +29,8 @@ impl Default for TimeSelector {
     fn default() -> Self {
         Self {
             time: vec![TimeSpan::fixed_range(
-                ExtendedTime::new(0, 0),
-                ExtendedTime::new(24, 0),
+                ExtendedTime::new(0, 0).unwrap(),
+                ExtendedTime::new(24, 0).unwrap(),
             )],
         }
     }

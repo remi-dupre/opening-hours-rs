@@ -58,15 +58,15 @@ impl Schedule {
     ///
     /// let sch1 = Schedule::from_ranges(
     ///     [
-    ///         ExtendedTime::new(10, 0)..ExtendedTime::new(14, 0),
-    ///         ExtendedTime::new(12, 0)..ExtendedTime::new(16, 0),
+    ///         ExtendedTime::new(10, 0).unwrap()..ExtendedTime::new(14, 0).unwrap(),
+    ///         ExtendedTime::new(12, 0).unwrap()..ExtendedTime::new(16, 0).unwrap(),
     ///     ],
     ///     RuleKind::Open,
     ///     &Default::default(),
     /// );
     ///
     /// let sch2 = Schedule::from_ranges(
-    ///     [ExtendedTime::new(10, 0)..ExtendedTime::new(16, 0)],
+    ///     [ExtendedTime::new(10, 0).unwrap()..ExtendedTime::new(16, 0).unwrap()],
     ///     RuleKind::Open,
     ///     &Default::default(),
     /// );
@@ -217,10 +217,20 @@ impl IntoIter {
     const HOLES_STATE: RuleKind = RuleKind::Closed;
 
     /// First minute of the schedule
-    const START_TIME: ExtendedTime = ExtendedTime::new(0, 0);
+    const START_TIME: ExtendedTime = {
+        match ExtendedTime::new(0, 0) {
+            Some(time) => time,
+            None => unreachable!(),
+        }
+    };
 
     /// Last minute of the schedule
-    const END_TIME: ExtendedTime = ExtendedTime::new(24, 0);
+    const END_TIME: ExtendedTime = {
+        match ExtendedTime::new(24, 0) {
+            Some(time) => time,
+            None => unreachable!(),
+        }
+    };
 
     /// Create a new iterator from a schedule.
     fn new(schedule: Schedule) -> Self {
@@ -340,10 +350,13 @@ macro_rules! schedule {
         let mut schedule = Schedule::new();
 
         $(
-            let mut prev = ExtendedTime::new($hh1, $mm1);
+            let mut prev = ExtendedTime::new($hh1, $mm1)
+                .expect("Invalid interval start");
 
             $(
-                let curr = ExtendedTime::new($hh2, $mm2);
+                let curr = ExtendedTime::new($hh2, $mm2)
+                    .expect("Invalid interval end");
+
                 let comments = vec![$(std::sync::Arc::from($comment)),*].into();
                 let next_schedule = Schedule::from_ranges([prev..curr], $kind, &comments);
                 schedule = schedule.addition(next_schedule);
