@@ -4,8 +4,8 @@ use compact_calendar::CompactCalendar;
 
 #[derive(Clone, Default, Debug, Hash, PartialEq, Eq)]
 pub struct ContextHolidays {
-    pub(crate) public: Arc<CompactCalendar>,
-    pub(crate) school: Arc<CompactCalendar>,
+    pub public: Arc<CompactCalendar>,
+    pub school: Arc<CompactCalendar>,
 }
 
 /// All the context attached to a parsed OpeningHours expression and that can

@@ -1,7 +1,8 @@
 use opening_hours_syntax::error::Error;
 use opening_hours_syntax::rules::RuleKind::*;
 
-use crate::schedule_at;
+use crate::country::Country;
+use crate::{datetime, schedule_at, Context, OpeningHours};
 
 //       June 2020
 // Su Mo Tu We Th Fr Sa
@@ -154,6 +155,14 @@ fn nth_with_offset() -> Result<(), Error> {
     Ok(())
 }
 
-fn _holiday() {
-    // TODO
+#[test]
+fn holiday() {
+    let ctx = Context::default().with_holidays(Country::FR.holidays());
+
+    let oh = OpeningHours::parse("PH 10:00-16:00")
+        .unwrap()
+        .with_context(ctx);
+
+    assert!(oh.is_open(datetime!("2024-07-14 12:00")));
+    assert!(oh.is_closed(datetime!("2024-07-13 12:00")));
 }

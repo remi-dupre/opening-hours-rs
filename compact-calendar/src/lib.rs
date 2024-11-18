@@ -79,7 +79,7 @@ impl CompactCalendar {
             } else if self.calendar.is_empty() {
                 self.first_year = date.year();
                 self.calendar.push_back(CompactYear::default());
-                self.calendar.back_mut().unwrap()
+                self.calendar.back_mut().unwrap() // just pushed
             } else if date.year() < self.first_year {
                 for _ in date.year()..self.first_year {
                     eprintln!("Push front");
@@ -87,7 +87,7 @@ impl CompactCalendar {
                 }
 
                 self.first_year = date.year();
-                self.calendar.front_mut().unwrap()
+                self.calendar.front_mut().unwrap() // just pushed
             } else {
                 let last_year = self.first_year
                     + i32::try_from(self.calendar.len()).expect("calendar is too large")
@@ -97,7 +97,7 @@ impl CompactCalendar {
                     self.calendar.push_back(CompactYear::default());
                 }
 
-                self.calendar.back_mut().unwrap()
+                self.calendar.back_mut().unwrap() // just pushed
             }
         };
 

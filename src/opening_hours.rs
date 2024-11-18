@@ -1,5 +1,3 @@
-use std::cmp::{max, min};
-use std::convert::TryInto;
 use std::fmt::Display;
 use std::iter::Peekable;
 use std::str::FromStr;
@@ -13,18 +11,18 @@ use opening_hours_syntax::rules::{OpeningHoursExpression, RuleKind, RuleOperator
 use crate::context::Context;
 use crate::date_filter::DateFilter;
 use crate::error::ParserError;
-use crate::schedule::{IntoIter, Schedule};
+use crate::schedule::Schedule;
 use crate::time_filter::{time_selector_intervals_at, time_selector_intervals_at_next_day};
 use crate::DateTimeRange;
 
 /// The upper bound of dates handled by specification
 pub const DATE_LIMIT: NaiveDateTime = {
     let Some(date) = NaiveDate::from_ymd_opt(10_000, 1, 1) else {
-        panic!("Invalid limit date")
+        unreachable!()
     };
 
     let Some(time) = NaiveTime::from_hms_opt(0, 0, 0) else {
-        panic!("Invalid limit time")
+        unreachable!()
     };
 
     NaiveDateTime::new(date, time)
@@ -51,8 +49,6 @@ impl OpeningHours {
 
     /// Parse a raw opening hours expression.
     ///
-    /// # Example
-    ///
     /// ```
     /// use opening_hours::OpeningHours;
     ///
@@ -65,8 +61,6 @@ impl OpeningHours {
     }
 
     /// Set a new evaluation context for this expression.
-    ///
-    /// # Example
     ///
     /// ```
     /// use opening_hours::OpeningHours;
@@ -101,7 +95,7 @@ impl OpeningHours {
             .flatten()
     }
 
-    /// TODO: doc
+    /// Get the schedule at a given day.
     pub fn schedule_at(&self, date: NaiveDate) -> Schedule {
         let mut prev_match = false;
         let mut prev_eval = None;
@@ -142,7 +136,8 @@ impl OpeningHours {
         prev_eval.unwrap_or_else(Schedule::new)
     }
 
-    /// TODO: doc
+    /// Iterate over disjoint intervals of different state restricted to the
+    /// time interval `from..to`.
     pub fn iter_range(
         &self,
         from: NaiveDateTime,
@@ -154,13 +149,17 @@ impl OpeningHours {
         TimeDomainIterator::new(self, from, to)
             .take_while(move |dtr| dtr.range.start < to)
             .map(move |dtr| {
-                let start = max(dtr.range.start, from);
-                let end = min(dtr.range.end, to);
+                let start = std::cmp::max(dtr.range.start, from);
+                let end = std::cmp::min(dtr.range.end, to);
                 DateTimeRange::new_with_sorted_comments(start..end, dtr.kind, dtr.comments)
             })
     }
 
-    // TODO: doc
+    // --
+    // -- High level implementations / Syntactic sugar
+    // --
+
+    // Same as [`OpeningHours::iter_range`] but with an open end.
     pub fn iter_from(
         &self,
         from: NaiveDateTime,
@@ -168,11 +167,18 @@ impl OpeningHours {
         self.iter_range(from, DATE_LIMIT)
     }
 
-    // --
-    // -- High level implementations
-    // --
-
-    /// TODO: doc
+    /// Get the next time where the state will change.
+    ///
+    /// ```
+    /// use chrono::NaiveDateTime;
+    /// use opening_hours::OpeningHours;
+    /// use opening_hours_syntax::RuleKind;
+    ///
+    /// let oh = OpeningHours::parse("12:00-18:00 open, 18:00-20:00 unknown").unwrap();
+    /// let date_1 = NaiveDateTime::parse_from_str("2024-11-18 15:00", "%Y-%m-%d %H:%M").unwrap();
+    /// let date_2 = NaiveDateTime::parse_from_str("2024-11-18 18:00", "%Y-%m-%d %H:%M").unwrap();
+    /// assert_eq!(oh.next_change(date_1), Some(date_2));
+    /// ```
     pub fn next_change(&self, current_time: NaiveDateTime) -> Option<NaiveDateTime> {
         let interval = self.iter_from(current_time).next()?;
 
@@ -183,7 +189,19 @@ impl OpeningHours {
         }
     }
 
-    /// TODO: doc
+    /// Get the state at given time.
+    ///
+    /// ```
+    /// use chrono::NaiveDateTime;
+    /// use opening_hours::OpeningHours;
+    /// use opening_hours_syntax::RuleKind;
+    ///
+    /// let oh = OpeningHours::parse("12:00-18:00 open, 18:00-20:00 unknown").unwrap();
+    /// let date_1 = NaiveDateTime::parse_from_str("2024-11-18 15:00", "%Y-%m-%d %H:%M").unwrap();
+    /// let date_2 = NaiveDateTime::parse_from_str("2024-11-18 19:00", "%Y-%m-%d %H:%M").unwrap();
+    /// assert_eq!(oh.state(date_1), RuleKind::Open);
+    /// assert_eq!(oh.state(date_2), RuleKind::Unknown);
+    /// ```
     pub fn state(&self, current_time: NaiveDateTime) -> RuleKind {
         self.iter_range(current_time, current_time + Duration::minutes(1))
             .next()
@@ -191,17 +209,50 @@ impl OpeningHours {
             .unwrap_or(RuleKind::Unknown)
     }
 
-    /// TODO: doc
+    /// Check if this is open at a given time.
+    ///
+    /// ```
+    /// use chrono::NaiveDateTime;
+    /// use opening_hours::OpeningHours;
+    ///
+    /// let oh = OpeningHours::parse("12:00-18:00 open, 18:00-20:00 unknown").unwrap();
+    /// let date_1 = NaiveDateTime::parse_from_str("2024-11-18 15:00", "%Y-%m-%d %H:%M").unwrap();
+    /// let date_2 = NaiveDateTime::parse_from_str("2024-11-18 19:00", "%Y-%m-%d %H:%M").unwrap();
+    /// assert!(oh.is_open(date_1));
+    /// assert!(!oh.is_open(date_2));
+    /// ```
     pub fn is_open(&self, current_time: NaiveDateTime) -> bool {
         self.state(current_time) == RuleKind::Open
     }
 
-    /// TODO: doc
+    /// Check if this is closed at a given time.
+    ///
+    /// ```
+    /// use chrono::NaiveDateTime;
+    /// use opening_hours::OpeningHours;
+    ///
+    /// let oh = OpeningHours::parse("12:00-18:00 open, 18:00-20:00 unknown").unwrap();
+    /// let date_1 = NaiveDateTime::parse_from_str("2024-11-18 10:00", "%Y-%m-%d %H:%M").unwrap();
+    /// let date_2 = NaiveDateTime::parse_from_str("2024-11-18 19:00", "%Y-%m-%d %H:%M").unwrap();
+    /// assert!(oh.is_closed(date_1));
+    /// assert!(!oh.is_closed(date_2));
+    /// ```
     pub fn is_closed(&self, current_time: NaiveDateTime) -> bool {
         self.state(current_time) == RuleKind::Closed
     }
 
-    /// TODO: doc
+    /// Check if this is unknown at a given time.
+    ///
+    /// ```
+    /// use chrono::NaiveDateTime;
+    /// use opening_hours::OpeningHours;
+    ///
+    /// let oh = OpeningHours::parse("12:00-18:00 open, 18:00-20:00 unknown").unwrap();
+    /// let date_1 = NaiveDateTime::parse_from_str("2024-11-18 19:00", "%Y-%m-%d %H:%M").unwrap();
+    /// let date_2 = NaiveDateTime::parse_from_str("2024-11-18 15:00", "%Y-%m-%d %H:%M").unwrap();
+    /// assert!(oh.is_unknown(date_1));
+    /// assert!(!oh.is_unknown(date_2));
+    /// ```
     pub fn is_unknown(&self, current_time: NaiveDateTime) -> bool {
         self.state(current_time) == RuleKind::Unknown
     }
@@ -247,13 +298,12 @@ fn rule_sequence_schedule_at(
 pub struct TimeDomainIterator {
     opening_hours: OpeningHours,
     curr_date: NaiveDate,
-    curr_schedule: Peekable<IntoIter>,
+    curr_schedule: Peekable<crate::schedule::IntoIter>,
     end_datetime: NaiveDateTime,
 }
 
 impl TimeDomainIterator {
-    /// TODO: doc
-    pub fn new(
+    fn new(
         opening_hours: &OpeningHours,
         start_datetime: NaiveDateTime,
         end_datetime: NaiveDateTime,

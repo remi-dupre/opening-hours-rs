@@ -7,8 +7,6 @@ use crate::error::UnknownCountryCode;
 
 /// An enum for selecting a country.
 ///
-/// # Example
-///
 /// ```
 /// use opening_hours::country::Country;
 ///
@@ -250,8 +248,6 @@ pub enum Country {
 impl Country {
     /// Get the country's full name.
     ///
-    /// # Example
-    ///
     /// ```
     /// use opening_hours::country::Country;
     ///
@@ -377,8 +373,6 @@ impl Country {
     }
 
     /// Get the country's iso code.
-    ///
-    /// # Example
     ///
     /// ```
     /// use opening_hours::country::Country;

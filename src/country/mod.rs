@@ -11,7 +11,16 @@ use crate::context::ContextHolidays;
 pub use generated::*;
 
 impl Country {
-    /// TODO: doc
+    /// Load holidays for this country from a compact embeded database.
+    ///
+    /// ```
+    /// use chrono::NaiveDate;
+    /// use opening_hours::country::Country;
+    ///
+    /// let holidays_fr = Country::FR.holidays();
+    /// let date = NaiveDate::from_ymd_opt(2024, 7, 14).unwrap(); // french national day
+    /// assert!(holidays_fr.public.contains(date));
+    /// ```
     pub fn holidays(self) -> ContextHolidays {
         fn decode_holidays_db(
             countries: &'static str,

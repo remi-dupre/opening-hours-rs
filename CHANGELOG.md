@@ -4,14 +4,16 @@
 
 ### General
 
-- Holidays database from [nager.date](https://date.nager.at/)
-- Some support for public holidays
+- Holidays database from [nager.date](https://date.nager.at/).
+- Some support for public holidays.
+- Replace all panicking functions with faillible ones.
 
 ### Rust
 
 - `OpeningHours` now implements `FromStr`.
 - `CompactCalendar` is no longer bounded.
 - Added module `country`.
+- Better documentation converage.
 
 ### Python
 

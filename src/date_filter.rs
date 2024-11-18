@@ -155,7 +155,7 @@ impl DateFilter for ds::MonthdayRange {
                         (start..=end).contains(&date)
                     }
                     (_, ds::Date::Easter { year: _ }) | (ds::Date::Easter { year: _ }, _) => {
-                        // TODO
+                        // TODO: Easter support
                         false
                     }
                 }
@@ -343,7 +343,7 @@ impl DateFilter for ds::WeekDayRange {
                 offset: _,
                 nth_from_start: _,
                 nth_from_end: _,
-            } => None, // TODO
+            } => None,
         }
     }
 }

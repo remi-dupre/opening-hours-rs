@@ -29,9 +29,11 @@ impl TimeRange {
     }
 }
 
-// TODO: document iteration
 /// Describe a full schedule for a day, keeping track of open, closed and
 /// unknown periods.
+///
+/// It can be turned into an iterator which will yield consecutive ranges of
+/// different states, with no holes or overlapping.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Schedule {
     /// Always keep a sequence of non-overlaping, increasing time ranges.
@@ -321,8 +323,6 @@ impl std::iter::FusedIterator for IntoIter {}
 ///
 /// Where the time values are written `{hour},{minutes}` and states are a
 /// [`RuleKind`] value, optionally followed by a list of comment literals.
-///
-/// ## Example
 ///
 /// ```
 /// use opening_hours_syntax::{ExtendedTime, RuleKind};

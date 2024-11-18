@@ -21,16 +21,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .into();
 
     for [env, in_path, out_path] in &PATH_ENV_IN_OUT {
-        // Load dates into an hashmap
+        // Load dates into an map
         let mut region_dates: BTreeMap<String, Vec<NaiveDate>> = BTreeMap::new();
         let lines = BufReader::new(File::open(in_path)?).lines();
 
         for line in lines {
             let line = line?;
             let mut line = line.splitn(2, ' ');
-
-            let region = line.next().unwrap();
-            let date = NaiveDate::parse_from_str(line.next().unwrap(), "%Y-%m-%d")?;
+            let region = line.next().expect("missing region");
+            let date = NaiveDate::parse_from_str(line.next().expect("missing date"), "%Y-%m-%d")?;
 
             region_dates
                 .entry(region.to_string())

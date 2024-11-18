@@ -67,11 +67,11 @@ impl<T: Ord> UniqueSortedVec<T> {
             }
             ([.., tail_x], [.., tail_y]) => {
                 let last = match tail_x.cmp(tail_y) {
-                    Ordering::Greater => self.0.pop().unwrap(),
-                    Ordering::Less => other.0.pop().unwrap(),
+                    Ordering::Greater => self.0.pop().unwrap(), // move `tail_x` out
+                    Ordering::Less => other.0.pop().unwrap(),   // move `tail_y` out
                     Ordering::Equal => {
-                        other.0.pop().unwrap();
-                        self.0.pop().unwrap()
+                        other.0.pop().unwrap(); // move `tail_x` out
+                        self.0.pop().unwrap() // move `tail_y` out
                     }
                 };
 

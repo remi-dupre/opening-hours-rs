@@ -43,10 +43,7 @@ pub fn parse(data: &str) -> Result<rl::OpeningHoursExpression> {
 // ---
 
 fn unexpected_token<T>(token: Rule, parent: Rule) -> T {
-    panic!(
-        "grammar error: found `{:?}` inside of `{:?}`",
-        token, parent
-    )
+    unreachable!("grammar error: found `{token:?}` inside of `{parent:?}`")
 }
 
 fn build_opening_hours(pair: Pair<Rule>) -> Result<Vec<rl::RuleSequence>> {
@@ -701,7 +698,7 @@ fn build_hour_minutes(pair: Pair<Rule>) -> Result<ExtendedTime> {
         .parse()
         .expect("invalid minutes");
 
-    ExtendedTime::new(hour, minutes).ok_or_else(|| Error::InvalidExtendTime { hour, minutes })
+    ExtendedTime::new(hour, minutes).ok_or(Error::InvalidExtendTime { hour, minutes })
 }
 
 fn build_extended_hour_minutes(pair: Pair<Rule>) -> Result<ExtendedTime> {
@@ -722,7 +719,7 @@ fn build_extended_hour_minutes(pair: Pair<Rule>) -> Result<ExtendedTime> {
         .parse()
         .expect("invalid minutes");
 
-    ExtendedTime::new(hour, minutes).ok_or_else(|| Error::InvalidExtendTime { hour, minutes })
+    ExtendedTime::new(hour, minutes).ok_or(Error::InvalidExtendTime { hour, minutes })
 }
 
 fn build_hour_minutes_as_duration(pair: Pair<Rule>) -> Duration {
