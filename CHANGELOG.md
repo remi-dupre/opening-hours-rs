@@ -12,6 +12,7 @@
 
 - `OpeningHours` now implements `FromStr`.
 - `CompactCalendar` is no longer bounded.
+- Added `Context`, which will later be extended to handle localization info.
 - Added module `country`.
 - Better documentation converage.
 

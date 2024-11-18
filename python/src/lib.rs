@@ -53,16 +53,6 @@ impl PyOpeningHours {
         Ok(Self { inner: oh.parse().map_err(ParserError::from)? })
     }
 
-    #[pyo3()]
-    fn __str__(&self) -> String {
-        self.inner.to_string()
-    }
-
-    #[pyo3()]
-    fn __repr__(&self) -> String {
-        format!("OpeningHours({:?})", self.inner.to_string())
-    }
-
     /// Get current state of the time domain, the state can be either "open",
     /// "closed" or "unknown".
     ///
@@ -182,6 +172,16 @@ impl PyOpeningHours {
             get_time(start.map(Into::into)),
             end.map(Into::into),
         )
+    }
+
+    #[pyo3()]
+    fn __str__(&self) -> String {
+        self.inner.to_string()
+    }
+
+    #[pyo3()]
+    fn __repr__(&self) -> String {
+        format!("OpeningHours({:?})", self.inner.to_string())
     }
 }
 

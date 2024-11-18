@@ -56,11 +56,8 @@ Supported features
 
 ### Holidays
 
-A public holiday database is loaded using Python library [workalendar]. You
-should refer to Python library for more information on which countries are
-supported.
-
-Holidays are not loaded beyond year 2100 to avoid having a huge binary.
+A public holiday database is loaded using [nager]. You can refer to their
+website for more detail on supported country or if you want to contribute.
 
 
 ### Syntax
@@ -88,3 +85,6 @@ the [opening-hours-syntax] crate.
 
 [workalendar]: https://pypi.org/project/workalendar/
     "Worldwide holidays and working days helper and toolkit."
+
+[nager]: https://date.nager.at/api/v3
+    "Worldwide holidays (REST API)"

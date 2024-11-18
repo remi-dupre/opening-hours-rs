@@ -22,6 +22,12 @@ pub enum Country {
 }
 
 impl Country {
+    pub const ALL: [Self; {{ countries | length }}] = [
+        {%- for country in countries %}
+        Self::{{ country.iso_code }},
+        {%- endfor %}
+    ];
+
     /// Get the country's full name.
     ///
     /// ```
