@@ -1,21 +1,15 @@
 mod errors;
 mod types;
 
-use std::pin::Pin;
-use std::sync::Arc;
-
-use chrono::offset::Local;
 use chrono::NaiveDateTime;
 
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 
+use self::types::{get_time, res_time};
 use crate::errors::ParserError;
 use crate::types::{RangeIterator, State};
-
-fn get_time(datetime: Option<NaiveDateTime>) -> NaiveDateTime {
-    datetime.unwrap_or_else(|| Local::now().naive_local())
-}
+use ::opening_hours::OpeningHours;
 
 /// Validate that input string is a correct opening hours description.
 ///
@@ -28,7 +22,7 @@ fn get_time(datetime: Option<NaiveDateTime>) -> NaiveDateTime {
 #[pyfunction]
 #[pyo3(text_signature = "(oh, /)")]
 fn validate(oh: &str) -> bool {
-    ::opening_hours::OpeningHours::parse(oh).is_ok()
+    OpeningHours::parse(oh).is_ok()
 }
 
 /// Parse input opening hours description.
@@ -43,30 +37,18 @@ fn validate(oh: &str) -> bool {
 /// >>> oh = OpeningHours("24/7")
 /// >>> oh.is_open()
 /// True
-#[pyclass(eq, hash, frozen)]
+#[pyclass(eq, hash, frozen, name = "OpeningHours")]
 #[derive(Hash, PartialEq, Eq)]
-struct OpeningHours {
-    inner: Pin<Arc<::opening_hours::OpeningHours>>,
+struct PyOpeningHours {
+    inner: OpeningHours,
 }
 
 #[pymethods]
-impl OpeningHours {
+impl PyOpeningHours {
     #[new]
     #[pyo3(signature = (oh, /))]
     fn new(oh: &str) -> PyResult<Self> {
-        Ok(Self {
-            inner: Arc::pin(::opening_hours::OpeningHours::parse(oh).map_err(ParserError::from)?),
-        })
-    }
-
-    #[pyo3()]
-    fn __str__(&self) -> String {
-        self.inner.to_string()
-    }
-
-    #[pyo3()]
-    fn __repr__(&self) -> String {
-        format!("OpeningHours({:?})", self.inner.to_string())
+        Ok(Self { inner: oh.parse().map_err(ParserError::from)? })
     }
 
     /// Get current state of the time domain, the state can be either "open",
@@ -85,10 +67,7 @@ impl OpeningHours {
     // #[pyo3(text_signature = "(self, time=None, /)")]
     #[pyo3(signature = (time=None, /))]
     fn state(&self, time: Option<NaiveDateTime>) -> State {
-        self.inner
-            .state(get_time(time.map(Into::into)))
-            .expect("unexpected date beyond year 10 000")
-            .into()
+        self.inner.state(get_time(time.map(Into::into))).into()
     }
 
     /// Check if current state is open.
@@ -157,10 +136,12 @@ impl OpeningHours {
     /// >>> OpeningHours("2099Mo-Su 12:30-17:00").next_change()
     /// datetime.datetime(2099, 1, 1, 12, 30)
     #[pyo3(signature = (time=None, /))]
-    fn next_change(&self, time: Option<NaiveDateTime>) -> NaiveDateTime {
-        self.inner
-            .next_change(get_time(time))
-            .expect("unexpected date beyond year 10 000")
+    fn next_change(&self, time: Option<NaiveDateTime>) -> Option<NaiveDateTime> {
+        res_time(
+            self.inner
+                .next_change(get_time(time))
+                .expect("unexpected date beyond year 10 000"),
+        )
     }
 
     /// Give an iterator that yields successive time intervals of consistent
@@ -185,10 +166,20 @@ impl OpeningHours {
     #[pyo3(signature = (start=None, end=None, /))]
     fn intervals(&self, start: Option<NaiveDateTime>, end: Option<NaiveDateTime>) -> RangeIterator {
         RangeIterator::new(
-            self.inner.clone(),
+            &self.inner,
             get_time(start.map(Into::into)),
             end.map(Into::into),
         )
+    }
+
+    #[pyo3()]
+    fn __str__(&self) -> String {
+        self.inner.to_string()
+    }
+
+    #[pyo3()]
+    fn __repr__(&self) -> String {
+        format!("OpeningHours({:?})", self.inner.to_string())
     }
 }
 
@@ -208,6 +199,6 @@ impl OpeningHours {
 fn opening_hours(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     pyo3_log::init();
     m.add_function(wrap_pyfunction!(validate, m)?)?;
-    m.add_class::<OpeningHours>()?;
+    m.add_class::<PyOpeningHours>()?;
     Ok(())
 }

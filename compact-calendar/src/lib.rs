@@ -1,5 +1,6 @@
 #![doc = include_str!("../README.md")]
 
+use std::collections::VecDeque;
 use std::{fmt, io};
 
 use chrono::{Datelike, NaiveDate};
@@ -8,58 +9,10 @@ use chrono::{Datelike, NaiveDate};
 #[derive(Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct CompactCalendar {
     first_year: i32,
-    calendar: Vec<CompactYear>,
+    calendar: VecDeque<CompactYear>,
 }
 
 impl CompactCalendar {
-    /// Create a new year that does not include any day but has the capacity to add any new day in
-    /// the range of `[first_year, last_year]`.
-    ///
-    /// ```
-    /// use compact_calendar::CompactCalendar;
-    /// use chrono::NaiveDate;
-    ///
-    /// let day1 = NaiveDate::from_ymd_opt(2013, 11, 3).unwrap();
-    /// let day2 = NaiveDate::from_ymd_opt(2022, 3, 5).unwrap();
-    /// let day3 = NaiveDate::from_ymd_opt(2055, 7, 5).unwrap();
-    ///
-    /// let mut cal = CompactCalendar::new(2020, 2050);
-    /// assert!(!cal.insert(day1));
-    /// assert!(cal.insert(day2));
-    /// assert!(!cal.insert(day3));
-    /// assert_eq!(cal.count(), 1);
-    /// ```
-    pub fn new(first_year: i32, last_year: i32) -> Self {
-        assert!(
-            first_year <= last_year,
-            "use CompactCalendar::empty() if you need to init a calendar with no capacity",
-        );
-
-        let length: usize = (last_year - first_year + 1)
-            .try_into()
-            .expect("compact calendar is too large to be initialized");
-
-        Self {
-            first_year,
-            calendar: vec![CompactYear::default(); length],
-        }
-    }
-
-    /// Create a new calendar year that does not include any day and does not have the capacity to
-    /// add any.
-    ///
-    /// ```
-    /// use compact_calendar::CompactCalendar;
-    /// use chrono::NaiveDate;
-    ///
-    /// let mut cal = CompactCalendar::empty();
-    /// assert!(!cal.insert(NaiveDate::from_ymd_opt(2013, 11, 3).unwrap()));
-    /// assert_eq!(cal.count(), 0);
-    /// ```
-    pub const fn empty() -> Self {
-        Self { first_year: 0, calendar: Vec::new() }
-    }
-
     /// Get a reference to the year containing give date.
     ///
     /// ```
@@ -69,7 +22,7 @@ impl CompactCalendar {
     /// let day1 = NaiveDate::from_ymd_opt(2013, 11, 3).unwrap();
     /// let day2 = NaiveDate::from_ymd_opt(2055, 3, 5).unwrap();
     ///
-    /// let mut cal = CompactCalendar::new(2000, 2050);
+    /// let mut cal = CompactCalendar::default();
     /// cal.insert(day1);
     ///
     /// assert!(cal.year_for(day1).unwrap().contains(11, 3));
@@ -90,22 +43,19 @@ impl CompactCalendar {
     /// let day2 = NaiveDate::from_ymd_opt(2022, 3, 5).unwrap();
     /// let day3 = NaiveDate::from_ymd_opt(2055, 7, 5).unwrap();
     ///
-    /// let mut cal = CompactCalendar::new(2000, 2050);
+    /// let mut cal = CompactCalendar::default();
     /// assert!(cal.year_for_mut(day3).is_none());
     ///
     /// cal.insert(day1);
     /// assert!(cal.year_for_mut(day1).unwrap().contains(11, 3));
-    ///
-    /// cal.year_for_mut(day2).unwrap().insert(3, 5);
-    /// assert!(cal.contains(day2));
     /// ```
     pub fn year_for_mut(&mut self, date: NaiveDate) -> Option<&mut CompactYear> {
         let year0 = usize::try_from(date.year() - self.first_year).ok()?;
         self.calendar.get_mut(year0)
     }
 
-    /// Include a day in this calendar. Return false if the given day was not inserted because it
-    /// does not belong to the year range of this calendar.
+    /// Include a day in this calendar. Return `false` if the day already
+    /// belonged to the calendar.
     ///
     /// ```
     /// use compact_calendar::CompactCalendar;
@@ -115,22 +65,43 @@ impl CompactCalendar {
     /// let day2 = NaiveDate::from_ymd_opt(2022, 3, 5).unwrap();
     /// let day3 = NaiveDate::from_ymd_opt(2055, 9, 7).unwrap();
     ///
-    /// let mut cal = CompactCalendar::new(2000, 2050);
-    /// assert!(cal.insert(day1));
+    /// let mut cal = CompactCalendar::default();
     /// assert!(cal.insert(day1));
     /// assert!(cal.insert(day2));
-    /// assert_eq!(cal.count(), 2);
-    ///
-    /// assert!(!cal.insert(day3));
-    /// assert_eq!(cal.count(), 2);
+    /// assert!(cal.insert(day3));
+    /// assert!(!cal.insert(day1));
+    /// assert_eq!(cal.count(), 3);
     /// ```
     pub fn insert(&mut self, date: NaiveDate) -> bool {
-        if let Some(year) = self.year_for_mut(date) {
-            year.insert(date.month(), date.day());
-            true
-        } else {
-            false
-        }
+        let year = {
+            if let Some(year) = self.year_for_mut(date) {
+                year
+            } else if self.calendar.is_empty() {
+                self.first_year = date.year();
+                self.calendar.push_back(CompactYear::default());
+                self.calendar.back_mut().unwrap() // just pushed
+            } else if date.year() < self.first_year {
+                for _ in date.year()..self.first_year {
+                    eprintln!("Push front");
+                    self.calendar.push_front(CompactYear::default());
+                }
+
+                self.first_year = date.year();
+                self.calendar.front_mut().unwrap() // just pushed
+            } else {
+                let last_year = self.first_year
+                    + i32::try_from(self.calendar.len()).expect("calendar is too large")
+                    - 1;
+
+                for _ in last_year..date.year() {
+                    self.calendar.push_back(CompactYear::default());
+                }
+
+                self.calendar.back_mut().unwrap() // just pushed
+            }
+        };
+
+        year.insert(date.month(), date.day())
     }
 
     /// Check if this calendar includes the given day.
@@ -143,7 +114,7 @@ impl CompactCalendar {
     /// let day2 = NaiveDate::from_ymd_opt(2022, 3, 5).unwrap();
     /// let day3 = NaiveDate::from_ymd_opt(2022, 8, 12).unwrap();
     ///
-    /// let mut cal = CompactCalendar::new(2000, 2050);
+    /// let mut cal = CompactCalendar::default();
     /// cal.insert(day1);
     /// cal.insert(day2);
     ///
@@ -169,7 +140,7 @@ impl CompactCalendar {
     /// let day2 = NaiveDate::from_ymd_opt(2022, 3, 5).unwrap();
     /// let day3 = NaiveDate::from_ymd_opt(2022, 8, 12).unwrap();
     ///
-    /// let mut cal = CompactCalendar::new(2000, 2050);
+    /// let mut cal = CompactCalendar::default();
     /// cal.insert(day3);
     /// cal.insert(day1);
     /// cal.insert(day2);
@@ -177,7 +148,7 @@ impl CompactCalendar {
     /// let days: Vec<_> = cal.iter().collect();
     /// assert_eq!(days, [day1, day2, day3])
     /// ```
-    pub fn iter(&self) -> impl Iterator<Item = NaiveDate> + '_ {
+    pub fn iter(&self) -> impl Iterator<Item = NaiveDate> + Send + Sync + '_ {
         (self.first_year..)
             .zip(self.calendar.iter())
             .flat_map(|(year_i, year)| {
@@ -200,7 +171,7 @@ impl CompactCalendar {
     /// let day2 = NaiveDate::from_ymd_opt(2022, 3, 5).unwrap();
     /// let day3 = NaiveDate::from_ymd_opt(2022, 8, 12).unwrap();
     ///
-    /// let mut cal = CompactCalendar::new(2000, 2050);
+    /// let mut cal = CompactCalendar::default();
     /// cal.insert(day1);
     /// cal.insert(day2);
     /// cal.insert(day3);
@@ -222,7 +193,7 @@ impl CompactCalendar {
                 let year0 = usize::try_from(date.year() - self.first_year).ok()?;
 
                 (date.year() + 1..)
-                    .zip(&self.calendar[year0 + 1..])
+                    .zip(self.calendar.iter().skip(year0 + 1))
                     .find_map(|(year_i, year)| {
                         let (month, day) = year.first()?;
                         Some(
@@ -232,7 +203,7 @@ impl CompactCalendar {
                     })
             })
         } else {
-            None
+            self.iter().next()
         }
     }
 
@@ -242,9 +213,9 @@ impl CompactCalendar {
     /// use compact_calendar::CompactCalendar;
     /// use chrono::NaiveDate;
     ///
-    /// let mut cal = CompactCalendar::new(2000, 2050);
-    /// cal.insert(NaiveDate::from_ymd(2022, 8, 12));
-    /// cal.insert(NaiveDate::from_ymd(2022, 3, 5));
+    /// let mut cal = CompactCalendar::default();
+    /// cal.insert(NaiveDate::from_ymd_opt(2022, 8, 12).unwrap());
+    /// cal.insert(NaiveDate::from_ymd_opt(2022, 3, 5).unwrap());
     /// assert_eq!(cal.count(), 2);
     /// ```
     pub fn count(&self) -> u32 {
@@ -257,14 +228,14 @@ impl CompactCalendar {
     /// use compact_calendar::CompactCalendar;
     /// use chrono::NaiveDate;
     ///
-    /// let mut cal = CompactCalendar::new(2000, 2050);
+    /// let mut cal = CompactCalendar::default();
     ///
     /// let mut buf1 = Vec::new();
-    /// cal.insert(NaiveDate::from_ymd(2022, 8, 12));
+    /// cal.insert(NaiveDate::from_ymd_opt(2022, 8, 12).unwrap());
     /// cal.serialize(&mut buf1).unwrap();
     ///
     /// let mut buf2 = Vec::new();
-    /// cal.insert(NaiveDate::from_ymd(2022, 3, 5));
+    /// cal.insert(NaiveDate::from_ymd_opt(2022, 3, 5).unwrap());
     /// cal.serialize(&mut buf2).unwrap();
     ///
     /// assert_ne!(buf1, buf2);
@@ -286,9 +257,9 @@ impl CompactCalendar {
     /// use compact_calendar::CompactCalendar;
     /// use chrono::NaiveDate;
     ///
-    /// let mut cal1 = CompactCalendar::new(2000, 2050);
-    /// cal1.insert(NaiveDate::from_ymd(2022, 8, 12));
-    /// cal1.insert(NaiveDate::from_ymd(2022, 3, 5));
+    /// let mut cal1 = CompactCalendar::default();
+    /// cal1.insert(NaiveDate::from_ymd_opt(2022, 8, 12).unwrap());
+    /// cal1.insert(NaiveDate::from_ymd_opt(2022, 3, 5).unwrap());
     ///
     /// let mut buf = Vec::new();
     /// cal1.serialize(&mut buf).unwrap();
@@ -317,19 +288,61 @@ impl CompactCalendar {
     }
 }
 
+impl Default for CompactCalendar {
+    /// Create a new year that does not include any day.
+    ///
+    /// ```
+    /// use compact_calendar::CompactCalendar;
+    /// use chrono::NaiveDate;
+    ///
+    /// let mut cal = CompactCalendar::default();
+    /// assert_eq!(cal.count(), 0);
+    /// ```
+    fn default() -> Self {
+        Self { first_year: 0, calendar: VecDeque::default() }
+    }
+}
+
+impl FromIterator<NaiveDate> for CompactCalendar {
+    /// Create a calendar from a list of dates.
+    ///
+    /// ```
+    /// use compact_calendar::CompactCalendar;
+    /// use chrono::NaiveDate;
+    ///
+    /// let dates = [
+    ///     NaiveDate::from_ymd_opt(2013, 11, 3).unwrap(),
+    ///     NaiveDate::from_ymd_opt(2022, 3, 5).unwrap(),
+    ///     NaiveDate::from_ymd_opt(2055, 7, 5).unwrap(),
+    ///     NaiveDate::from_ymd_opt(2013, 11, 3).unwrap(),
+    /// ];
+    ///
+    /// let cal: CompactCalendar = dates.iter().copied().collect();
+    /// assert_eq!(cal.count(), 3);
+    /// assert!(cal.contains(dates[0]));
+    /// ```
+    fn from_iter<T: IntoIterator<Item = NaiveDate>>(iter: T) -> Self {
+        let mut calendar = CompactCalendar::default();
+
+        for date in iter {
+            calendar.insert(date);
+        }
+
+        calendar.calendar.make_contiguous();
+        calendar.calendar.shrink_to_fit();
+        calendar
+    }
+}
+
 impl fmt::Debug for CompactCalendar {
     /// ```
     /// use compact_calendar::CompactCalendar;
     /// use chrono::NaiveDate;
     ///
-    /// let mut cal = CompactCalendar::new(2000, 2050);
-    /// cal.insert(NaiveDate::from_ymd(2022, 8, 12));
-    /// cal.insert(NaiveDate::from_ymd(2022, 3, 5));
-    ///
-    /// assert_eq!(
-    ///     format!("{cal:?}"),
-    ///     "CompactCalendar { first_year: 2000, last_year: 2050, calendar: {2022-03-05, 2022-08-12} }",
-    /// );
+    /// let mut cal = CompactCalendar::default();
+    /// cal.insert(NaiveDate::from_ymd_opt(2022, 8, 12).unwrap());
+    /// cal.insert(NaiveDate::from_ymd_opt(2022, 3, 5).unwrap());
+    /// assert_eq!(format!("{cal:?}"), "CompactCalendar({2022-03-05, 2022-08-12})");
     /// ```
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         struct DebugCalendar<'a>(&'a CompactCalendar);
@@ -340,12 +353,8 @@ impl fmt::Debug for CompactCalendar {
             }
         }
 
-        let last_year = self.first_year + self.calendar.len() as i32 - 1;
-
-        f.debug_struct("CompactCalendar")
-            .field("first_year", &self.first_year)
-            .field("last_year", &last_year)
-            .field("calendar", &DebugCalendar(self))
+        f.debug_tuple("CompactCalendar")
+            .field(&DebugCalendar(self))
             .finish()
     }
 }
@@ -356,7 +365,8 @@ impl fmt::Debug for CompactCalendar {
 pub struct CompactYear([CompactMonth; 12]);
 
 impl CompactYear {
-    /// Include a day in this year.
+    /// Include a day in this year. Return `false` if the day was already
+    /// included.
     ///
     /// ```
     /// use compact_calendar::CompactYear;
@@ -367,7 +377,7 @@ impl CompactYear {
     /// year.insert(1, 25);
     /// assert_eq!(year.count(), 2);
     /// ```
-    pub fn insert(&mut self, month: u32, day: u32) {
+    pub fn insert(&mut self, month: u32, day: u32) -> bool {
         assert!((1..=12).contains(&month));
         assert!((1..=31).contains(&day));
         self.0[(month - 1) as usize].insert(day)
@@ -575,7 +585,7 @@ impl fmt::Debug for CompactYear {
 pub struct CompactMonth(u32);
 
 impl CompactMonth {
-    /// Include a day in this month.
+    /// Include a day in this month. Return `false` if it was already included.
     ///
     /// ```
     /// use compact_calendar::CompactMonth;
@@ -586,9 +596,15 @@ impl CompactMonth {
     /// month.insert(19);
     /// assert_eq!(month.count(), 2);
     /// ```
-    pub fn insert(&mut self, day: u32) {
+    pub fn insert(&mut self, day: u32) -> bool {
         assert!((1..=31).contains(&day));
-        self.0 |= 1 << (day - 1)
+
+        if self.contains(day) {
+            false
+        } else {
+            self.0 |= 1 << (day - 1);
+            true
+        }
     }
 
     /// Check if this month includes the given day.
@@ -738,7 +754,6 @@ impl CompactMonth {
     }
 }
 
-#[allow(clippy::derivable_impls)]
 impl Default for CompactMonth {
     /// Create a new month that does not include any day.
     ///

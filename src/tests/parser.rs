@@ -3,35 +3,60 @@ use crate::OpeningHours;
 
 #[test]
 fn parse_24_7() {
-    assert!(OpeningHours::parse("24/7").is_ok());
+    assert!("24/7".parse::<OpeningHours>().is_ok());
+}
+
+#[test]
+fn parse_open_ended() {
+    assert_eq!(
+        "12:00+".parse::<OpeningHours>().is_ok(),
+        "12:00-24:00".parse::<OpeningHours>().is_ok(),
+    );
 }
 
 #[test]
 fn parse_invalid() {
-    assert!(OpeningHours::parse("this is not a valid expression").is_err());
-    assert!(OpeningHours::parse("10:00-100:00").is_err());
-    assert!(OpeningHours::parse("10:00-12:00 tomorrow").is_err());
+    assert!("this is not a valid expression"
+        .parse::<OpeningHours>()
+        .is_err());
+    assert!("10:00-100:00".parse::<OpeningHours>().is_err());
+    assert!("10:00-12:00 tomorrow".parse::<OpeningHours>().is_err());
 }
 
-// Here is a tough one:
-// "check website http://www.senat.fr/visite/jardin/horaires.html"; Mar Su[-1]-Sep 30 07:30-19:15+ open "check closing time on website http://www.senat.fr/visite/jardin/horaires.html"; (sunset-00:10)-(sunrise-00:50) closed; 21:30-07:30 closed
 #[test]
 fn parse_sample() {
     for raw_oh in sample() {
-        assert!(OpeningHours::parse(raw_oh).is_ok());
+        assert!(raw_oh.parse::<OpeningHours>().is_ok());
     }
+}
+
+#[test]
+fn parse_relaxed() {
+    assert!("4:00-8:00".parse::<OpeningHours>().is_ok());
+    assert!("04:00 - 08:00".parse::<OpeningHours>().is_ok());
+    assert!("4:00 - 8:00".parse::<OpeningHours>().is_ok());
+
+    assert!("Mo-Fr 10:00-18:00;Sa-Su 10:00-12:00"
+        .parse::<OpeningHours>()
+        .is_ok());
 }
 
 #[test]
 fn parse_reformated_sample() {
     for raw_oh in sample() {
-        let oh = OpeningHours::parse(raw_oh).unwrap();
-        assert!(OpeningHours::parse(&oh.to_string()).is_ok());
+        let oh = raw_oh.parse::<OpeningHours>().unwrap();
+        assert!(&oh.to_string().parse::<OpeningHours>().is_ok());
     }
 }
 
 #[test]
 fn parse_reformated() {
-    let format_and_parse = |oh| OpeningHours::parse(&OpeningHours::parse(oh).unwrap().to_string());
+    let format_and_parse = |oh: &str| {
+        oh.parse::<OpeningHours>()
+            .unwrap()
+            .to_string()
+            .parse::<OpeningHours>()
+    };
+
     assert!(format_and_parse("Oct").is_ok());
 }

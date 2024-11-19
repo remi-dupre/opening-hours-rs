@@ -1,6 +1,6 @@
 [package]
 name = "opening-hours"
-version = "0.8.3"
+version = "0.9.0"
 authors = ["Rémi Dupré <remi@dupre.io>"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
@@ -21,14 +21,14 @@ members = ["compact-calendar", "fuzz", "opening-hours-syntax", "python"]
 disable-test-timeouts = []
 
 [dependencies]
+compact-calendar = { path = "compact-calendar", version = "0.9.0" }
+opening-hours-syntax = { path = "opening-hours-syntax", version = "0.9.0" }
 chrono = "0.4"
-compact-calendar = { path = "compact-calendar", version = "0.8.2" }
 flate2 = "1.0"
 log = { version = "0.4", features = [ "kv" ] }
-opening-hours-syntax = { path = "opening-hours-syntax", version = "0.8.2" }
 
 [build-dependencies]
-compact-calendar = { path = "compact-calendar", version = "0.8.2" }
+compact-calendar = { path = "compact-calendar", version = "0.9.0" }
 chrono = "0.4"
 flate2 = "1.0"
 
@@ -38,6 +38,9 @@ criterion = "0.5"
 [[bench]]
 name = "benchmarks"
 harness = false
+
+[profile.dev.package.flate2]
+opt-level = 3  # build script will run substantially faster for dev
 
 [profile.bench]
 codegen-units = 1

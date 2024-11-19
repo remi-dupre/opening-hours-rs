@@ -4,10 +4,11 @@ use std::convert::TryInto;
 use chrono::prelude::Datelike;
 use chrono::{Duration, NaiveDate};
 
-use compact_calendar::CompactCalendar;
 use opening_hours_syntax::rules::day::{self as ds, Month};
 
+use crate::context::Context;
 use crate::opening_hours::DATE_LIMIT;
+use crate::utils::dates::count_days_in_month;
 use crate::utils::range::{RangeExt, WrappingRange};
 
 /// Get the first valid date before give "yyyy/mm/dd", for example if
@@ -23,41 +24,41 @@ fn first_valid_ymd(year: i32, month: u32, day: u32) -> NaiveDate {
 
 /// Generic trait to specify the behavior of a selector over dates.
 pub trait DateFilter {
-    fn filter(&self, date: NaiveDate, holidays: &CompactCalendar) -> bool;
+    fn filter(&self, date: NaiveDate, ctx: &Context) -> bool;
 
     /// Provide a lower bound to the next date with a different result to `filter`.
-    fn next_change_hint(&self, _date: NaiveDate, _holidays: &CompactCalendar) -> Option<NaiveDate> {
+    fn next_change_hint(&self, _date: NaiveDate, _ctx: &Context) -> Option<NaiveDate> {
         None
     }
 }
 
 impl<T: DateFilter> DateFilter for [T] {
-    fn filter(&self, date: NaiveDate, holidays: &CompactCalendar) -> bool {
-        self.is_empty() || self.iter().any(|x| x.filter(date, holidays))
+    fn filter(&self, date: NaiveDate, ctx: &Context) -> bool {
+        self.is_empty() || self.iter().any(|x| x.filter(date, ctx))
     }
 
-    fn next_change_hint(&self, date: NaiveDate, holidays: &CompactCalendar) -> Option<NaiveDate> {
+    fn next_change_hint(&self, date: NaiveDate, ctx: &Context) -> Option<NaiveDate> {
         self.iter()
-            .map(|selector| selector.next_change_hint(date, holidays))
+            .map(|selector| selector.next_change_hint(date, ctx))
             .min()
             .unwrap_or_else(|| Some(DATE_LIMIT.date()))
     }
 }
 
 impl DateFilter for ds::DaySelector {
-    fn filter(&self, date: NaiveDate, holidays: &CompactCalendar) -> bool {
-        self.year.filter(date, holidays)
-            && self.monthday.filter(date, holidays)
-            && self.week.filter(date, holidays)
-            && self.weekday.filter(date, holidays)
+    fn filter(&self, date: NaiveDate, ctx: &Context) -> bool {
+        self.year.filter(date, ctx)
+            && self.monthday.filter(date, ctx)
+            && self.week.filter(date, ctx)
+            && self.weekday.filter(date, ctx)
     }
 
-    fn next_change_hint(&self, date: NaiveDate, holidays: &CompactCalendar) -> Option<NaiveDate> {
+    fn next_change_hint(&self, date: NaiveDate, ctx: &Context) -> Option<NaiveDate> {
         *[
-            self.year.next_change_hint(date, holidays),
-            self.monthday.next_change_hint(date, holidays),
-            self.week.next_change_hint(date, holidays),
-            self.weekday.next_change_hint(date, holidays),
+            self.year.next_change_hint(date, ctx),
+            self.monthday.next_change_hint(date, ctx),
+            self.week.next_change_hint(date, ctx),
+            self.weekday.next_change_hint(date, ctx),
         ]
         .iter()
         .min()
@@ -66,7 +67,7 @@ impl DateFilter for ds::DaySelector {
 }
 
 impl DateFilter for ds::YearRange {
-    fn filter(&self, date: NaiveDate, _holidays: &CompactCalendar) -> bool {
+    fn filter(&self, date: NaiveDate, _ctx: &Context) -> bool {
         let Ok(year) = date.year().try_into() else {
             return false;
         };
@@ -74,7 +75,7 @@ impl DateFilter for ds::YearRange {
         self.range.contains(&year) && (year - self.range.start()) % self.step == 0
     }
 
-    fn next_change_hint(&self, date: NaiveDate, _holidays: &CompactCalendar) -> Option<NaiveDate> {
+    fn next_change_hint(&self, date: NaiveDate, _ctx: &Context) -> Option<NaiveDate> {
         let Ok(curr_year) = date.year().try_into() else {
             return Some(DATE_LIMIT.date());
         };
@@ -104,7 +105,7 @@ impl DateFilter for ds::YearRange {
 }
 
 impl DateFilter for ds::MonthdayRange {
-    fn filter(&self, date: NaiveDate, _holidays: &CompactCalendar) -> bool {
+    fn filter(&self, date: NaiveDate, _ctx: &Context) -> bool {
         let in_year = date.year() as u16;
         let in_month = Month::from_date(date);
 
@@ -154,7 +155,7 @@ impl DateFilter for ds::MonthdayRange {
                         (start..=end).contains(&date)
                     }
                     (_, ds::Date::Easter { year: _ }) | (ds::Date::Easter { year: _ }, _) => {
-                        // TODO
+                        // TODO: Easter support
                         false
                     }
                 }
@@ -162,7 +163,7 @@ impl DateFilter for ds::MonthdayRange {
         }
     }
 
-    fn next_change_hint(&self, date: NaiveDate, _holidays: &CompactCalendar) -> Option<NaiveDate> {
+    fn next_change_hint(&self, date: NaiveDate, _ctx: &Context) -> Option<NaiveDate> {
         match self {
             ds::MonthdayRange::Month { range, year: None } => {
                 let month = Month::from_date(date);
@@ -294,53 +295,66 @@ impl DateFilter for ds::MonthdayRange {
 }
 
 impl DateFilter for ds::WeekDayRange {
-    fn filter(&self, date: NaiveDate, holidays: &CompactCalendar) -> bool {
+    fn filter(&self, date: NaiveDate, ctx: &Context) -> bool {
         match self {
-            ds::WeekDayRange::Fixed { range, nth, offset } => {
+            ds::WeekDayRange::Fixed { range, offset, nth_from_start, nth_from_end } => {
                 let date = date - Duration::days(*offset);
-                let date_nth = (date.day() as u8 - 1) / 7;
+                let pos_from_start = (date.day() as u8 - 1) / 7;
+                let pos_from_end = (count_days_in_month(date) - date.day() as u8) / 7;
                 let range_u8 = (*range.start() as u8)..=(*range.end() as u8);
-                range_u8.wrapping_contains(&(date.weekday() as u8)) && nth[usize::from(date_nth)]
+
+                range_u8.wrapping_contains(&(date.weekday() as u8))
+                    && (nth_from_start[usize::from(pos_from_start)]
+                        || nth_from_end[usize::from(pos_from_end)])
             }
-            ds::WeekDayRange::Holiday { kind, offset } => match kind {
-                ds::HolidayKind::Public => {
-                    let date = date - Duration::days(*offset);
-                    holidays.contains(date)
-                }
-                ds::HolidayKind::School => false,
-            },
+            ds::WeekDayRange::Holiday { kind, offset } => {
+                let calendar = match kind {
+                    ds::HolidayKind::Public => &ctx.holidays.public,
+                    ds::HolidayKind::School => &ctx.holidays.school,
+                };
+
+                let date = date - Duration::days(*offset);
+                calendar.contains(date)
+            }
         }
     }
 
-    fn next_change_hint(&self, date: NaiveDate, holidays: &CompactCalendar) -> Option<NaiveDate> {
+    fn next_change_hint(&self, date: NaiveDate, ctx: &Context) -> Option<NaiveDate> {
         match self {
-            ds::WeekDayRange::Holiday { kind: ds::HolidayKind::Public, offset } => Some({
+            ds::WeekDayRange::Holiday { kind, offset } => Some({
+                let calendar = match kind {
+                    ds::HolidayKind::Public => &ctx.holidays.public,
+                    ds::HolidayKind::School => &ctx.holidays.school,
+                };
+
                 let date_with_offset = date - Duration::days(*offset);
 
-                if holidays.contains(date_with_offset) {
+                if calendar.contains(date_with_offset) {
                     date.succ_opt()?
                 } else {
-                    holidays
+                    calendar
                         .first_after(date_with_offset)
                         .map(|following| following + Duration::days(*offset))
                         .unwrap_or_else(|| DATE_LIMIT.date())
                 }
             }),
-            ds::WeekDayRange::Holiday { kind: ds::HolidayKind::School, offset: _ } => {
-                Some(DATE_LIMIT.date())
-            }
-            ds::WeekDayRange::Fixed { range: _, offset: _, nth: _ } => None, // TODO
+            ds::WeekDayRange::Fixed {
+                range: _,
+                offset: _,
+                nth_from_start: _,
+                nth_from_end: _,
+            } => None,
         }
     }
 }
 
 impl DateFilter for ds::WeekRange {
-    fn filter(&self, date: NaiveDate, _holidays: &CompactCalendar) -> bool {
+    fn filter(&self, date: NaiveDate, _ctx: &Context) -> bool {
         let week = date.iso_week().week() as u8;
         self.range.wrapping_contains(&week) && (week - self.range.start()) % self.step == 0
     }
 
-    fn next_change_hint(&self, date: NaiveDate, _holidays: &CompactCalendar) -> Option<NaiveDate> {
+    fn next_change_hint(&self, date: NaiveDate, _ctx: &Context) -> Option<NaiveDate> {
         let week = date.iso_week().week() as u8;
 
         if self.range.wrapping_contains(&week) {

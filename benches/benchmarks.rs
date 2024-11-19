@@ -1,4 +1,5 @@
-use opening_hours::OpeningHours;
+use opening_hours::country::Country;
+use opening_hours::{Context, OpeningHours};
 
 use chrono::NaiveDateTime;
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
@@ -21,11 +22,16 @@ fn bench_parse(c: &mut Criterion) {
 }
 
 fn bench_eval(c: &mut Criterion) {
+    let fr_context = Context::default().with_holidays(Country::FR.holidays());
     let date_time = NaiveDateTime::parse_from_str("2021-02-01 12:03", "%Y-%m-%d %H:%M").unwrap();
+
     let sch_24_7 = OpeningHours::parse(SCH_24_7).unwrap();
     let sch_addition = OpeningHours::parse(SCH_ADDITION).unwrap();
-    let sch_holiday = OpeningHours::parse(SCH_HOLIDAY).unwrap().with_region("FR");
     let sch_jan_dec = OpeningHours::parse(SCH_JAN_DEC).unwrap();
+
+    let sch_holiday = OpeningHours::parse(SCH_HOLIDAY)
+        .unwrap()
+        .with_context(fr_context);
 
     {
         let mut group = c.benchmark_group("is_open");

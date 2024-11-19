@@ -1,3 +1,4 @@
+mod country;
 mod holiday_selector;
 mod issues;
 mod month_selector;
@@ -5,6 +6,7 @@ mod next_change;
 mod parser;
 mod regression;
 mod rules;
+mod schedule;
 mod time_selector;
 mod week_selector;
 mod weekday_selector;
@@ -31,8 +33,18 @@ pub fn exec_with_timeout<R: Send + 'static>(
         return f();
     }
 
-    let result = Arc::new(Mutex::new(None));
+    let result = Arc::new(Mutex::new((None, false)));
     let finished = Arc::new(Condvar::new());
+
+    struct DetectPanic<R>(Arc<Mutex<(Option<R>, bool)>>);
+
+    impl<R> Drop for DetectPanic<R> {
+        fn drop(&mut self) {
+            if thread::panicking() {
+                self.0.lock().expect("failed to write panic").1 = true;
+            }
+        }
+    }
 
     let _runner = {
         let f = black_box(f);
@@ -40,13 +52,15 @@ pub fn exec_with_timeout<R: Send + 'static>(
         let finished = finished.clone();
 
         thread::spawn(move || {
+            let _panic_guard = DetectPanic(result.clone());
+
             let elapsed = {
                 let start = Instant::now();
                 let res = f();
                 (start.elapsed(), res)
             };
 
-            *result.lock().expect("failed to write result") = Some(elapsed);
+            result.lock().expect("failed to write result").0 = Some(elapsed);
             finished.notify_all();
         })
     };
@@ -55,7 +69,11 @@ pub fn exec_with_timeout<R: Send + 'static>(
         .wait_timeout(result.lock().expect("failed to fetch result"), timeout)
         .expect("poisoned lock");
 
-    let Some((elapsed, res)) = result.take() else {
+    if result.1 {
+        panic!("exec stopped due to panic");
+    }
+
+    let Some((elapsed, res)) = result.0.take() else {
         panic!("exec stopped due to {timeout:?} timeout");
     };
 
@@ -86,13 +104,16 @@ macro_rules! datetime {
 macro_rules! schedule_at {
     ( $expression: expr, $date: expr ) => {{
         use $crate::{date, OpeningHours};
-        OpeningHours::parse($expression)?.schedule_at(date!($date))
+        $expression
+            .parse::<OpeningHours>()?
+            .schedule_at(date!($date))
     }};
     ( $expression: expr, $date: expr, $region: expr ) => {{
-        use $crate::{date, OpeningHours};
+        use $crate::{date, Context, OpeningHours};
 
-        OpeningHours::parse($expression)?
-            .with_region($region)
+        $expression
+            .parse::<OpeningHours>()?
+            .with_context(Context::default().with_holidays($region.holidays()))
             .schedule_at(date!($date))
     }};
 }

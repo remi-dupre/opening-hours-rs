@@ -1,11 +1,21 @@
-use std::pin::Pin;
-use std::sync::Arc;
-
-use chrono::NaiveDateTime;
+use chrono::{Local, NaiveDateTime};
+use opening_hours::opening_hours::DATE_LIMIT;
 use pyo3::prelude::*;
 
 use opening_hours::DateTimeRange;
 use opening_hours_syntax::rules::RuleKind;
+
+pub(crate) fn get_time(datetime: Option<NaiveDateTime>) -> NaiveDateTime {
+    datetime.unwrap_or_else(|| Local::now().naive_local())
+}
+
+pub(crate) fn res_time(datetime: NaiveDateTime) -> Option<NaiveDateTime> {
+    if datetime == DATE_LIMIT {
+        None
+    } else {
+        Some(datetime)
+    }
+}
 
 // ---
 // --- State
@@ -43,42 +53,26 @@ impl IntoPy<Py<PyAny>> for State {
 
 /// Iterator that owns a pointer to a [`OpeningHours`] together with a
 /// self reference to it.
-#[pyclass(unsendable)]
+#[pyclass()]
 pub struct RangeIterator {
-    _td: Pin<Arc<opening_hours::OpeningHours>>,
-    iter: Box<dyn Iterator<Item = DateTimeRange<'static>>>,
+    iter: Box<dyn Iterator<Item = DateTimeRange> + Send + Sync>,
 }
 
 impl RangeIterator {
     pub fn new(
-        td: Pin<Arc<opening_hours::OpeningHours>>,
+        td: &opening_hours::OpeningHours,
         start: NaiveDateTime,
         end: Option<NaiveDateTime>,
     ) -> Self {
         let iter = {
             if let Some(end) = end {
-                Box::new(
-                    td.iter_range(start, end)
-                        .expect("unexpected date beyond year 10 000"),
-                ) as _
+                Box::new(td.iter_range(start, end)) as _
             } else {
-                Box::new(
-                    td.iter_from(start)
-                        .expect("unexpected date beyond year 10 000"),
-                ) as _
+                Box::new(td.iter_from(start)) as _
             }
         };
 
-        // Extend the lifetime of the reference to td inside of iter.
-        //   1. `td` won't be dropped before `iter` as they are both owned by the struct.
-        //   2. `td` won't move as it is marked Pin.
-        //   3. we must ensure in [`RangeIterator`]'s implementation that iter is not moved out of
-        //      the struct.
-        let iter: Box<dyn Iterator<Item = DateTimeRange<'_>>> = iter;
-        let iter: Box<dyn Iterator<Item = DateTimeRange<'static>>> =
-            unsafe { std::mem::transmute(iter) };
-
-        Self { _td: td, iter }
+        Self { iter }
     }
 }
 
@@ -90,13 +84,14 @@ impl RangeIterator {
 
     fn __next__(
         mut slf: PyRefMut<Self>,
-    ) -> Option<(NaiveDateTime, NaiveDateTime, State, Vec<&'_ str>)> {
+    ) -> Option<(NaiveDateTime, Option<NaiveDateTime>, State, Vec<String>)> {
         let dt_range = slf.iter.next()?;
+
         Some((
             dt_range.range.start,
-            dt_range.range.end,
+            res_time(dt_range.range.end),
             dt_range.kind.into(),
-            dt_range.into_comments().into(),
+            dt_range.comments.iter().map(|c| c.to_string()).collect(),
         ))
     }
 }

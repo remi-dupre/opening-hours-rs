@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.9.0
+
+### General
+
+- Holidays database from [nager.date](https://date.nager.at/).
+- Some support for public holidays.
+- Replace all panicking functions with faillible ones.
+
+### Rust
+
+- `OpeningHours` now implements `FromStr`.
+- `CompactCalendar` is no longer bounded.
+- Added `Context`, which will later be extended to handle localization info.
+- Added module `country`.
+- Better documentation converage.
+
+### Python
+
+- Got rid of `unsafe` used in `OpeningHours.intervals` implementation.
+- The iterator returned by `OpeningHours.intervals` can be moved between
+  threads.
+
+
 ## 0.8.3
 
 ### Fixes

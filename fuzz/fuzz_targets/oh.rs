@@ -2,11 +2,11 @@
 use arbitrary::Arbitrary;
 use chrono::DateTime;
 use libfuzzer_sys::{fuzz_target, Corpus};
-use opening_hours::opening_hours::REGION_HOLIDAYS;
+use opening_hours::country::Country;
 
 use std::fmt::Debug;
 
-use opening_hours::OpeningHours;
+use opening_hours::{Context, OpeningHours};
 
 #[derive(Arbitrary, Clone)]
 pub struct Data {
@@ -42,23 +42,24 @@ fuzz_target!(|data: Data| -> Corpus {
 
     let date = date.naive_utc();
 
-    let Ok(mut oh_1) = OpeningHours::parse(&data.oh) else {
+    let Ok(mut oh_1) = data.oh.parse::<OpeningHours>() else {
         return Corpus::Reject;
     };
 
-    let mut oh_2 = OpeningHours::parse(&oh_1.to_string()).unwrap_or_else(|err| {
+    let mut oh_2: OpeningHours = oh_1.to_string().parse().unwrap_or_else(|err| {
         eprintln!("[ERR] Initial Expression: {}", data.oh);
         eprintln!("[ERR] Invalid stringified Expression: {oh_1}");
         panic!("{err}")
     });
 
     if data.region.is_empty() {
-        if !REGION_HOLIDAYS.contains_key(data.region.as_str()) {
+        let Ok(country) = data.region.parse::<Country>() else {
             return Corpus::Reject;
-        }
+        };
 
-        oh_1 = oh_1.with_region(&data.region);
-        oh_2 = oh_2.with_region(&data.region);
+        let ctx = Context::default().with_holidays(country.holidays());
+        oh_1 = oh_1.with_context(ctx.clone());
+        oh_2 = oh_2.with_context(ctx);
     }
 
     assert_eq!(oh_1.is_open(date), oh_2.is_open(date));

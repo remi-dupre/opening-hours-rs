@@ -1,103 +1,83 @@
-use std::boxed::Box;
-use std::cmp::{max, min};
-use std::collections::HashMap;
-use std::convert::TryInto;
 use std::fmt::Display;
-use std::iter::{empty, Peekable};
-use std::sync::LazyLock;
+use std::iter::Peekable;
+use std::str::FromStr;
+use std::sync::Arc;
 
 use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime};
-use flate2::read::ZlibDecoder;
 
-use compact_calendar::CompactCalendar;
 use opening_hours_syntax::extended_time::ExtendedTime;
-use opening_hours_syntax::rules::{RuleKind, RuleOperator, RuleSequence};
+use opening_hours_syntax::rules::{OpeningHoursExpression, RuleKind, RuleOperator, RuleSequence};
 
+use crate::context::Context;
 use crate::date_filter::DateFilter;
-use crate::schedule::{Schedule, TimeRange};
+use crate::error::ParserError;
+use crate::schedule::Schedule;
 use crate::time_filter::{time_selector_intervals_at, time_selector_intervals_at_next_day};
 use crate::DateTimeRange;
 
-const EMPTY_CALENDAR: &CompactCalendar = &CompactCalendar::empty();
-
-/// An array of sorted holidays for each known region
-pub static REGION_HOLIDAYS: LazyLock<HashMap<&str, CompactCalendar>> = LazyLock::new(|| {
-    let mut reader = ZlibDecoder::new(include_bytes!(env!("HOLIDAYS_FILE")) as &[_]);
-
-    env!("HOLIDAYS_REGIONS")
-        .split(',')
-        .map(|region| {
-            let calendar =
-                CompactCalendar::deserialize(&mut reader).expect("unable to parse holiday data");
-
-            (region, calendar)
-        })
-        .collect()
-});
-
 /// The upper bound of dates handled by specification
 pub const DATE_LIMIT: NaiveDateTime = {
-    let Some(date) = NaiveDate::from_ymd_opt(9999, 12, 31) else {
-        panic!("Invalid limit date")
+    let Some(date) = NaiveDate::from_ymd_opt(10_000, 1, 1) else {
+        unreachable!()
     };
 
     let Some(time) = NaiveTime::from_hms_opt(0, 0, 0) else {
-        panic!("Invalid limit time")
+        unreachable!()
     };
 
     NaiveDateTime::new(date, time)
 };
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-pub struct DateLimitExceeded;
-
 // OpeningHours
 
+/// A parsed opening hours expression and its evaluation context.
+///
+/// Note that all big inner structures are immutable and wrapped by an `Arc`
+/// so this is safe and fast to clone.
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct OpeningHours {
     /// Rules describing opening hours
-    rules: Vec<RuleSequence>,
-    /// The sorted list of holidays
-    holidays: &'static CompactCalendar,
+    expr: Arc<OpeningHoursExpression>,
+    /// Evalutation context
+    ctx: Context,
 }
 
 impl OpeningHours {
-    /// Init a new TimeDomain with the given set of Rules.
-    pub fn parse(data: &str) -> Result<Self, crate::ParserError> {
-        Ok(OpeningHours {
-            rules: opening_hours_syntax::parse(data)?,
-            holidays: EMPTY_CALENDAR,
-        })
-    }
+    // --
+    // -- Builder Methods
+    // --
 
-    /// Get the list of all loaded public holidays.
-    pub fn holidays(&self) -> &'static CompactCalendar {
-        self.holidays
-    }
-
-    /// Replace loaded holidays with known holidays for the given region. If
-    /// the region is not existing, no holiday will be loaded.
+    /// Parse a raw opening hours expression.
     ///
     /// ```
     /// use opening_hours::OpeningHours;
     ///
-    /// let oh = OpeningHours::parse("24/7").unwrap();
-    /// assert_eq!(oh.holidays().count(), 0);
-    /// assert_ne!(oh.with_region("FR").holidays().count(), 0);
+    /// assert!(OpeningHours::parse("24/7 open").is_ok());
+    /// assert!(OpeningHours::parse("not a valid expression").is_err());
     /// ```
-    pub fn with_region(self, region: &str) -> Self {
-        OpeningHours {
-            holidays: REGION_HOLIDAYS
-                .get(region.to_uppercase().as_str())
-                .unwrap_or_else(|| {
-                    log::warn!(region = region; "Unknown region is ignored");
-                    EMPTY_CALENDAR
-                }),
-            ..self
-        }
+    pub fn parse(raw_oh: &str) -> Result<Self, ParserError> {
+        let expr = Arc::new(opening_hours_syntax::parse(raw_oh)?);
+        Ok(Self { expr, ctx: Context::default() })
     }
 
-    // Low level implementations.
+    /// Set a new evaluation context for this expression.
+    ///
+    /// ```
+    /// use opening_hours::OpeningHours;
+    /// use opening_hours::context::Context;
+    ///
+    /// let oh = OpeningHours::parse("Mo-Fr open")
+    ///     .unwrap()
+    ///     .with_context(Context::default());
+    /// ```
+    pub fn with_context(mut self, ctx: Context) -> Self {
+        self.ctx = ctx;
+        self
+    }
+
+    // --
+    // -- Low level implementations.
+    // --
     //
     // Following functions are used to build the TimeDomainIterator which is
     // used to implement all other functions.
@@ -108,20 +88,21 @@ impl OpeningHours {
     /// Provide a lower bound to the next date when a different set of rules
     /// could match.
     fn next_change_hint(&self, date: NaiveDate) -> Option<NaiveDate> {
-        self.rules
+        (self.expr.rules)
             .iter()
-            .map(|rule| rule.day_selector.next_change_hint(date, self.holidays()))
+            .map(|rule| rule.day_selector.next_change_hint(date, &self.ctx))
             .min()
             .flatten()
     }
 
+    /// Get the schedule at a given day.
     pub fn schedule_at(&self, date: NaiveDate) -> Schedule {
         let mut prev_match = false;
         let mut prev_eval = None;
 
-        for rules_seq in &self.rules {
-            let curr_match = rules_seq.day_selector.filter(date, self.holidays());
-            let curr_eval = rule_sequence_schedule_at(rules_seq, date, self.holidays());
+        for rules_seq in &self.expr.rules {
+            let curr_match = rules_seq.day_selector.filter(date, &self.ctx);
+            let curr_eval = rule_sequence_schedule_at(rules_seq, date, &self.ctx);
 
             let (new_match, new_eval) = match rules_seq.operator {
                 RuleOperator::Normal => (
@@ -152,106 +133,159 @@ impl OpeningHours {
             prev_eval = new_eval;
         }
 
-        prev_eval.unwrap_or_else(Schedule::empty)
+        prev_eval.unwrap_or_else(Schedule::new)
     }
 
-    pub fn iter_from(
-        &self,
-        from: NaiveDateTime,
-    ) -> Result<impl Iterator<Item = DateTimeRange> + '_, DateLimitExceeded> {
-        self.iter_range(from, DATE_LIMIT)
-    }
-
+    /// Iterate over disjoint intervals of different state restricted to the
+    /// time interval `from..to`.
     pub fn iter_range(
         &self,
         from: NaiveDateTime,
         to: NaiveDateTime,
-    ) -> Result<impl Iterator<Item = DateTimeRange> + '_, DateLimitExceeded> {
-        if from >= DATE_LIMIT || to > DATE_LIMIT {
-            Err(DateLimitExceeded)
+    ) -> impl Iterator<Item = DateTimeRange> + Send + Sync {
+        let from = std::cmp::min(DATE_LIMIT, from);
+        let to = std::cmp::min(DATE_LIMIT, to);
+
+        TimeDomainIterator::new(self, from, to)
+            .take_while(move |dtr| dtr.range.start < to)
+            .map(move |dtr| {
+                let start = std::cmp::max(dtr.range.start, from);
+                let end = std::cmp::min(dtr.range.end, to);
+                DateTimeRange::new_with_sorted_comments(start..end, dtr.kind, dtr.comments)
+            })
+    }
+
+    // --
+    // -- High level implementations / Syntactic sugar
+    // --
+
+    // Same as [`OpeningHours::iter_range`] but with an open end.
+    pub fn iter_from(
+        &self,
+        from: NaiveDateTime,
+    ) -> impl Iterator<Item = DateTimeRange> + Send + Sync {
+        self.iter_range(from, DATE_LIMIT)
+    }
+
+    /// Get the next time where the state will change.
+    ///
+    /// ```
+    /// use chrono::NaiveDateTime;
+    /// use opening_hours::OpeningHours;
+    /// use opening_hours_syntax::RuleKind;
+    ///
+    /// let oh = OpeningHours::parse("12:00-18:00 open, 18:00-20:00 unknown").unwrap();
+    /// let date_1 = NaiveDateTime::parse_from_str("2024-11-18 15:00", "%Y-%m-%d %H:%M").unwrap();
+    /// let date_2 = NaiveDateTime::parse_from_str("2024-11-18 18:00", "%Y-%m-%d %H:%M").unwrap();
+    /// assert_eq!(oh.next_change(date_1), Some(date_2));
+    /// ```
+    pub fn next_change(&self, current_time: NaiveDateTime) -> Option<NaiveDateTime> {
+        let interval = self.iter_from(current_time).next()?;
+
+        if interval.range.end == DATE_LIMIT {
+            None
         } else {
-            Ok(TimeDomainIterator::new(self, from, to)
-                .take_while(move |dtr| dtr.range.start < to)
-                .map(move |dtr| {
-                    let start = max(dtr.range.start, from);
-                    let end = min(dtr.range.end, to);
-                    DateTimeRange::new_with_sorted_comments(start..end, dtr.kind, dtr.comments)
-                }))
+            Some(interval.range.end)
         }
     }
 
-    // High level implementations
-
-    pub fn next_change(
-        &self,
-        current_time: NaiveDateTime,
-    ) -> Result<NaiveDateTime, DateLimitExceeded> {
-        Ok(self
-            .iter_from(current_time)?
-            .next()
-            .map(|dtr| dtr.range.end)
-            .unwrap_or(DATE_LIMIT))
-    }
-
-    pub fn state(&self, current_time: NaiveDateTime) -> Result<RuleKind, DateLimitExceeded> {
-        Ok(self
-            .iter_range(current_time, current_time + Duration::minutes(1))?
+    /// Get the state at given time.
+    ///
+    /// ```
+    /// use chrono::NaiveDateTime;
+    /// use opening_hours::OpeningHours;
+    /// use opening_hours_syntax::RuleKind;
+    ///
+    /// let oh = OpeningHours::parse("12:00-18:00 open, 18:00-20:00 unknown").unwrap();
+    /// let date_1 = NaiveDateTime::parse_from_str("2024-11-18 15:00", "%Y-%m-%d %H:%M").unwrap();
+    /// let date_2 = NaiveDateTime::parse_from_str("2024-11-18 19:00", "%Y-%m-%d %H:%M").unwrap();
+    /// assert_eq!(oh.state(date_1), RuleKind::Open);
+    /// assert_eq!(oh.state(date_2), RuleKind::Unknown);
+    /// ```
+    pub fn state(&self, current_time: NaiveDateTime) -> RuleKind {
+        self.iter_range(current_time, current_time + Duration::minutes(1))
             .next()
             .map(|dtr| dtr.kind)
-            .unwrap_or(RuleKind::Unknown))
+            .unwrap_or(RuleKind::Unknown)
     }
 
+    /// Check if this is open at a given time.
+    ///
+    /// ```
+    /// use chrono::NaiveDateTime;
+    /// use opening_hours::OpeningHours;
+    ///
+    /// let oh = OpeningHours::parse("12:00-18:00 open, 18:00-20:00 unknown").unwrap();
+    /// let date_1 = NaiveDateTime::parse_from_str("2024-11-18 15:00", "%Y-%m-%d %H:%M").unwrap();
+    /// let date_2 = NaiveDateTime::parse_from_str("2024-11-18 19:00", "%Y-%m-%d %H:%M").unwrap();
+    /// assert!(oh.is_open(date_1));
+    /// assert!(!oh.is_open(date_2));
+    /// ```
     pub fn is_open(&self, current_time: NaiveDateTime) -> bool {
-        matches!(self.state(current_time), Ok(RuleKind::Open))
+        self.state(current_time) == RuleKind::Open
     }
 
+    /// Check if this is closed at a given time.
+    ///
+    /// ```
+    /// use chrono::NaiveDateTime;
+    /// use opening_hours::OpeningHours;
+    ///
+    /// let oh = OpeningHours::parse("12:00-18:00 open, 18:00-20:00 unknown").unwrap();
+    /// let date_1 = NaiveDateTime::parse_from_str("2024-11-18 10:00", "%Y-%m-%d %H:%M").unwrap();
+    /// let date_2 = NaiveDateTime::parse_from_str("2024-11-18 19:00", "%Y-%m-%d %H:%M").unwrap();
+    /// assert!(oh.is_closed(date_1));
+    /// assert!(!oh.is_closed(date_2));
+    /// ```
     pub fn is_closed(&self, current_time: NaiveDateTime) -> bool {
-        matches!(self.state(current_time), Ok(RuleKind::Closed))
+        self.state(current_time) == RuleKind::Closed
     }
 
+    /// Check if this is unknown at a given time.
+    ///
+    /// ```
+    /// use chrono::NaiveDateTime;
+    /// use opening_hours::OpeningHours;
+    ///
+    /// let oh = OpeningHours::parse("12:00-18:00 open, 18:00-20:00 unknown").unwrap();
+    /// let date_1 = NaiveDateTime::parse_from_str("2024-11-18 19:00", "%Y-%m-%d %H:%M").unwrap();
+    /// let date_2 = NaiveDateTime::parse_from_str("2024-11-18 15:00", "%Y-%m-%d %H:%M").unwrap();
+    /// assert!(oh.is_unknown(date_1));
+    /// assert!(!oh.is_unknown(date_2));
+    /// ```
     pub fn is_unknown(&self, current_time: NaiveDateTime) -> bool {
-        matches!(
-            self.state(current_time),
-            Err(DateLimitExceeded) | Ok(RuleKind::Unknown)
-        )
+        self.state(current_time) == RuleKind::Unknown
     }
+}
 
-    pub fn intervals(
-        &self,
-        from: NaiveDateTime,
-        to: NaiveDateTime,
-    ) -> Result<impl Iterator<Item = DateTimeRange>, DateLimitExceeded> {
-        Ok(self
-            .iter_from(from)?
-            .take_while(move |dtr| dtr.range.start < to)
-            .map(move |dtr| {
-                let start = max(dtr.range.start, from);
-                let end = min(dtr.range.end, to);
-                DateTimeRange::new_with_sorted_comments(start..end, dtr.kind, dtr.comments)
-            }))
+impl FromStr for OpeningHours {
+    type Err = ParserError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::parse(s)
     }
 }
 
 impl Display for OpeningHours {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        RuleSequence::write_rules_seq(f, &self.rules)
+        write!(f, "{}", self.expr)
     }
 }
 
-fn rule_sequence_schedule_at<'s>(
-    rule_sequence: &'s RuleSequence,
+fn rule_sequence_schedule_at(
+    rule_sequence: &RuleSequence,
     date: NaiveDate,
-    holiday: &CompactCalendar,
-) -> Option<Schedule<'s>> {
+    ctx: &Context,
+) -> Option<Schedule> {
     let from_today = Some(date)
-        .filter(|date| rule_sequence.day_selector.filter(*date, holiday))
+        .filter(|date| rule_sequence.day_selector.filter(*date, ctx))
         .map(|date| time_selector_intervals_at(&rule_sequence.time_selector, date))
-        .map(|rgs| Schedule::from_ranges(rgs, rule_sequence.kind, rule_sequence.comments.to_ref()));
+        .map(|rgs| Schedule::from_ranges(rgs, rule_sequence.kind, &rule_sequence.comments));
 
     let from_yesterday = (date.pred_opt())
-        .filter(|prev| rule_sequence.day_selector.filter(*prev, holiday))
+        .filter(|prev| rule_sequence.day_selector.filter(*prev, ctx))
         .map(|prev| time_selector_intervals_at_next_day(&rule_sequence.time_selector, prev))
-        .map(|rgs| Schedule::from_ranges(rgs, rule_sequence.kind, rule_sequence.comments.to_ref()));
+        .map(|rgs| Schedule::from_ranges(rgs, rule_sequence.kind, &rule_sequence.comments));
 
     match (from_today, from_yesterday) {
         (Some(sched_1), Some(sched_2)) => Some(sched_1.addition(sched_2)),
@@ -261,30 +295,27 @@ fn rule_sequence_schedule_at<'s>(
 
 // TimeDomainIterator
 
-pub struct TimeDomainIterator<'d> {
-    opening_hours: &'d OpeningHours,
+pub struct TimeDomainIterator {
+    opening_hours: OpeningHours,
     curr_date: NaiveDate,
-    curr_schedule: Peekable<Box<dyn Iterator<Item = TimeRange<'d>> + 'd>>,
+    curr_schedule: Peekable<crate::schedule::IntoIter>,
     end_datetime: NaiveDateTime,
 }
 
-impl<'d> TimeDomainIterator<'d> {
-    pub fn new(
-        opening_hours: &'d OpeningHours,
+impl TimeDomainIterator {
+    fn new(
+        opening_hours: &OpeningHours,
         start_datetime: NaiveDateTime,
         end_datetime: NaiveDateTime,
     ) -> Self {
+        let opening_hours = opening_hours.clone();
         let start_date = start_datetime.date();
         let start_time = start_datetime.time().into();
+        let mut curr_schedule = opening_hours.schedule_at(start_date).into_iter().peekable();
 
-        let mut curr_schedule = {
-            if start_datetime < end_datetime {
-                opening_hours.schedule_at(start_date).into_iter_filled()
-            } else {
-                Box::new(empty())
-            }
+        if start_datetime >= end_datetime {
+            (&mut curr_schedule).for_each(|_| {});
         }
-        .peekable();
 
         while curr_schedule
             .peek()
@@ -312,7 +343,7 @@ impl<'d> TimeDomainIterator<'d> {
                     .next_change_hint(self.curr_date)
                     .unwrap_or_else(|| self.curr_date.succ_opt().expect("reached invalid date"));
 
-                assert!(next_change_hint > self.curr_date);
+                assert!(next_change_hint > self.curr_date, "infinite loop detected");
                 self.curr_date = next_change_hint;
 
                 if self.curr_date <= self.end_datetime.date() && self.curr_date < DATE_LIMIT.date()
@@ -320,16 +351,16 @@ impl<'d> TimeDomainIterator<'d> {
                     self.curr_schedule = self
                         .opening_hours
                         .schedule_at(self.curr_date)
-                        .into_iter_filled()
-                        .peekable()
+                        .into_iter()
+                        .peekable();
                 }
             }
         }
     }
 }
 
-impl<'d> Iterator for TimeDomainIterator<'d> {
-    type Item = DateTimeRange<'d>;
+impl Iterator for TimeDomainIterator {
+    type Item = DateTimeRange;
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(curr_tr) = self.curr_schedule.peek().cloned() {
@@ -349,7 +380,7 @@ impl<'d> Iterator for TimeDomainIterator<'d> {
                 .curr_schedule
                 .peek()
                 .map(|tr| tr.range.start)
-                .unwrap_or_else(|| ExtendedTime::new(0, 0));
+                .unwrap_or_else(|| ExtendedTime::new(0, 0).unwrap());
 
             let end = std::cmp::min(
                 self.end_datetime,

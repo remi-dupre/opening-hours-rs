@@ -1,4 +1,6 @@
-**/target
+data/osm_examples.txt
+docs
 fuzz/artifacts
 fuzz/corpus
-python/docs
+__pycache__
+**/target
