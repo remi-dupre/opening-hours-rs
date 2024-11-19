@@ -8,7 +8,7 @@ use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime};
 use opening_hours_syntax::extended_time::ExtendedTime;
 use opening_hours_syntax::rules::{OpeningHoursExpression, RuleKind, RuleOperator, RuleSequence};
 
-use crate::context::Context;
+use crate::context::{Context, Localize, NoLocation};
 use crate::date_filter::DateFilter;
 use crate::error::ParserError;
 use crate::schedule::Schedule;
@@ -37,18 +37,14 @@ pub const DATE_LIMIT: NaiveDateTime = {
 /// Note that all big inner structures are immutable and wrapped by an `Arc`
 /// so this is safe and fast to clone.
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
-pub struct OpeningHours {
+pub struct OpeningHours<L: Localize = NoLocation> {
     /// Rules describing opening hours
     expr: Arc<OpeningHoursExpression>,
     /// Evalutation context
-    ctx: Context,
+    ctx: Context<L>,
 }
 
-impl OpeningHours {
-    // --
-    // -- Builder Methods
-    // --
-
+impl OpeningHours<NoLocation> {
     /// Parse a raw opening hours expression.
     ///
     /// ```
@@ -61,6 +57,12 @@ impl OpeningHours {
         let expr = Arc::new(opening_hours_syntax::parse(raw_oh)?);
         Ok(Self { expr, ctx: Context::default() })
     }
+}
+
+impl<L: Localize> OpeningHours<L> {
+    // --
+    // -- Builder Methods
+    // --
 
     /// Set a new evaluation context for this expression.
     ///
@@ -72,7 +74,7 @@ impl OpeningHours {
     ///     .unwrap()
     ///     .with_context(Context::default());
     /// ```
-    pub fn with_context(mut self, ctx: Context) -> Self {
+    pub fn with_context(mut self, ctx: Context<L>) -> Self {
         self.ctx = ctx;
         self
     }
@@ -280,10 +282,10 @@ impl Display for OpeningHours {
     }
 }
 
-fn rule_sequence_schedule_at(
+fn rule_sequence_schedule_at<L: Localize>(
     rule_sequence: &RuleSequence,
     date: NaiveDate,
-    ctx: &Context,
+    ctx: &Context<L>,
 ) -> Option<Schedule> {
     let from_today = Some(date)
         .filter(|date| rule_sequence.day_selector.filter(*date, ctx))
@@ -303,16 +305,16 @@ fn rule_sequence_schedule_at(
 
 // TimeDomainIterator
 
-pub struct TimeDomainIterator {
-    opening_hours: OpeningHours,
+pub struct TimeDomainIterator<L: Clone + Localize> {
+    opening_hours: OpeningHours<L>,
     curr_date: NaiveDate,
     curr_schedule: Peekable<crate::schedule::IntoIter>,
     end_datetime: NaiveDateTime,
 }
 
-impl TimeDomainIterator {
+impl<L: Localize> TimeDomainIterator<L> {
     fn new(
-        opening_hours: &OpeningHours,
+        opening_hours: &OpeningHours<L>,
         start_datetime: NaiveDateTime,
         end_datetime: NaiveDateTime,
     ) -> Self {
@@ -367,7 +369,7 @@ impl TimeDomainIterator {
     }
 }
 
-impl Iterator for TimeDomainIterator {
+impl<L: Localize> Iterator for TimeDomainIterator<L> {
     type Item = DateTimeRange;
 
     fn next(&mut self) -> Option<Self::Item> {
