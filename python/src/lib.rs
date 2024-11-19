@@ -6,12 +6,10 @@ use chrono::NaiveDateTime;
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 
+use self::types::{get_time, res_time};
 use crate::errors::ParserError;
 use crate::types::{RangeIterator, State};
 use ::opening_hours::OpeningHours;
-
-use self::types::get_time;
-use self::types::res_time;
 
 /// Validate that input string is a correct opening hours description.
 ///
