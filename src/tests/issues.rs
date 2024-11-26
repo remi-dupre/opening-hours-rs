@@ -79,3 +79,23 @@ fn gh52_no_interval_after_last_midnight() -> Result<(), Error> {
     assert_eq!(intervals.next(), None);
     Ok(())
 }
+
+/// https://github.com/remi-dupre/opening-hours-rs/issues/56
+#[test]
+fn gh56_only_close_when_no_day_filter() -> Result<(), Error> {
+    let oh: OpeningHours = dbg!("00:30-05:30".parse()?);
+    let date_start = datetime!("2024-11-25 17:30");
+    let date_end = datetime!("2024-11-26 09:00");
+    let mut intervals = oh.iter_range(date_start, date_end);
+
+    assert_eq!(
+        intervals.next(),
+        Some(DateTimeRange {
+            range: date_start..datetime!("2024-11-26 00:30"),
+            kind: RuleKind::Closed,
+            comments: Default::default(),
+        })
+    );
+
+    Ok(())
+}

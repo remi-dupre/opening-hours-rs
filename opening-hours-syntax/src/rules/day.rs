@@ -40,7 +40,8 @@ pub struct DaySelector {
 }
 
 impl DaySelector {
-    pub(crate) fn is_empty(&self) -> bool {
+    /// Return `true` if there is no date filter in this expression.
+    pub fn is_empty(&self) -> bool {
         self.year.is_empty()
             && self.monthday.is_empty()
             && self.week.is_empty()

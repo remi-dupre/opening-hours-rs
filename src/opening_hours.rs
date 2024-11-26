@@ -12,7 +12,9 @@ use crate::context::Context;
 use crate::date_filter::DateFilter;
 use crate::error::ParserError;
 use crate::schedule::Schedule;
-use crate::time_filter::{time_selector_intervals_at, time_selector_intervals_at_next_day};
+use crate::time_filter::{
+    time_selector_intervals_at, time_selector_intervals_at_next_day, TimeFilter,
+};
 use crate::DateTimeRange;
 
 /// The upper bound of dates handled by specification
@@ -90,7 +92,13 @@ impl OpeningHours {
     fn next_change_hint(&self, date: NaiveDate) -> Option<NaiveDate> {
         (self.expr.rules)
             .iter()
-            .map(|rule| rule.day_selector.next_change_hint(date, &self.ctx))
+            .map(|rule| {
+                if rule.time_selector.is_immutable_full_day() && rule.day_selector.is_empty() {
+                    Some(DATE_LIMIT.date())
+                } else {
+                    rule.day_selector.next_change_hint(date, &self.ctx)
+                }
+            })
             .min()
             .flatten()
     }

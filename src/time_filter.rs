@@ -11,13 +11,11 @@ pub(crate) fn time_selector_intervals_at(
     time_selector: &ts::TimeSelector,
     date: NaiveDate,
 ) -> impl Iterator<Item = Range<ExtendedTime>> + '_ {
-    ranges_union(
-        time_selector_as_naive(time_selector, date).filter_map(|range| {
-            let dstart = ExtendedTime::new(0, 0).unwrap();
-            let dend = ExtendedTime::new(24, 0).unwrap();
-            range_intersection(range, dstart..dend)
-        }),
-    )
+    ranges_union(time_selector.as_naive(date).filter_map(|range| {
+        let dstart = ExtendedTime::new(0, 0).unwrap();
+        let dend = ExtendedTime::new(24, 0).unwrap();
+        range_intersection(range, dstart..dend)
+    }))
 }
 
 pub(crate) fn time_selector_intervals_at_next_day(
@@ -25,7 +23,8 @@ pub(crate) fn time_selector_intervals_at_next_day(
     date: NaiveDate,
 ) -> impl Iterator<Item = Range<ExtendedTime>> + '_ {
     ranges_union(
-        time_selector_as_naive(time_selector, date)
+        time_selector
+            .as_naive(date)
             .filter_map(|range| {
                 let dstart = ExtendedTime::new(24, 0).unwrap();
                 let dend = ExtendedTime::new(48, 0).unwrap();
@@ -39,27 +38,43 @@ pub(crate) fn time_selector_intervals_at_next_day(
     )
 }
 
-fn time_selector_as_naive(
-    time_selector: &ts::TimeSelector,
-    date: NaiveDate,
-) -> impl Iterator<Item = Range<ExtendedTime>> + '_ {
-    time_selector
-        .time
-        .iter()
-        .map(move |span| span.as_naive(date))
-}
-
 /// Trait used to project a time representation to its naive representation at
 /// a given date.
-pub(crate) trait AsNaive {
-    type Output;
-    fn as_naive(&self, date: NaiveDate) -> Self::Output;
+pub(crate) trait TimeFilter {
+    type Output<'a>
+    where
+        Self: 'a;
+
+    /// Check if this filter is always matching the full day.
+    fn is_immutable_full_day(&self) -> bool {
+        false
+    }
+
+    /// Project a time representation to its naive representation at a given date.
+    fn as_naive(&self, date: NaiveDate) -> Self::Output<'_>;
 }
 
-impl AsNaive for ts::TimeSpan {
-    type Output = Range<ExtendedTime>;
+impl TimeFilter for ts::TimeSelector {
+    type Output<'a> = NaiveTimeSelectorIterator<'a>;
 
-    fn as_naive(&self, date: NaiveDate) -> Self::Output {
+    fn is_immutable_full_day(&self) -> bool {
+        self.time.iter().all(|span| span.is_immutable_full_day())
+    }
+
+    fn as_naive(&self, date: NaiveDate) -> Self::Output<'_> {
+        NaiveTimeSelectorIterator { date, inner: self.time.iter() }
+    }
+}
+
+impl TimeFilter for ts::TimeSpan {
+    type Output<'a> = Range<ExtendedTime>;
+
+    fn is_immutable_full_day(&self) -> bool {
+        self.range.start == ts::Time::Fixed(ExtendedTime::new(0, 0).unwrap())
+            && self.range.end == ts::Time::Fixed(ExtendedTime::new(24, 0).unwrap())
+    }
+
+    fn as_naive(&self, date: NaiveDate) -> Self::Output<'_> {
         let start = self.range.start.as_naive(date);
         let end = self.range.end.as_naive(date);
 
@@ -78,10 +93,10 @@ impl AsNaive for ts::TimeSpan {
     }
 }
 
-impl AsNaive for ts::Time {
-    type Output = ExtendedTime;
+impl TimeFilter for ts::Time {
+    type Output<'a> = ExtendedTime;
 
-    fn as_naive(&self, date: NaiveDate) -> Self::Output {
+    fn as_naive(&self, date: NaiveDate) -> Self::Output<'_> {
         match self {
             ts::Time::Fixed(naive) => *naive,
             ts::Time::Variable(variable) => variable.as_naive(date),
@@ -89,10 +104,10 @@ impl AsNaive for ts::Time {
     }
 }
 
-impl AsNaive for ts::VariableTime {
-    type Output = ExtendedTime;
+impl TimeFilter for ts::VariableTime {
+    type Output<'a> = ExtendedTime;
 
-    fn as_naive(&self, date: NaiveDate) -> Self::Output {
+    fn as_naive(&self, date: NaiveDate) -> Self::Output<'_> {
         self.event
             .as_naive(date)
             .add_minutes(self.offset)
@@ -100,10 +115,10 @@ impl AsNaive for ts::VariableTime {
     }
 }
 
-impl AsNaive for ts::TimeEvent {
-    type Output = ExtendedTime;
+impl TimeFilter for ts::TimeEvent {
+    type Output<'a> = ExtendedTime;
 
-    fn as_naive(&self, _date: NaiveDate) -> Self::Output {
+    fn as_naive(&self, _date: NaiveDate) -> Self::Output<'_> {
         // TODO: real computation based on the day (and position/timezone?)
         match self {
             Self::Dawn => ExtendedTime::new(6, 0).unwrap(),
@@ -111,5 +126,20 @@ impl AsNaive for ts::TimeEvent {
             Self::Sunset => ExtendedTime::new(19, 0).unwrap(),
             Self::Dusk => ExtendedTime::new(20, 0).unwrap(),
         }
+    }
+}
+
+/// Output type for [`TimeSelector::as_naive`].
+pub(crate) struct NaiveTimeSelectorIterator<'a> {
+    date: NaiveDate,
+    inner: std::slice::Iter<'a, ts::TimeSpan>,
+}
+
+impl<'a> Iterator for NaiveTimeSelectorIterator<'a> {
+    type Item = <ts::TimeSpan as TimeFilter>::Output<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let span = self.inner.next()?;
+        Some(span.as_naive(self.date))
     }
 }
