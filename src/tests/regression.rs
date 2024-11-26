@@ -126,31 +126,28 @@ fn s009_pj_no_open_before_separator() {
     );
 }
 
-// TODO: this is *has* to be slow with current implementation as the date
-//       filter "24/7" may change every day. This could be improved through
-//       a special filter on immutable full schedules.
-// #[test]
-// fn s010_pj_slow_after_24_7() -> Result<(), Error> {
-//     exec_with_timeout(Duration::from_millis(100), || {
-//         assert!("24/7 open ; 2021Jan-Feb off"
-//             .parse::<OpeningHours>()?
-//             .next_change(datetime!("2021-07-09 19:30"))
-//             .is_none());
-//
-//         Ok::<(), Error>(())
-//     })?;
-//
-//     exec_with_timeout(Duration::from_millis(100), || {
-//         assert!("24/7 open ; 2021 Jan 01-Feb 10 off"
-//             .parse::<OpeningHours>()?
-//             .next_change(datetime!("2021-07-09 19:30"))
-//             .is_none());
-//
-//         Ok::<(), Error>(())
-//     })?;
-//
-//     Ok(())
-// }
+#[test]
+fn s010_pj_slow_after_24_7() -> Result<(), Error> {
+    exec_with_timeout(Duration::from_millis(100), || {
+        assert!("24/7 open ; 2021Jan-Feb off"
+            .parse::<OpeningHours>()?
+            .next_change(datetime!("2021-07-09 19:30"))
+            .is_none());
+
+        Ok::<(), Error>(())
+    })?;
+
+    exec_with_timeout(Duration::from_millis(100), || {
+        assert!("24/7 open ; 2021 Jan 01-Feb 10 off"
+            .parse::<OpeningHours>()?
+            .next_change(datetime!("2021-07-09 19:30"))
+            .is_none());
+
+        Ok::<(), Error>(())
+    })?;
+
+    Ok(())
+}
 
 #[test]
 fn s011_fuzz_extreme_year() -> Result<(), Error> {
