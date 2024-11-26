@@ -54,6 +54,11 @@ impl DateFilter for ds::DaySelector {
     }
 
     fn next_change_hint(&self, date: NaiveDate, ctx: &Context) -> Option<NaiveDate> {
+        // If there is no date filter, then all dates shall match
+        if self.is_empty() {
+            return date.succ_opt();
+        }
+
         *[
             self.year.next_change_hint(date, ctx),
             self.monthday.next_change_hint(date, ctx),

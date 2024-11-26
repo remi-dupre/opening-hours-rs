@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.1
+
+### Fixes
+
+- Fix [#56](https://github.com/remi-dupre/opening-hours-rs/issues/56):
+  expressions with no date filter (eg. `00:30-05:30`) may be considered as
+  always closed.
+
 ## 0.9.0
 
 ### General
@@ -22,7 +30,6 @@
 - The iterator returned by `OpeningHours.intervals` can be moved between
   threads.
 
-
 ## 0.8.3
 
 ### Fixes
@@ -30,20 +37,17 @@
 - Fix [#52](https://github.com/remi-dupre/opening-hours-rs/pull/52): intervals
   were stopping at midnight before the last day.
 
-
 ## 0.8.2
 
 ### Fixes
 
 - Python's Linux binary build were not uploading
 
-
 ## 0.8.1
 
 ### Fixes
 
 - Rust crate couldn't publish
-
 
 ## 0.8.0
 
