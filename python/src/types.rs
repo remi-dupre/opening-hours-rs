@@ -1,9 +1,12 @@
+use std::convert::Infallible;
+use std::sync::OnceLock;
+
 use chrono::{Local, NaiveDateTime};
 use opening_hours::opening_hours::DATE_LIMIT;
-use pyo3::prelude::*;
-
 use opening_hours::DateTimeRange;
 use opening_hours_syntax::rules::RuleKind;
+use pyo3::prelude::*;
+use pyo3::types::PyString;
 
 pub(crate) fn get_time(datetime: Option<NaiveDateTime>) -> NaiveDateTime {
     datetime.unwrap_or_else(|| Local::now().naive_local())
@@ -37,13 +40,23 @@ impl From<RuleKind> for State {
     }
 }
 
-impl IntoPy<Py<PyAny>> for State {
-    fn into_py(self, py: Python<'_>) -> Py<PyAny> {
-        match self {
-            Self::Open => "open".into_py(py),
-            Self::Closed => "closed".into_py(py),
-            Self::Unknown => "unknown".into_py(py),
-        }
+impl<'py> IntoPyObject<'py> for State {
+    type Target = PyString;
+    type Output = Borrowed<'static, 'py, Self::Target>;
+    type Error = Infallible;
+
+    fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+        static PY_CACHE_OPEN: OnceLock<Py<PyString>> = OnceLock::new();
+        static PY_CACHE_CLOSED: OnceLock<Py<PyString>> = OnceLock::new();
+        static PY_CACHE_UNKNOWN: OnceLock<Py<PyString>> = OnceLock::new();
+
+        let res = match self {
+            Self::Open => PY_CACHE_OPEN.get_or_init(|| PyString::new(py, "open").unbind()),
+            Self::Closed => PY_CACHE_CLOSED.get_or_init(|| PyString::new(py, "closed").unbind()),
+            Self::Unknown => PY_CACHE_UNKNOWN.get_or_init(|| PyString::new(py, "unknown").unbind()),
+        };
+
+        Ok(res.bind_borrowed(py))
     }
 }
 
