@@ -19,14 +19,8 @@ use crate::DateTimeRange;
 
 /// The upper bound of dates handled by specification
 pub const DATE_LIMIT: NaiveDateTime = {
-    let Some(date) = NaiveDate::from_ymd_opt(10_000, 1, 1) else {
-        unreachable!()
-    };
-
-    let Some(time) = NaiveTime::from_hms_opt(0, 0, 0) else {
-        unreachable!()
-    };
-
+    let date = NaiveDate::from_ymd_opt(10_000, 1, 1).unwrap();
+    let time = NaiveTime::from_hms_opt(0, 0, 0).unwrap();
     NaiveDateTime::new(date, time)
 };
 
