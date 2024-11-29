@@ -199,6 +199,7 @@ impl PyOpeningHours {
 fn opening_hours(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     pyo3_log::init();
     m.add_function(wrap_pyfunction!(validate, m)?)?;
+    m.add_class::<State>()?;
     m.add_class::<PyOpeningHours>()?;
     Ok(())
 }

@@ -1,12 +1,8 @@
-use std::convert::Infallible;
-use std::sync::OnceLock;
-
 use chrono::{Local, NaiveDateTime};
 use opening_hours::opening_hours::DATE_LIMIT;
 use opening_hours::DateTimeRange;
 use opening_hours_syntax::rules::RuleKind;
 use pyo3::prelude::*;
-use pyo3::types::PyString;
 
 pub(crate) fn get_time(datetime: Option<NaiveDateTime>) -> NaiveDateTime {
     datetime.unwrap_or_else(|| Local::now().naive_local())
@@ -24,9 +20,15 @@ pub(crate) fn res_time(datetime: NaiveDateTime) -> Option<NaiveDateTime> {
 // --- State
 // ---
 
+/// Specify the state of an opening hours interval.
+#[pyclass(ord, eq, frozen, hash, str, rename_all = "UPPERCASE")]
+#[derive(Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub enum State {
+    /// Currently open
     Open,
+    /// Currently closed
     Closed,
+    /// May be open depending on context
     Unknown,
 }
 
@@ -40,25 +42,35 @@ impl From<RuleKind> for State {
     }
 }
 
-impl<'py> IntoPyObject<'py> for State {
-    type Target = PyString;
-    type Output = Borrowed<'static, 'py, Self::Target>;
-    type Error = Infallible;
-
-    fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
-        static PY_CACHE_OPEN: OnceLock<Py<PyString>> = OnceLock::new();
-        static PY_CACHE_CLOSED: OnceLock<Py<PyString>> = OnceLock::new();
-        static PY_CACHE_UNKNOWN: OnceLock<Py<PyString>> = OnceLock::new();
-
-        let res = match self {
-            Self::Open => PY_CACHE_OPEN.get_or_init(|| PyString::new(py, "open").unbind()),
-            Self::Closed => PY_CACHE_CLOSED.get_or_init(|| PyString::new(py, "closed").unbind()),
-            Self::Unknown => PY_CACHE_UNKNOWN.get_or_init(|| PyString::new(py, "unknown").unbind()),
-        };
-
-        Ok(res.bind_borrowed(py))
+impl std::fmt::Display for State {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            State::Open => write!(f, "open"),
+            State::Closed => write!(f, "closed"),
+            State::Unknown => write!(f, "unknown"),
+        }
     }
 }
+
+// impl<'py> IntoPyObject<'py> for State {
+//     type Target = PyString;
+//     type Output = Borrowed<'static, 'py, Self::Target>;
+//     type Error = Infallible;
+//
+//     fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+//         static PY_CACHE_OPEN: OnceLock<Py<PyString>> = OnceLock::new();
+//         static PY_CACHE_CLOSED: OnceLock<Py<PyString>> = OnceLock::new();
+//         static PY_CACHE_UNKNOWN: OnceLock<Py<PyString>> = OnceLock::new();
+//
+//         let res = match self {
+//             Self::Open => PY_CACHE_OPEN.get_or_init(|| PyString::new(py, "open").unbind()),
+//             Self::Closed => PY_CACHE_CLOSED.get_or_init(|| PyString::new(py, "closed").unbind()),
+//             Self::Unknown => PY_CACHE_UNKNOWN.get_or_init(|| PyString::new(py, "unknown").unbind()),
+//         };
+//
+//         Ok(res.bind_borrowed(py))
+//     }
+// }
 
 // ---
 // --- RangeIterator
@@ -89,6 +101,7 @@ impl RangeIterator {
     }
 }
 
+/// Iterator over a range of opening hours.
 #[pymethods]
 impl RangeIterator {
     fn __iter__(slf: PyRef<Self>) -> Py<Self> {
