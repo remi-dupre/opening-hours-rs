@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.10.0
+
+### Python
+
+- Add the `opening_hours.State` type.
+
 ## 0.9.1
 
 ### Fixes
