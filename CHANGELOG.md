@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.10.0
+
+### Rust
+
+- Rust 1.83
+
+### Python
+
+- Add the `opening_hours.State` type.
+
 ## 0.9.1
 
 ### Fixes

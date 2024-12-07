@@ -102,18 +102,26 @@ macro_rules! datetime {
 
 #[macro_export]
 macro_rules! schedule_at {
-    ( $expression: expr, $date: expr ) => {{
-        use $crate::{date, OpeningHours};
-        $expression
-            .parse::<OpeningHours>()?
-            .schedule_at(date!($date))
-    }};
-    ( $expression: expr, $date: expr, $region: expr ) => {{
-        use $crate::{date, Context, OpeningHours};
+    (
+        $expression: expr,
+        $date: expr
+        $( , region = $region: expr )?
+        $( , coord = $coord: expr )?
+        $( , )?
+    ) => {{
+        use $crate::{date, Context, OpeningHours,NoLocation };
+
+        let ctx = Context::<NoLocation>::default()
+            $( .with_holidays($region.holidays()) )?
+            $( .with_locale({
+                use $crate::Localize;
+                NoLocation::default().with_tz_from_coords($coord.0, $coord.1)
+            }))?;
+
 
         $expression
             .parse::<OpeningHours>()?
-            .with_context(Context::default().with_holidays($region.holidays()))
+            .with_context(ctx)
             .schedule_at(date!($date))
     }};
 }

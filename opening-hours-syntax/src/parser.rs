@@ -43,7 +43,7 @@ pub fn parse(data: &str) -> Result<rl::OpeningHoursExpression> {
 // ---
 
 fn unexpected_token<T>(token: Rule, parent: Rule) -> T {
-    unreachable!("grammar error: found `{token:?}` inside of `{parent:?}`")
+    unreachable!("Grammar error: found `{token:?}` inside of `{parent:?}`")
 }
 
 fn build_opening_hours(pair: Pair<Rule>) -> Result<Vec<rl::RuleSequence>> {

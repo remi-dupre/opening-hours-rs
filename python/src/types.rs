@@ -1,9 +1,8 @@
 use chrono::{Local, NaiveDateTime};
 use opening_hours::opening_hours::DATE_LIMIT;
-use pyo3::prelude::*;
-
 use opening_hours::DateTimeRange;
 use opening_hours_syntax::rules::RuleKind;
+use pyo3::prelude::*;
 
 pub(crate) fn get_time(datetime: Option<NaiveDateTime>) -> NaiveDateTime {
     datetime.unwrap_or_else(|| Local::now().naive_local())
@@ -21,9 +20,15 @@ pub(crate) fn res_time(datetime: NaiveDateTime) -> Option<NaiveDateTime> {
 // --- State
 // ---
 
+/// Specify the state of an opening hours interval.
+#[pyclass(ord, eq, frozen, hash, str, rename_all = "UPPERCASE")]
+#[derive(Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub enum State {
+    /// Currently open
     Open,
+    /// Currently closed
     Closed,
+    /// May be open depending on context
     Unknown,
 }
 
@@ -37,12 +42,12 @@ impl From<RuleKind> for State {
     }
 }
 
-impl IntoPy<Py<PyAny>> for State {
-    fn into_py(self, py: Python<'_>) -> Py<PyAny> {
+impl std::fmt::Display for State {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Open => "open".into_py(py),
-            Self::Closed => "closed".into_py(py),
-            Self::Unknown => "unknown".into_py(py),
+            State::Open => write!(f, "open"),
+            State::Closed => write!(f, "closed"),
+            State::Unknown => write!(f, "unknown"),
         }
     }
 }
@@ -51,8 +56,7 @@ impl IntoPy<Py<PyAny>> for State {
 // --- RangeIterator
 // ---
 
-/// Iterator that owns a pointer to a [`OpeningHours`] together with a
-/// self reference to it.
+/// Iterator over a range period of an [`OpeningHours`].
 #[pyclass()]
 pub struct RangeIterator {
     iter: Box<dyn Iterator<Item = DateTimeRange> + Send + Sync>,
