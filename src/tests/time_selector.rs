@@ -52,6 +52,39 @@ fn events() -> Result<(), Error> {
 }
 
 #[test]
+fn events_localized() -> Result<(), Error> {
+    assert_eq!(
+        schedule_at!(
+            "(dawn-02:30)-(dusk+02:30)",
+            "2020-06-01",
+            coord = (48.87, 2.29),
+        ),
+        schedule! { 0,00 => Open => 0,56 ; 2,40 => Open => 24,00 }
+    );
+
+    assert_eq!(
+        schedule_at!(
+            "(dawn+00:30)-(dusk-00:30)",
+            "2020-06-01",
+            coord = (48.87, 2.29),
+        ),
+        schedule! { 5,40 => Open => 21,57 }
+    );
+
+    assert_eq!(
+        schedule_at!("sunrise-19:45", "2020-06-01", coord = (48.87, 2.29)),
+        schedule! { 5,51 => Open => 19,45 }
+    );
+
+    assert_eq!(
+        schedule_at!("08:15-sunset", "2020-06-01", coord = (48.87, 2.29)),
+        schedule! { 8,15 => Open => 21,46 }
+    );
+
+    Ok(())
+}
+
+#[test]
 fn overlap() -> Result<(), Error> {
     assert_eq!(
         schedule_at!("10:00-12:00,14:00-25:30", "2020-06-01"),
