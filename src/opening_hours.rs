@@ -140,9 +140,8 @@ impl<L: Localize> OpeningHours<L> {
         prev_eval.unwrap_or_else(Schedule::new)
     }
 
-    /// Iterate over disjoint intervals of different state restricted to the
-    /// time interval `from..to`.
-    pub fn iter_range(
+    /// Same as [`iter_range`], but with naive date input and outputs.
+    fn iter_range_naive(
         &self,
         from: NaiveDateTime,
         to: NaiveDateTime,
@@ -163,12 +162,32 @@ impl<L: Localize> OpeningHours<L> {
     // -- High level implementations / Syntactic sugar
     // --
 
+    /// Iterate over disjoint intervals of different state restricted to the
+    /// time interval `from..to`.
+    pub fn iter_range(
+        &self,
+        from: L::DateTime,
+        to: L::DateTime,
+    ) -> impl Iterator<Item = DateTimeRange<L::DateTime>> + use<'_, L> + Send + Sync {
+        let naive_from = std::cmp::min(DATE_LIMIT, self.ctx.localize.naive(from.clone()));
+        let naive_to = std::cmp::min(DATE_LIMIT, self.ctx.localize.naive(to.clone()));
+
+        self.iter_range_naive(naive_from, naive_to).map(|dtr| {
+            DateTimeRange::new_with_sorted_comments(
+                self.ctx.localize.datetime(dtr.range.start)
+                    ..self.ctx.localize.datetime(dtr.range.end),
+                dtr.kind,
+                dtr.comments,
+            )
+        })
+    }
+
     // Same as [`OpeningHours::iter_range`] but with an open end.
     pub fn iter_from(
         &self,
-        from: NaiveDateTime,
-    ) -> impl Iterator<Item = DateTimeRange> + Send + Sync {
-        self.iter_range(from, DATE_LIMIT)
+        from: L::DateTime,
+    ) -> impl Iterator<Item = DateTimeRange<L::DateTime>> + use<'_, L> + Send + Sync {
+        self.iter_range(from, self.ctx.localize.datetime(DATE_LIMIT))
     }
 
     /// Get the next time where the state will change.
@@ -183,10 +202,10 @@ impl<L: Localize> OpeningHours<L> {
     /// let date_2 = NaiveDateTime::parse_from_str("2024-11-18 18:00", "%Y-%m-%d %H:%M").unwrap();
     /// assert_eq!(oh.next_change(date_1), Some(date_2));
     /// ```
-    pub fn next_change(&self, current_time: NaiveDateTime) -> Option<NaiveDateTime> {
+    pub fn next_change(&self, current_time: L::DateTime) -> Option<L::DateTime> {
         let interval = self.iter_from(current_time).next()?;
 
-        if interval.range.end == DATE_LIMIT {
+        if self.ctx.localize.naive(interval.range.end.clone()) >= DATE_LIMIT {
             None
         } else {
             Some(interval.range.end)
@@ -206,8 +225,8 @@ impl<L: Localize> OpeningHours<L> {
     /// assert_eq!(oh.state(date_1), RuleKind::Open);
     /// assert_eq!(oh.state(date_2), RuleKind::Unknown);
     /// ```
-    pub fn state(&self, current_time: NaiveDateTime) -> RuleKind {
-        self.iter_range(current_time, current_time + Duration::minutes(1))
+    pub fn state(&self, current_time: L::DateTime) -> RuleKind {
+        self.iter_range(current_time.clone(), current_time + Duration::minutes(1))
             .next()
             .map(|dtr| dtr.kind)
             .unwrap_or(RuleKind::Unknown)
@@ -225,7 +244,7 @@ impl<L: Localize> OpeningHours<L> {
     /// assert!(oh.is_open(date_1));
     /// assert!(!oh.is_open(date_2));
     /// ```
-    pub fn is_open(&self, current_time: NaiveDateTime) -> bool {
+    pub fn is_open(&self, current_time: L::DateTime) -> bool {
         self.state(current_time) == RuleKind::Open
     }
 
@@ -241,7 +260,7 @@ impl<L: Localize> OpeningHours<L> {
     /// assert!(oh.is_closed(date_1));
     /// assert!(!oh.is_closed(date_2));
     /// ```
-    pub fn is_closed(&self, current_time: NaiveDateTime) -> bool {
+    pub fn is_closed(&self, current_time: L::DateTime) -> bool {
         self.state(current_time) == RuleKind::Closed
     }
 
@@ -257,7 +276,7 @@ impl<L: Localize> OpeningHours<L> {
     /// assert!(oh.is_unknown(date_1));
     /// assert!(!oh.is_unknown(date_2));
     /// ```
-    pub fn is_unknown(&self, current_time: NaiveDateTime) -> bool {
+    pub fn is_unknown(&self, current_time: L::DateTime) -> bool {
         self.state(current_time) == RuleKind::Unknown
     }
 }
