@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use std::ops::Add;
 use std::sync::Arc;
 
-use chrono::{Datelike, Duration, NaiveDate, NaiveDateTime, NaiveTime, Timelike};
+use chrono::{Datelike, Duration, NaiveDate, NaiveDateTime, NaiveTime, TimeDelta, Timelike};
 use compact_calendar::CompactCalendar;
 use opening_hours_syntax::rules::time::TimeEvent;
 
@@ -31,26 +31,39 @@ pub trait Localize: Clone + Send + Sync {
         + Debug
         + Eq
         + Ord
+        + Sync
+        + Send
         + Datelike
         + Timelike
         + Add<Duration, Output = Self::DateTime>;
 
     /// The type that results in specifying a new time zone
-    type WithTz<T: chrono::TimeZone + Send + Sync>: LocalizeWithTz;
+    type WithTz<T>: LocalizeWithTz
+    where
+        T: chrono::TimeZone + Send + Sync,
+        T::Offset: Send + Sync;
+
+    /// Get naive local time
+    fn naive(&self, dt: Self::DateTime) -> NaiveDateTime;
+
+    /// Localize a naive datetime
+    fn datetime(&self, naive: NaiveDateTime) -> Self::DateTime;
 
     /// Get the localized time for a sun event at a given date
     fn event_time(&self, _date: NaiveDate, event: TimeEvent) -> NaiveTime {
         match event {
-            TimeEvent::Dawn => NaiveTime::from_hms_opt(6, 0, 0),
-            TimeEvent::Sunrise => NaiveTime::from_hms_opt(7, 0, 0),
-            TimeEvent::Sunset => NaiveTime::from_hms_opt(19, 0, 0),
-            TimeEvent::Dusk => NaiveTime::from_hms_opt(20, 0, 0),
+            TimeEvent::Dawn => NaiveTime::from_hms_opt(6, 0, 0).unwrap(),
+            TimeEvent::Sunrise => NaiveTime::from_hms_opt(7, 0, 0).unwrap(),
+            TimeEvent::Sunset => NaiveTime::from_hms_opt(19, 0, 0).unwrap(),
+            TimeEvent::Dusk => NaiveTime::from_hms_opt(20, 0, 0).unwrap(),
         }
-        .unwrap()
     }
 
-    /// Specify a new tiem zone
-    fn with_tz<T: chrono::TimeZone + Send + Sync>(self, tz: T) -> Self::WithTz<T>;
+    /// Specify a new time zone
+    fn with_tz<T>(self, tz: T) -> Self::WithTz<T>
+    where
+        T: chrono::TimeZone + Send + Sync,
+        T::Offset: Send + Sync;
 
     // // #[cfg(feature = "localize")]
     // fn try_with_coord_infer_tz(
@@ -89,11 +102,25 @@ pub struct NoLocation {
 
 impl Localize for NoLocation {
     type DateTime = NaiveDateTime;
-    type WithTz<Tz: chrono::TimeZone + Send + Sync> = TzLocation<Tz>;
+
+    type WithTz<Tz>
+        = TzLocation<Tz>
+    where
+        Tz: chrono::TimeZone + Send + Sync,
+        Tz::Offset: Send + Sync;
+
+    fn naive(&self, dt: Self::DateTime) -> NaiveDateTime {
+        dt
+    }
+
+    fn datetime(&self, naive: NaiveDateTime) -> Self::DateTime {
+        naive
+    }
 
     fn with_tz<Tz>(self, tz: Tz) -> Self::WithTz<Tz>
     where
         Tz: chrono::TimeZone + Send + Sync,
+        Tz::Offset: Send + Sync,
     {
         TzLocation { tz }
     }
@@ -111,11 +138,37 @@ where
 impl<Tz> Localize for TzLocation<Tz>
 where
     Tz: chrono::TimeZone + Send + Sync,
+    Tz::Offset: Send + Sync,
 {
     type DateTime = chrono::DateTime<Tz>;
-    type WithTz<T: chrono::TimeZone + Send + Sync> = TzLocation<T>;
 
-    fn with_tz<T: chrono::TimeZone + Send + Sync>(self, tz: T) -> Self::WithTz<T> {
+    type WithTz<T>
+        = TzLocation<T>
+    where
+        T: chrono::TimeZone + Send + Sync,
+        T::Offset: Send + Sync;
+
+    fn naive(&self, dt: Self::DateTime) -> NaiveDateTime {
+        dt.with_timezone(&self.tz).naive_local()
+    }
+
+    fn datetime(&self, mut naive: NaiveDateTime) -> Self::DateTime {
+        loop {
+            if let Some(dt) = self.tz.from_local_datetime(&naive).latest() {
+                return dt;
+            }
+
+            naive = naive
+                .checked_add_signed(TimeDelta::minutes(1))
+                .expect("no valid datetime for time zone");
+        }
+    }
+
+    fn with_tz<T>(self, tz: T) -> Self::WithTz<T>
+    where
+        T: chrono::TimeZone + Send + Sync,
+        T::Offset: Send + Sync,
+    {
         TzLocation { tz }
     }
 }
@@ -123,6 +176,7 @@ where
 impl<Tz> LocalizeWithTz for TzLocation<Tz>
 where
     Tz: chrono::TimeZone + Send + Sync,
+    Tz::Offset: Send + Sync,
 {
     type WithCoord = CoordLocation<Tz>;
 
@@ -145,13 +199,36 @@ where
 impl<Tz> Localize for CoordLocation<Tz>
 where
     Tz: chrono::TimeZone + Send + Sync,
+    Tz::Offset: Send + Sync,
 {
     type DateTime = chrono::DateTime<Tz>;
-    type WithTz<T: chrono::TimeZone + Send + Sync> = CoordLocation<T>;
+
+    type WithTz<T>
+        = CoordLocation<T>
+    where
+        T: chrono::TimeZone + Send + Sync,
+        T::Offset: Send + Sync;
+
+    fn naive(&self, dt: Self::DateTime) -> NaiveDateTime {
+        dt.with_timezone(&self.tz).naive_local()
+    }
+
+    fn datetime(&self, mut naive: NaiveDateTime) -> Self::DateTime {
+        loop {
+            if let Some(dt) = self.tz.from_local_datetime(&naive).latest() {
+                return dt;
+            }
+
+            naive = naive
+                .checked_add_signed(TimeDelta::minutes(1))
+                .expect("no valid datetime for time zone");
+        }
+    }
 
     fn with_tz<T>(self, tz: T) -> Self::WithTz<T>
     where
         T: chrono::TimeZone + Send + Sync,
+        T::Offset: Send + Sync,
     {
         CoordLocation { tz, lat: self.lat, lon: self.lon }
     }
@@ -164,6 +241,7 @@ where
 impl<Tz> LocalizeWithTz for CoordLocation<Tz>
 where
     Tz: chrono::TimeZone + Send + Sync,
+    Tz::Offset: Send + Sync,
 {
     type WithCoord = Self;
 

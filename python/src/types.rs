@@ -52,32 +52,11 @@ impl std::fmt::Display for State {
     }
 }
 
-// impl<'py> IntoPyObject<'py> for State {
-//     type Target = PyString;
-//     type Output = Borrowed<'static, 'py, Self::Target>;
-//     type Error = Infallible;
-//
-//     fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
-//         static PY_CACHE_OPEN: OnceLock<Py<PyString>> = OnceLock::new();
-//         static PY_CACHE_CLOSED: OnceLock<Py<PyString>> = OnceLock::new();
-//         static PY_CACHE_UNKNOWN: OnceLock<Py<PyString>> = OnceLock::new();
-//
-//         let res = match self {
-//             Self::Open => PY_CACHE_OPEN.get_or_init(|| PyString::new(py, "open").unbind()),
-//             Self::Closed => PY_CACHE_CLOSED.get_or_init(|| PyString::new(py, "closed").unbind()),
-//             Self::Unknown => PY_CACHE_UNKNOWN.get_or_init(|| PyString::new(py, "unknown").unbind()),
-//         };
-//
-//         Ok(res.bind_borrowed(py))
-//     }
-// }
-
 // ---
 // --- RangeIterator
 // ---
 
-/// Iterator that owns a pointer to a [`OpeningHours`] together with a
-/// self reference to it.
+/// Iterator over a range period of an [`OpeningHours`].
 #[pyclass()]
 pub struct RangeIterator {
     iter: Box<dyn Iterator<Item = DateTimeRange> + Send + Sync>,
@@ -101,7 +80,6 @@ impl RangeIterator {
     }
 }
 
-/// Iterator over a range of opening hours.
 #[pymethods]
 impl RangeIterator {
     fn __iter__(slf: PyRef<Self>) -> Py<Self> {
