@@ -68,9 +68,8 @@ impl<L: Localize> OpeningHours<L> {
     ///     .unwrap()
     ///     .with_context(Context::default());
     /// ```
-    pub fn with_context(mut self, ctx: Context<L>) -> Self {
-        self.ctx = ctx;
-        self
+    pub fn with_context<L2: Localize>(self, ctx: Context<L2>) -> OpeningHours<L2> {
+        OpeningHours { expr: self.expr, ctx }
     }
 
     // --
@@ -169,13 +168,12 @@ impl<L: Localize> OpeningHours<L> {
         from: L::DateTime,
         to: L::DateTime,
     ) -> impl Iterator<Item = DateTimeRange<L::DateTime>> + use<'_, L> + Send + Sync {
-        let naive_from = std::cmp::min(DATE_LIMIT, self.ctx.localize.naive(from.clone()));
-        let naive_to = std::cmp::min(DATE_LIMIT, self.ctx.localize.naive(to.clone()));
+        let naive_from = std::cmp::min(DATE_LIMIT, self.ctx.locale.naive(from));
+        let naive_to = std::cmp::min(DATE_LIMIT, self.ctx.locale.naive(to));
 
         self.iter_range_naive(naive_from, naive_to).map(|dtr| {
             DateTimeRange::new_with_sorted_comments(
-                self.ctx.localize.datetime(dtr.range.start)
-                    ..self.ctx.localize.datetime(dtr.range.end),
+                self.ctx.locale.datetime(dtr.range.start)..self.ctx.locale.datetime(dtr.range.end),
                 dtr.kind,
                 dtr.comments,
             )
@@ -187,7 +185,7 @@ impl<L: Localize> OpeningHours<L> {
         &self,
         from: L::DateTime,
     ) -> impl Iterator<Item = DateTimeRange<L::DateTime>> + use<'_, L> + Send + Sync {
-        self.iter_range(from, self.ctx.localize.datetime(DATE_LIMIT))
+        self.iter_range(from, self.ctx.locale.datetime(DATE_LIMIT))
     }
 
     /// Get the next time where the state will change.
@@ -205,7 +203,7 @@ impl<L: Localize> OpeningHours<L> {
     pub fn next_change(&self, current_time: L::DateTime) -> Option<L::DateTime> {
         let interval = self.iter_from(current_time).next()?;
 
-        if self.ctx.localize.naive(interval.range.end.clone()) >= DATE_LIMIT {
+        if self.ctx.locale.naive(interval.range.end.clone()) >= DATE_LIMIT {
             None
         } else {
             Some(interval.range.end)
@@ -302,12 +300,12 @@ fn rule_sequence_schedule_at<L: Localize>(
 ) -> Option<Schedule> {
     let from_today = Some(date)
         .filter(|date| rule_sequence.day_selector.filter(*date, ctx))
-        .map(|date| time_selector_intervals_at(&rule_sequence.time_selector, date))
+        .map(|date| time_selector_intervals_at(ctx, &rule_sequence.time_selector, date))
         .map(|rgs| Schedule::from_ranges(rgs, rule_sequence.kind, &rule_sequence.comments));
 
     let from_yesterday = (date.pred_opt())
         .filter(|prev| rule_sequence.day_selector.filter(*prev, ctx))
-        .map(|prev| time_selector_intervals_at_next_day(&rule_sequence.time_selector, prev))
+        .map(|prev| time_selector_intervals_at_next_day(ctx, &rule_sequence.time_selector, prev))
         .map(|rgs| Schedule::from_ranges(rgs, rule_sequence.kind, &rule_sequence.comments));
 
     match (from_today, from_yesterday) {
