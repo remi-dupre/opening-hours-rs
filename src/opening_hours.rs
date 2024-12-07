@@ -167,13 +167,14 @@ impl<L: Localize> OpeningHours<L> {
         &self,
         from: L::DateTime,
         to: L::DateTime,
-    ) -> impl Iterator<Item = DateTimeRange<L::DateTime>> + use<'_, L> + Send + Sync {
-        let naive_from = std::cmp::min(DATE_LIMIT, self.ctx.locale.naive(from));
-        let naive_to = std::cmp::min(DATE_LIMIT, self.ctx.locale.naive(to));
+    ) -> impl Iterator<Item = DateTimeRange<L::DateTime>> + Send + Sync {
+        let locale = self.ctx.locale.clone();
+        let naive_from = std::cmp::min(DATE_LIMIT, locale.naive(from));
+        let naive_to = std::cmp::min(DATE_LIMIT, locale.naive(to));
 
-        self.iter_range_naive(naive_from, naive_to).map(|dtr| {
+        self.iter_range_naive(naive_from, naive_to).map(move |dtr| {
             DateTimeRange::new_with_sorted_comments(
-                self.ctx.locale.datetime(dtr.range.start)..self.ctx.locale.datetime(dtr.range.end),
+                locale.datetime(dtr.range.start)..locale.datetime(dtr.range.end),
                 dtr.kind,
                 dtr.comments,
             )
@@ -184,7 +185,7 @@ impl<L: Localize> OpeningHours<L> {
     pub fn iter_from(
         &self,
         from: L::DateTime,
-    ) -> impl Iterator<Item = DateTimeRange<L::DateTime>> + use<'_, L> + Send + Sync {
+    ) -> impl Iterator<Item = DateTimeRange<L::DateTime>> + Send + Sync {
         self.iter_range(from, self.ctx.locale.datetime(DATE_LIMIT))
     }
 
