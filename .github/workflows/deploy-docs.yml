@@ -1,11 +1,15 @@
-name: Deploy Docs
+name: deploy-docs
 
 on:
-  - push
+  workflow_run:
+    workflows: [checks]
+    types:
+      - completed
 
 jobs:
   deploy-python-doc:
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable

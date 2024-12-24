@@ -3,10 +3,13 @@
 #
 #    maturin generate-ci github
 #
-name: Deploy PyPI
+name: deploy-pypi
 
 on:
-  - push
+  workflow_run:
+    workflows: [checks]
+    types:
+      - completed
 
 permissions:
   contents: read
@@ -149,7 +152,7 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
-    if: ${{ github.ref == 'refs/heads/master' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.ref == 'refs/heads/master' }}
     needs: [linux, musllinux, windows, macos, sdist]
     permissions:
       # Use to sign the release artifacts
