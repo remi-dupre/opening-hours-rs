@@ -1,9 +1,11 @@
 mod generated;
 
 use std::collections::HashMap;
+use std::io::Read;
 use std::sync::{Arc, LazyLock};
 
 use compact_calendar::CompactCalendar;
+use country_boundaries::CountryBoundaries;
 use flate2::bufread::DeflateDecoder;
 
 use crate::context::ContextHolidays;
@@ -11,6 +13,35 @@ use crate::context::ContextHolidays;
 pub use generated::*;
 
 impl Country {
+    /// Attempt to automatically detect a country from coordinates.
+    ///
+    /// ```
+    /// use opening_hours::country::Country;
+    ///
+    /// let country_paris = Country::try_from_coords(48.86, 2.34).unwrap();
+    /// assert_eq!(country_paris, Country::FR);
+    /// ```
+    pub fn try_from_coords(lat: f64, lon: f64) -> Option<Self> {
+        static BOUNDARIES: LazyLock<CountryBoundaries> = LazyLock::new(|| {
+            let mut buffer = Vec::new();
+
+            DeflateDecoder::new(include_bytes!(env!("COUNTRY_BOUNDS_FILE")).as_slice())
+                .read_to_end(&mut buffer)
+                .expect("unable to parse country bounds data");
+
+            CountryBoundaries::from_reader(buffer.as_slice())
+                .expect("failed to load country boundaries database")
+        });
+
+        for cc in BOUNDARIES.ids(country_boundaries::LatLon::new(lat, lon).ok()?) {
+            if let Ok(res) = cc.parse() {
+                return Some(res);
+            }
+        }
+
+        None
+    }
+
     /// Load holidays for this country from a compact embeded database.
     ///
     /// ```

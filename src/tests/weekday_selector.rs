@@ -157,7 +157,7 @@ fn nth_with_offset() -> Result<(), Error> {
 
 #[test]
 fn holiday() {
-    let ctx: Context = Context::default().with_holidays(Country::FR.holidays());
+    let ctx = Context::default().with_holidays(Country::FR.holidays());
 
     let oh = OpeningHours::parse("PH 10:00-16:00")
         .unwrap()

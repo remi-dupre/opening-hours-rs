@@ -9,6 +9,8 @@ use compact_calendar::CompactCalendar;
 use opening_hours_syntax::rules::time::TimeEvent;
 use sunrise_next::{DawnType, SolarDay, SolarEvent};
 
+use crate::country::Country;
+
 // --
 // -- Holidays
 // --
@@ -289,6 +291,22 @@ impl<L> Context<L> {
     /// Attach a new locale component to this context.
     pub fn with_locale<L2: Localize>(self, locale: L2) -> Context<L2> {
         Context { holidays: self.holidays, locale }
+    }
+}
+
+impl Context<CoordLocation<chrono_tz::Tz>> {
+    /// Create a context with given coordinates and try to infer a timezone and
+    /// a local holiday calendar.
+    ///
+    /// TODO: test?
+    /// TODO: example?
+    pub fn from_coords(lat: f64, lon: f64) -> Self {
+        let holidays = Country::try_from_coords(lat, lon)
+            .map(Country::holidays)
+            .unwrap_or_default();
+
+        let locale = NoLocation::default().with_tz_from_coords(lat, lon);
+        Self { holidays, locale }
     }
 }
 
