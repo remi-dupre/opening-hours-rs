@@ -31,10 +31,7 @@ pub trait DateFilter {
     /// Provide a lower bound to the next date with a different result to `filter`.
     fn next_change_hint<L>(&self, _date: NaiveDate, _ctx: &Context<L>) -> Option<NaiveDate>
     where
-        L: Localize,
-    {
-        None
-    }
+        L: Localize;
 }
 
 impl<T: DateFilter> DateFilter for [T] {
