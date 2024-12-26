@@ -141,6 +141,15 @@ where
     tz: Tz,
 }
 
+impl<Tz> TzLocation<Tz>
+where
+    Tz: TimeZone + Send + Sync,
+{
+    pub fn new(tz: Tz) -> Self {
+        Self { tz }
+    }
+}
+
 impl<Tz> Localize for TzLocation<Tz>
 where
     Tz: TimeZone + Send + Sync,

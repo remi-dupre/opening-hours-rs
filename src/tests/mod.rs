@@ -1,6 +1,7 @@
 mod country;
 mod holiday_selector;
 mod issues;
+mod localization;
 mod month_selector;
 mod next_change;
 mod parser;
@@ -97,6 +98,13 @@ macro_rules! datetime {
     ( $date: expr ) => {{
         use chrono::NaiveDateTime;
         NaiveDateTime::parse_from_str($date, "%Y-%m-%d %H:%M").expect("invalid datetime literal")
+    }};
+    ( $date: expr, $tz: expr ) => {{
+        use chrono::TimeZone;
+
+        $tz.from_local_datetime(&datetime!($date))
+            .single()
+            .expect("ambiguous input datetime")
     }};
 }
 

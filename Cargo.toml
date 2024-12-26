@@ -38,6 +38,7 @@ chrono = "0.4"
 flate2 = "1.0"
 
 [dev-dependencies]
+chrono-tz = "0.10"
 criterion = "0.5"
 
 [[bench]]
