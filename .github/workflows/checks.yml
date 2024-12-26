@@ -73,16 +73,16 @@ jobs:
   coverage:
     runs-on: ubuntu-latest
     container:
-      image: xd009642/tarpaulin:0.31.3
+      image: xd009642/tarpaulin:develop-nightly
       options: --security-opt seccomp=unconfined
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - name: Show Python Version
-        run: python --version
+      # - uses: actions/setup-python@v5
+      #   with:
+      #     python-version: "3.11"
+      - name: Install Python library
+        run: apt-get update && apt-get install -yy python3-dev && apt-get clean
       - name: Generate code coverage
         run: >-
           cargo +nightly tarpaulin --out xml
