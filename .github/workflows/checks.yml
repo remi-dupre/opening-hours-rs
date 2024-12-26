@@ -22,9 +22,6 @@ jobs:
         working-directory: ${{ matrix.crate }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ matrix.toolchain }}
@@ -54,9 +51,6 @@ jobs:
         working-directory: scripts
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
       - name: Install poetry
         run: |
           python -m pip install --upgrade pip
@@ -78,9 +72,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
-      # - uses: actions/setup-python@v5
-      #   with:
-      #     python-version: "3.11"
       - name: Install Python library
         run: apt-get update && apt-get install -yy python3-dev && apt-get clean
       - name: Generate code coverage
