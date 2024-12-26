@@ -9,6 +9,8 @@
 ### Python
 
 - Add the `opening_hours.State` type.
+- Updated to latest maturin's workflow, which should ship precompiled binaries
+  for more older Python version
 
 ## 0.9.1
 

@@ -37,7 +37,6 @@ jobs:
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
-          maturin-version: v1.8.0
           target: ${{ matrix.platform.target }}
           args: --release --out dist --find-interpreter
           sccache: "true"
@@ -69,7 +68,6 @@ jobs:
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
-          maturin-version: v1.8.0
           target: ${{ matrix.platform.target }}
           args: --release --out dist --find-interpreter
           sccache: "true"
@@ -98,7 +96,6 @@ jobs:
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
-          maturin-version: v1.8.0
           target: ${{ matrix.platform.target }}
           args: --release --out dist --find-interpreter
           sccache: "true"
@@ -125,7 +122,6 @@ jobs:
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
-          maturin-version: v1.8.0
           target: ${{ matrix.platform.target }}
           args: --release --out dist --find-interpreter
           sccache: "true"
@@ -142,7 +138,6 @@ jobs:
       - name: Build sdist
         uses: PyO3/maturin-action@v1
         with:
-          maturin-version: v1.8.0
           command: sdist
           args: --out dist
       - name: Upload sdist
@@ -172,7 +167,6 @@ jobs:
       - name: Publish to PyPI
         uses: PyO3/maturin-action@v1
         env:
-          maturin-version: v1.8.0
           MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         with:
           command: upload
