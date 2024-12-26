@@ -44,18 +44,6 @@ impl InputTime {
             InputTime::TzAware(date_time) => *date_time,
         }
     }
-
-    pub(crate) fn copy_local_naive(&self, dt: NaiveDateTime) -> Self {
-        match self {
-            InputTime::Naive(_) => Self::Naive(dt),
-            InputTime::TzAware(self_dt) => self_dt
-                .timezone()
-                .from_local_datetime(&dt)
-                .earliest()
-                .map(Self::TzAware)
-                .unwrap_or_else(|| Self::Naive(dt)),
-        }
-    }
 }
 
 // ---
