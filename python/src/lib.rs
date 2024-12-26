@@ -1,6 +1,9 @@
 mod errors;
 mod types;
 
+#[cfg(test)]
+mod tests;
+
 use chrono::NaiveDateTime;
 
 use pyo3::prelude::*;

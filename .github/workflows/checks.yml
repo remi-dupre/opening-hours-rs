@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        crate: ["opening-hours-syntax", ".", "compact-calendar"]
+        crate: ["opening-hours-syntax", ".", "compact-calendar", "python"]
         toolchain: ["stable", "beta", "nightly"]
     defaults:
       run:
@@ -39,29 +39,6 @@ jobs:
         if: matrix.toolchain != 'nightly'
       - name: Tests
         run: cargo test
-
-  # ---
-  # --- Execute tests for python package
-  # ---
-
-  test-python:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
-      - name: Install poetry
-        run: |
-          python -m pip install --upgrade pip
-          pip install poetry
-      - name: Install dev dependancies
-        run: poetry install
-      - name: Build Python package
-        run: poetry run maturin develop
-      - name: Run doctests
-        run: poetry run python/run_doctests.py
 
   # ---
   # --- Check that all versions are consistency accross packages
@@ -105,7 +82,7 @@ jobs:
           --ignore-panics --ignore-tests
           --features disable-test-timeouts
           --run-types Tests --run-types Doctests
-          -p opening-hours -p opening-hours-syntax -p compact-calendar
+          -p opening-hours -p opening-hours-syntax -p compact-calendar -p opening-hours-py
 
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v2
