@@ -1,15 +1,11 @@
-name: deploy-rust
+name: Deploy Crates
 
 on:
-  workflow_run:
-    workflows: [checks]
-    types:
-      - completed
+  - push
 
 jobs:
   deploy-rust:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     strategy:
       max-parallel: 1
