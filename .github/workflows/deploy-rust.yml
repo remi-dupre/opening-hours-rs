@@ -1,0 +1,38 @@
+name: deploy-rust
+
+on:
+  workflow_run:
+    workflows: [checks]
+    types:
+      - completed
+
+jobs:
+  deploy-rust:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    strategy:
+      max-parallel: 1
+      matrix:
+        crate:
+          - compact-calendar
+          - opening-hours-syntax
+          - .
+
+    defaults:
+      run:
+        working-directory: ${{ matrix.crate }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Login to crates.io
+        run: cargo login $TOKEN
+        if: github.ref == 'refs/heads/master'
+        env:
+          TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
+
+      - name: Publish to crates.io
+        run: cargo publish
+        if: github.ref == 'refs/heads/master'
