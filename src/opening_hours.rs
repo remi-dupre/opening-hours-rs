@@ -72,6 +72,11 @@ impl<L: Localize> OpeningHours<L> {
         OpeningHours { expr: self.expr, ctx }
     }
 
+    /// Get the context attached to this expression.
+    pub fn get_context(&self) -> &Context<L> {
+        &self.ctx
+    }
+
     // --
     // -- Low level implementations.
     // --
@@ -288,7 +293,7 @@ impl FromStr for OpeningHours {
     }
 }
 
-impl Display for OpeningHours {
+impl<L: Localize> Display for OpeningHours<L> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.expr)
     }

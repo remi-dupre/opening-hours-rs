@@ -138,7 +138,7 @@ pub struct TzLocation<Tz>
 where
     Tz: TimeZone + Send + Sync,
 {
-    tz: Tz,
+    pub tz: Tz,
 }
 
 impl<Tz> TzLocation<Tz>
@@ -206,9 +206,9 @@ pub struct CoordLocation<Tz>
 where
     Tz: TimeZone + Send + Sync,
 {
-    tz: Tz,
-    lat: f64,
-    lon: f64,
+    pub tz: Tz,
+    pub lat: f64,
+    pub lon: f64,
 }
 
 impl<Tz> Localize for CoordLocation<Tz>
@@ -287,8 +287,8 @@ where
 /// alter its evaluation semantics.
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct Context<L = NoLocation> {
-    pub(crate) holidays: ContextHolidays,
-    pub(crate) locale: L,
+    pub holidays: ContextHolidays,
+    pub locale: L,
 }
 
 impl<L> Context<L> {

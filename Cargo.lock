@@ -661,6 +661,7 @@ name = "opening-hours-py"
 version = "0.10.0"
 dependencies = [
  "chrono",
+ "chrono-tz",
  "opening-hours",
  "opening-hours-syntax",
  "pyo3",
@@ -907,6 +908,7 @@ checksum = "e484fd2c8b4cb67ab05a318f1fd6fa8f199fcc30819f08f07d200809dba26c15"
 dependencies = [
  "cfg-if",
  "chrono",
+ "chrono-tz",
  "indoc",
  "libc",
  "memoffset",

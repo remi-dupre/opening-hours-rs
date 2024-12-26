@@ -1,18 +1,60 @@
-use chrono::{Local, NaiveDateTime};
+use chrono::{DateTime, Local, NaiveDateTime, TimeZone};
 use opening_hours::opening_hours::DATE_LIMIT;
-use opening_hours::DateTimeRange;
+use opening_hours::{CoordLocation, DateTimeRange, TzLocation};
 use opening_hours_syntax::rules::RuleKind;
 use pyo3::prelude::*;
 
-pub(crate) fn get_time(datetime: Option<NaiveDateTime>) -> NaiveDateTime {
-    datetime.unwrap_or_else(|| Local::now().naive_local())
+// ---
+// --- DateTime
+// ---
+
+#[derive(FromPyObject, IntoPyObject)]
+pub(crate) enum InputTime {
+    Naive(NaiveDateTime),
+    TzAware(DateTime<chrono_tz::Tz>),
 }
 
-pub(crate) fn res_time(datetime: NaiveDateTime) -> Option<NaiveDateTime> {
-    if datetime == DATE_LIMIT {
-        None
-    } else {
-        Some(datetime)
+impl InputTime {
+    /// Just ensures that *DATE_LIMIT* is mapped to `None`.
+    pub(crate) fn map_date_limit(self) -> Option<Self> {
+        if self.as_naive_local() == DATE_LIMIT {
+            None
+        } else {
+            Some(self)
+        }
+    }
+
+    pub(crate) fn unwrap_or_now(val: Option<Self>) -> Self {
+        val.unwrap_or_else(|| Self::Naive(Local::now().naive_local()))
+    }
+
+    pub(crate) fn as_naive_local(&self) -> NaiveDateTime {
+        match self {
+            InputTime::Naive(naive_date_time) => *naive_date_time,
+            InputTime::TzAware(date_time) => date_time.naive_local(),
+        }
+    }
+
+    pub(crate) fn as_tz_aware(&self, default_tz: &chrono_tz::Tz) -> DateTime<chrono_tz::Tz> {
+        match self {
+            InputTime::Naive(naive_date_time) => default_tz
+                .from_local_datetime(naive_date_time)
+                .earliest()
+                .expect("input time is not valid for target timezone"), // TODO: exception
+            InputTime::TzAware(date_time) => *date_time,
+        }
+    }
+
+    pub(crate) fn copy_local_naive(&self, dt: NaiveDateTime) -> Self {
+        match self {
+            InputTime::Naive(_) => Self::Naive(dt),
+            InputTime::TzAware(self_dt) => self_dt
+                .timezone()
+                .from_local_datetime(&dt)
+                .earliest()
+                .map(Self::TzAware)
+                .unwrap_or_else(|| Self::Naive(dt)),
+        }
     }
 }
 
@@ -59,20 +101,67 @@ impl std::fmt::Display for State {
 /// Iterator over a range period of an [`OpeningHours`].
 #[pyclass()]
 pub struct RangeIterator {
-    iter: Box<dyn Iterator<Item = DateTimeRange> + Send + Sync>,
+    iter: Box<dyn Iterator<Item = DateTimeRange<InputTime>> + Send + Sync>,
 }
 
 impl RangeIterator {
-    pub fn new(
+    pub fn new_naive(
         td: &opening_hours::OpeningHours,
         start: NaiveDateTime,
         end: Option<NaiveDateTime>,
     ) -> Self {
         let iter = {
             if let Some(end) = end {
-                Box::new(td.iter_range(start, end)) as _
+                Box::new(
+                    td.iter_range(start, end)
+                        .map(|rg| rg.map_dates(InputTime::Naive)),
+                ) as _
             } else {
-                Box::new(td.iter_from(start)) as _
+                Box::new(td.iter_from(start).map(|rg| rg.map_dates(InputTime::Naive))) as _
+            }
+        };
+
+        Self { iter }
+    }
+
+    pub fn new_tz_aware(
+        td: &opening_hours::OpeningHours<TzLocation<chrono_tz::Tz>>,
+        start: DateTime<chrono_tz::Tz>,
+        end: Option<DateTime<chrono_tz::Tz>>,
+    ) -> Self {
+        let iter = {
+            if let Some(end) = end {
+                Box::new(
+                    td.iter_range(start, end)
+                        .map(|rg| rg.map_dates(InputTime::TzAware)),
+                ) as _
+            } else {
+                Box::new(
+                    td.iter_from(start)
+                        .map(|rg| rg.map_dates(InputTime::TzAware)),
+                ) as _
+            }
+        };
+
+        Self { iter }
+    }
+
+    pub fn new_coords(
+        td: &opening_hours::OpeningHours<CoordLocation<chrono_tz::Tz>>,
+        start: DateTime<chrono_tz::Tz>,
+        end: Option<DateTime<chrono_tz::Tz>>,
+    ) -> Self {
+        let iter = {
+            if let Some(end) = end {
+                Box::new(
+                    td.iter_range(start, end)
+                        .map(|rg| rg.map_dates(InputTime::TzAware)),
+                ) as _
+            } else {
+                Box::new(
+                    td.iter_from(start)
+                        .map(|rg| rg.map_dates(InputTime::TzAware)),
+                ) as _
             }
         };
 
@@ -88,12 +177,12 @@ impl RangeIterator {
 
     fn __next__(
         mut slf: PyRefMut<Self>,
-    ) -> Option<(NaiveDateTime, Option<NaiveDateTime>, State, Vec<String>)> {
+    ) -> Option<(InputTime, Option<InputTime>, State, Vec<String>)> {
         let dt_range = slf.iter.next()?;
 
         Some((
             dt_range.range.start,
-            res_time(dt_range.range.end),
+            dt_range.range.end.map_date_limit(),
             dt_range.kind.into(),
             dt_range.comments.iter().map(|c| c.to_string()).collect(),
         ))
