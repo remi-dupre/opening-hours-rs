@@ -11,6 +11,19 @@ use pyo3::prelude::*;
 static INIT_PYTHON_GIL: Once = Once::new();
 
 pub(crate) fn run_python(source: &str) {
+    #[pyclass]
+    struct CaptureStdout;
+
+    #[pymethods]
+    impl CaptureStdout {
+        #[classattr]
+        fn encoding() -> &'static str {
+            "utf-8"
+        }
+
+        fn write(&self, _data: &str) {}
+    }
+
     let common_prefix = source
         .lines()
         .filter(|l| !l.trim().is_empty())
@@ -39,7 +52,19 @@ pub(crate) fn run_python(source: &str) {
     });
 
     Python::with_gil(|py| {
-        py.run(CString::new(without_indent).unwrap().as_c_str(), None, None)
-            .unwrap();
+        let sys = py.import("sys").expect("could not import sys");
+
+        sys.setattr("stdout", CaptureStdout.into_pyobject(py).unwrap())
+            .expect("could not intercept stdout");
+
+        if let Err(err) = py.run(CString::new(without_indent).unwrap().as_c_str(), None, None) {
+            let traceback = err
+                .traceback(py)
+                .and_then(|tb| tb.format().ok())
+                .map(|s| "\n".to_string() + &s)
+                .unwrap_or_default();
+
+            panic!("Python Error {err:?}: {}.{traceback}", err.value(py))
+        }
     });
 }

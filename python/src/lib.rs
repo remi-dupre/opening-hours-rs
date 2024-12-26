@@ -50,6 +50,31 @@ impl From<PyOpeningHoursInner> for PyOpeningHours {
 ///
 /// TODO: explaine, country, coords, timezone, ...
 ///
+/// Parameters
+/// ----------
+/// oh : str
+///     Opening hours expression as defined in OSM (eg. "24/7").
+///     See https://wiki.openstreetmap.org/wiki/Key:opening_hours/specification
+/// timezone : Optional[zoneinfo.ZoneInfo]
+///     Timezone where the physical place attached to these opening hours lives
+///     in. When specified, operations on this expression will return dates
+///     attached to this timezone and input times in other timezones will be
+///     converted.
+/// country : Optional[str]
+///     ISO code of the country this physical place lives in. This will be used
+///     to load a calendar of local public holidays.
+/// coords : Optional[tuple[float, float]]
+///     (latitude, longitude) of this place. When this is specified together
+///     with a timezone sun events will be accurate (sunrise, sunset, dusk,
+///     dawn). By default, this will be used to automatically detect the
+///     timezone and a country code.
+/// auto_country : bool (default: `True`)
+///     If set to `True`, the country code will automatically be inferred from
+///     coordinates when they are specified.
+/// auto_timezone : bool (default: `True`)
+///     If set to `True`, the timezone will automatically be inferred from
+///     coordinates when they are specified.
+///
 /// Raises
 /// ------
 /// SyntaxError
@@ -112,7 +137,7 @@ impl PyOpeningHours {
                 let ctx = ctx.with_locale(locale);
                 PyOpeningHoursInner::WithCoords { oh: oh.with_context(ctx), tz }.into()
             }
-            _ => PyOpeningHoursInner::Naive(oh).into(),
+            _ => PyOpeningHoursInner::Naive(oh.with_context(ctx)).into(),
         })
     }
 
