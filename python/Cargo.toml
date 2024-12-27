@@ -15,8 +15,8 @@ name = "opening_hours"
 crate-type = ["cdylib"]
 
 [dependencies]
-chrono = "0.4"
-chrono-tz = "0.10"  
+chrono = { version = "0.4", default-features = false }
+chrono-tz = { version = "0.10", default-features = false }
 opening-hours = { path = "..", version = "0.10.0" }
 opening-hours-syntax = { path = "../opening-hours-syntax", version = "0.10.0" }
 pyo3-log = "0.12"

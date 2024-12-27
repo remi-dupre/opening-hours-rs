@@ -17,7 +17,10 @@ build-backend = "maturin"
 
 [tool.maturin]
 manifest-path = "python/Cargo.toml"
-
-# This feature must only be enabled during builds as it would break tests, see
-# https://pyo3.rs/v0.23.3/faq.html#i-cant-run-cargo-test-or-i-cant-build-in-a-cargo-workspace-im-having-linker-issues-like-symbol-not-found-or-undefined-reference-to-_pyexc_systemerror
-features = ["pyo3/extension-module"]
+features = [
+    # This feature must only be enabled during builds as it would break tests, see
+    # https://pyo3.rs/v0.23.3/faq.html#i-cant-run-cargo-test-or-i-cant-build-in-a-cargo-workspace-im-having-linker-issues-like-symbol-not-found-or-undefined-reference-to-_pyexc_systemerror
+    "pyo3/extension-module",
+    # I don't get why but this feature is not enabled from Cargo.toml in CI
+    "pyo3/chrono-tz",
+]
