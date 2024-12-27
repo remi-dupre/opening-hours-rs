@@ -12,16 +12,16 @@ use pyo3::prelude::*;
 // ---
 
 #[derive(Clone, Debug, FromPyObject, IntoPyObject)]
-pub(crate) enum InputTime {
+pub(crate) enum DateTimeMaybeAware {
     Naive(NaiveDateTime),
     TzAware(DateTime<chrono_tz::Tz>),
 }
 
-impl InputTime {
+impl DateTimeMaybeAware {
     fn as_naive_local(&self) -> NaiveDateTime {
         match self {
-            InputTime::Naive(naive_date_time) => *naive_date_time,
-            InputTime::TzAware(date_time) => date_time.naive_local(),
+            DateTimeMaybeAware::Naive(naive_date_time) => *naive_date_time,
+            DateTimeMaybeAware::TzAware(date_time) => date_time.naive_local(),
         }
     }
 
@@ -40,13 +40,13 @@ impl InputTime {
     }
 }
 
-impl Add<TimeDelta> for InputTime {
+impl Add<TimeDelta> for DateTimeMaybeAware {
     type Output = Self;
 
     fn add(self, rhs: TimeDelta) -> Self::Output {
         match self {
-            InputTime::Naive(dt) => InputTime::Naive(dt + rhs),
-            InputTime::TzAware(dt) => InputTime::TzAware(dt + rhs),
+            DateTimeMaybeAware::Naive(dt) => DateTimeMaybeAware::Naive(dt + rhs),
+            DateTimeMaybeAware::TzAware(dt) => DateTimeMaybeAware::TzAware(dt + rhs),
         }
     }
 }
@@ -62,12 +62,12 @@ pub(crate) struct PyLocale {
 }
 
 impl Localize for PyLocale {
-    type DateTime = InputTime;
+    type DateTime = DateTimeMaybeAware;
 
     fn naive(&self, dt: Self::DateTime) -> NaiveDateTime {
         match dt {
-            InputTime::Naive(dt) => dt,
-            InputTime::TzAware(dt) => {
+            DateTimeMaybeAware::Naive(dt) => dt,
+            DateTimeMaybeAware::TzAware(dt) => {
                 if let Some(local_tz) = self.timezone {
                     dt.with_timezone(&local_tz).naive_local()
                 } else {
@@ -79,9 +79,9 @@ impl Localize for PyLocale {
 
     fn datetime(&self, naive: NaiveDateTime) -> Self::DateTime {
         if let Some(local_tz) = self.timezone {
-            InputTime::TzAware(TzLocation { tz: local_tz }.datetime(naive))
+            DateTimeMaybeAware::TzAware(TzLocation { tz: local_tz }.datetime(naive))
         } else {
-            InputTime::Naive(naive)
+            DateTimeMaybeAware::Naive(naive)
         }
     }
 
@@ -137,14 +137,14 @@ impl std::fmt::Display for State {
 /// Iterator over a range period of an [`OpeningHours`].
 #[pyclass()]
 pub struct RangeIterator {
-    iter: Box<dyn Iterator<Item = DateTimeRange<InputTime>> + Send + Sync>,
+    iter: Box<dyn Iterator<Item = DateTimeRange<DateTimeMaybeAware>> + Send + Sync>,
 }
 
 impl RangeIterator {
     pub(crate) fn new(
         td: &opening_hours::OpeningHours<PyLocale>,
-        start: InputTime,
-        end: Option<InputTime>,
+        start: DateTimeMaybeAware,
+        end: Option<DateTimeMaybeAware>,
     ) -> Self {
         let iter = {
             if let Some(end) = end {
@@ -166,7 +166,12 @@ impl RangeIterator {
 
     fn __next__(
         mut slf: PyRefMut<Self>,
-    ) -> Option<(InputTime, Option<InputTime>, State, Vec<String>)> {
+    ) -> Option<(
+        DateTimeMaybeAware,
+        Option<DateTimeMaybeAware>,
+        State,
+        Vec<String>,
+    )> {
         let dt_range = slf.iter.next()?;
 
         Some((

@@ -8,7 +8,7 @@ use ::opening_hours::CoordLocation;
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 
-use self::types::InputTime;
+use self::types::DateTimeMaybeAware;
 use self::types::PyLocale;
 use crate::errors::ParserError;
 use crate::types::{RangeIterator, State};
@@ -143,8 +143,8 @@ impl PyOpeningHours {
     /// >>> OpeningHours("24/7 off").state()
     /// State.CLOSED
     #[pyo3(signature = (time=None, /))]
-    fn state(&self, time: Option<InputTime>) -> State {
-        let time = InputTime::unwrap_or_now(time);
+    fn state(&self, time: Option<DateTimeMaybeAware>) -> State {
+        let time = DateTimeMaybeAware::unwrap_or_now(time);
         self.inner.state(time).into()
     }
 
@@ -161,8 +161,8 @@ impl PyOpeningHours {
     /// >>> OpeningHours("24/7").is_open()
     /// True
     #[pyo3(signature = (time=None, /))]
-    fn is_open(&self, time: Option<InputTime>) -> bool {
-        let time = InputTime::unwrap_or_now(time);
+    fn is_open(&self, time: Option<DateTimeMaybeAware>) -> bool {
+        let time = DateTimeMaybeAware::unwrap_or_now(time);
         self.inner.is_open(time)
     }
 
@@ -179,8 +179,8 @@ impl PyOpeningHours {
     /// >>> OpeningHours("24/7 off").is_closed()
     /// True
     #[pyo3(signature = (time=None, /))]
-    fn is_closed(&self, time: Option<InputTime>) -> bool {
-        let time = InputTime::unwrap_or_now(time);
+    fn is_closed(&self, time: Option<DateTimeMaybeAware>) -> bool {
+        let time = DateTimeMaybeAware::unwrap_or_now(time);
         self.inner.is_closed(time)
     }
 
@@ -197,8 +197,8 @@ impl PyOpeningHours {
     /// >>> OpeningHours("24/7 unknown").is_unknown()
     /// True
     #[pyo3(signature = (time=None, /))]
-    fn is_unknown(&self, time: Option<InputTime>) -> bool {
-        let time = InputTime::unwrap_or_now(time);
+    fn is_unknown(&self, time: Option<DateTimeMaybeAware>) -> bool {
+        let time = DateTimeMaybeAware::unwrap_or_now(time);
         self.inner.is_unknown(time)
     }
 
@@ -217,8 +217,8 @@ impl PyOpeningHours {
     /// >>> OpeningHours("2099Mo-Su 12:30-17:00").next_change()
     /// datetime.datetime(2099, 1, 1, 12, 30)
     #[pyo3(signature = (time=None, /))]
-    fn next_change(&self, time: Option<InputTime>) -> Option<InputTime> {
-        let time = InputTime::unwrap_or_now(time);
+    fn next_change(&self, time: Option<DateTimeMaybeAware>) -> Option<DateTimeMaybeAware> {
+        let time = DateTimeMaybeAware::unwrap_or_now(time);
         self.inner.next_change(time)
         // TODO: prefer input timezone
     }
@@ -243,8 +243,12 @@ impl PyOpeningHours {
     /// >>> next(intervals)
     /// (datetime.datetime(2099, 1, 1, 12, 30), datetime.datetime(2099, 1, 1, 17, 0), State.OPEN, [])
     #[pyo3(signature = (start=None, end=None, /))]
-    fn intervals(&self, start: Option<InputTime>, end: Option<InputTime>) -> RangeIterator {
-        let start = InputTime::unwrap_or_now(start);
+    fn intervals(
+        &self,
+        start: Option<DateTimeMaybeAware>,
+        end: Option<DateTimeMaybeAware>,
+    ) -> RangeIterator {
+        let start = DateTimeMaybeAware::unwrap_or_now(start);
         RangeIterator::new(&self.inner, start, end)
         // TODO: prefer input timezone
     }
