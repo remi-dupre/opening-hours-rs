@@ -218,6 +218,7 @@ where
 {
     type DateTime = chrono::DateTime<Tz>;
 
+    // TODO: remove this builder pattern altogether
     type WithTz<T>
         = CoordLocation<T>
     where

@@ -8,10 +8,11 @@ use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 
 use self::types::InputTime;
+use self::types::PyLocale;
 use crate::errors::ParserError;
 use crate::types::{RangeIterator, State};
 use ::opening_hours::country::Country;
-use ::opening_hours::{Context, CoordLocation, Localize, NoLocation, OpeningHours, TzLocation};
+use ::opening_hours::{Context, Localize, NoLocation, OpeningHours};
 
 /// Validate that input string is a correct opening hours description.
 ///
@@ -27,28 +28,7 @@ fn validate(oh: &str) -> bool {
     OpeningHours::parse(oh).is_ok()
 }
 
-#[derive(PartialEq)]
-enum PyOpeningHoursInner {
-    Naive(OpeningHours<NoLocation>),
-    WithTz {
-        oh: OpeningHours<TzLocation<chrono_tz::Tz>>,
-        tz: chrono_tz::Tz,
-    },
-    WithCoords {
-        oh: OpeningHours<CoordLocation<chrono_tz::Tz>>,
-        tz: chrono_tz::Tz,
-    },
-}
-
-impl From<PyOpeningHoursInner> for PyOpeningHours {
-    fn from(val: PyOpeningHoursInner) -> Self {
-        PyOpeningHours { inner: val }
-    }
-}
-
 /// Parse input opening hours description.
-///
-/// TODO: explaine, country, coords, timezone, ...
 ///
 /// Parameters
 /// ----------
@@ -88,7 +68,7 @@ impl From<PyOpeningHoursInner> for PyOpeningHours {
 #[pyclass(frozen, name = "OpeningHours")]
 #[derive(PartialEq)]
 struct PyOpeningHours {
-    inner: PyOpeningHoursInner,
+    inner: OpeningHours<PyLocale>,
 }
 
 #[pymethods]
@@ -122,23 +102,25 @@ impl PyOpeningHours {
             }
         }
 
-        Ok(match (timezone, coords, auto_timezone) {
+        let locale = match (timezone, coords, auto_timezone) {
             (Some(tz), None, _) | (Some(tz), _, false) => {
-                let ctx = ctx.with_locale(TzLocation::new(tz));
-                PyOpeningHoursInner::WithTz { oh: oh.with_context(ctx), tz }.into()
+                PyLocale { timezone: Some(tz), coords: None }
             }
             (Some(tz), Some((lat, lon)), _) => {
-                let ctx = ctx.with_locale(CoordLocation { tz, lat, lon });
-                PyOpeningHoursInner::WithCoords { oh: oh.with_context(ctx), tz }.into()
+                PyLocale { timezone: Some(tz), coords: Some((lat, lon)) }
             }
             (None, Some((lat, lon)), true) => {
-                let locale = NoLocation::default().with_tz_from_coords(lat, lon);
-                let tz = locale.tz;
-                let ctx = ctx.with_locale(locale);
-                PyOpeningHoursInner::WithCoords { oh: oh.with_context(ctx), tz }.into()
+                let tmp = NoLocation::default().with_tz_from_coords(lat, lon);
+
+                PyLocale {
+                    timezone: Some(tmp.tz),
+                    coords: Some((tmp.lat, tmp.lon)),
+                }
             }
-            _ => PyOpeningHoursInner::Naive(oh.with_context(ctx)).into(),
-        })
+            _ => PyLocale::default(),
+        };
+
+        Ok(PyOpeningHours { inner: oh.with_context(ctx.with_locale(locale)) })
     }
 
     /// Get current state of the time domain, the state can be either "open",
@@ -158,12 +140,7 @@ impl PyOpeningHours {
     #[pyo3(signature = (time=None, /))]
     fn state(&self, time: Option<InputTime>) -> State {
         let time = InputTime::unwrap_or_now(time);
-
-        match &self.inner {
-            PyOpeningHoursInner::Naive(oh) => oh.state(time.as_naive_local()).into(),
-            PyOpeningHoursInner::WithTz { oh, tz } => oh.state(time.as_tz_aware(tz)).into(),
-            PyOpeningHoursInner::WithCoords { oh, tz } => oh.state(time.as_tz_aware(tz)).into(),
-        }
+        self.inner.state(time).into()
     }
 
     /// Check if current state is open.
@@ -181,12 +158,7 @@ impl PyOpeningHours {
     #[pyo3(signature = (time=None, /))]
     fn is_open(&self, time: Option<InputTime>) -> bool {
         let time = InputTime::unwrap_or_now(time);
-
-        match &self.inner {
-            PyOpeningHoursInner::Naive(oh) => oh.is_open(time.as_naive_local()),
-            PyOpeningHoursInner::WithTz { oh, tz } => oh.is_open(time.as_tz_aware(tz)),
-            PyOpeningHoursInner::WithCoords { oh, tz } => oh.is_open(time.as_tz_aware(tz)),
-        }
+        self.inner.is_open(time)
     }
 
     /// Check if current state is closed.
@@ -204,12 +176,7 @@ impl PyOpeningHours {
     #[pyo3(signature = (time=None, /))]
     fn is_closed(&self, time: Option<InputTime>) -> bool {
         let time = InputTime::unwrap_or_now(time);
-
-        match &self.inner {
-            PyOpeningHoursInner::Naive(oh) => oh.is_closed(time.as_naive_local()),
-            PyOpeningHoursInner::WithTz { oh, tz } => oh.is_closed(time.as_tz_aware(tz)),
-            PyOpeningHoursInner::WithCoords { oh, tz } => oh.is_closed(time.as_tz_aware(tz)),
-        }
+        self.inner.is_closed(time)
     }
 
     /// Check if current state is unknown.
@@ -227,12 +194,7 @@ impl PyOpeningHours {
     #[pyo3(signature = (time=None, /))]
     fn is_unknown(&self, time: Option<InputTime>) -> bool {
         let time = InputTime::unwrap_or_now(time);
-
-        match &self.inner {
-            PyOpeningHoursInner::Naive(oh) => oh.is_unknown(time.as_naive_local()),
-            PyOpeningHoursInner::WithTz { oh, tz } => oh.is_closed(time.as_tz_aware(tz)),
-            PyOpeningHoursInner::WithCoords { oh, tz } => oh.is_closed(time.as_tz_aware(tz)),
-        }
+        self.inner.is_unknown(time)
     }
 
     /// Get the date for next change of state.
@@ -253,21 +215,12 @@ impl PyOpeningHours {
     fn next_change(&self, time: Option<InputTime>) -> Option<InputTime> {
         let time = InputTime::unwrap_or_now(time);
 
-        match &self.inner {
-            PyOpeningHoursInner::Naive(oh) => InputTime::Naive(
-                oh.next_change(time.as_naive_local())
-                    .expect("unexpected date beyond year 10 000"),
-            ),
-            PyOpeningHoursInner::WithTz { oh, tz } => InputTime::TzAware(
-                oh.next_change(time.as_tz_aware(tz))
-                    .expect("unexpected date beyond year 10 000"),
-            ),
-            PyOpeningHoursInner::WithCoords { oh, tz } => InputTime::TzAware(
-                oh.next_change(time.as_tz_aware(tz))
-                    .expect("unexpected date beyond year 10 000"),
-            ),
-        }
-        .map_date_limit()
+        self.inner
+            .next_change(time)
+            .expect("unexpected date beyond year 10 000")
+            .map_date_limit()
+
+        // TODO: prefer input timezone
     }
 
     /// Give an iterator that yields successive time intervals of consistent
@@ -292,48 +245,17 @@ impl PyOpeningHours {
     #[pyo3(signature = (start=None, end=None, /))]
     fn intervals(&self, start: Option<InputTime>, end: Option<InputTime>) -> RangeIterator {
         let start = InputTime::unwrap_or_now(start);
-
-        match &self.inner {
-            PyOpeningHoursInner::Naive(oh) => RangeIterator::new_naive(
-                oh,
-                start.as_naive_local(),
-                end.map(|dt| dt.as_naive_local()),
-            ),
-            PyOpeningHoursInner::WithTz { oh, tz } => RangeIterator::new_tz_aware(
-                oh,
-                start.as_tz_aware(tz),
-                end.map(|dt| dt.as_tz_aware(tz)),
-            ),
-            PyOpeningHoursInner::WithCoords { oh, tz } => RangeIterator::new_coords(
-                oh,
-                start.as_tz_aware(tz),
-                end.map(|dt| dt.as_tz_aware(tz)),
-            ),
-        }
+        RangeIterator::new(&self.inner, start, end)
     }
 
     #[pyo3()]
     fn __str__(&self) -> String {
-        match &self.inner {
-            PyOpeningHoursInner::Naive(oh) => oh.to_string(),
-            PyOpeningHoursInner::WithTz { oh, tz: _ } => oh.to_string(),
-            PyOpeningHoursInner::WithCoords { oh, tz: _ } => oh.to_string(),
-        }
+        self.inner.to_string()
     }
 
     #[pyo3()]
     fn __repr__(&self) -> String {
-        match &self.inner {
-            PyOpeningHoursInner::Naive(oh) => {
-                format!("OpeningHours({:?})", oh.to_string())
-            }
-            PyOpeningHoursInner::WithTz { oh, tz } => {
-                format!("OpeningHours({:?}, tz={tz})", oh.to_string())
-            }
-            PyOpeningHoursInner::WithCoords { oh, tz } => {
-                format!("OpeningHours({:?}, tz={tz})", oh.to_string())
-            }
-        }
+        format!("OpeningHours({:?})", self.inner.to_string())
     }
 }
 

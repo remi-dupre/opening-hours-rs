@@ -1,6 +1,11 @@
-use chrono::{DateTime, Local, NaiveDateTime, TimeZone};
+use std::ops::Add;
+
+use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, TimeDelta, TimeZone};
 use opening_hours::opening_hours::DATE_LIMIT;
-use opening_hours::{CoordLocation, DateTimeRange, TzLocation};
+use opening_hours::{
+    CoordLocation, DateTimeRange, Localize, LocalizeWithTz, NoLocation, TzLocation,
+};
+use opening_hours_syntax::rules::time::TimeEvent;
 use opening_hours_syntax::rules::RuleKind;
 use pyo3::prelude::*;
 
@@ -8,13 +13,20 @@ use pyo3::prelude::*;
 // --- DateTime
 // ---
 
-#[derive(FromPyObject, IntoPyObject)]
+#[derive(Clone, FromPyObject, IntoPyObject)]
 pub(crate) enum InputTime {
     Naive(NaiveDateTime),
     TzAware(DateTime<chrono_tz::Tz>),
 }
 
 impl InputTime {
+    fn as_naive_local(&self) -> NaiveDateTime {
+        match self {
+            InputTime::Naive(naive_date_time) => *naive_date_time,
+            InputTime::TzAware(date_time) => date_time.naive_local(),
+        }
+    }
+
     /// Just ensures that *DATE_LIMIT* is mapped to `None`.
     pub(crate) fn map_date_limit(self) -> Option<Self> {
         if self.as_naive_local() == DATE_LIMIT {
@@ -24,25 +36,85 @@ impl InputTime {
         }
     }
 
+    /// Fetch local time if value is `None`.
     pub(crate) fn unwrap_or_now(val: Option<Self>) -> Self {
         val.unwrap_or_else(|| Self::Naive(Local::now().naive_local()))
     }
+}
 
-    pub(crate) fn as_naive_local(&self) -> NaiveDateTime {
+impl Add<TimeDelta> for InputTime {
+    type Output = Self;
+
+    fn add(self, rhs: TimeDelta) -> Self::Output {
         match self {
-            InputTime::Naive(naive_date_time) => *naive_date_time,
-            InputTime::TzAware(date_time) => date_time.naive_local(),
+            InputTime::Naive(dt) => InputTime::Naive(dt + rhs),
+            InputTime::TzAware(dt) => InputTime::TzAware(dt + rhs),
+        }
+    }
+}
+
+// ---
+// --- Localization
+// ---
+
+#[derive(Copy, Clone, Default, PartialEq)]
+pub(crate) struct PyLocale {
+    pub(crate) timezone: Option<chrono_tz::Tz>,
+    pub(crate) coords: Option<(f64, f64)>,
+}
+
+impl Localize for PyLocale {
+    type DateTime = InputTime;
+
+    type WithTz<T>
+        = Self
+    where
+        T: TimeZone + Send + Sync,
+        T::Offset: Send + Sync;
+
+    fn naive(&self, dt: Self::DateTime) -> NaiveDateTime {
+        match dt {
+            InputTime::Naive(dt) => dt,
+            InputTime::TzAware(dt) => {
+                if let Some(local_tz) = self.timezone {
+                    dt.with_timezone(&local_tz).naive_local()
+                } else {
+                    dt.naive_local()
+                }
+            }
         }
     }
 
-    pub(crate) fn as_tz_aware(&self, default_tz: &chrono_tz::Tz) -> DateTime<chrono_tz::Tz> {
-        match self {
-            InputTime::Naive(naive_date_time) => default_tz
-                .from_local_datetime(naive_date_time)
-                .earliest()
-                .expect("input time is not valid for target timezone"), // TODO: exception
-            InputTime::TzAware(date_time) => *date_time,
+    fn datetime(&self, naive: NaiveDateTime) -> Self::DateTime {
+        if let Some(local_tz) = self.timezone {
+            InputTime::TzAware(TzLocation { tz: local_tz }.datetime(naive))
+        } else {
+            InputTime::Naive(naive)
         }
+    }
+
+    fn event_time(&self, date: NaiveDate, event: TimeEvent) -> chrono::NaiveTime {
+        if let (Some(tz), Some((lat, lon))) = (self.timezone, self.coords) {
+            CoordLocation { tz, lat, lon }.event_time(date, event)
+        } else {
+            NoLocation::default().event_time(date, event)
+        }
+    }
+
+    fn with_tz<T>(self, _tz: T) -> Self::WithTz<T>
+    where
+        T: TimeZone + Send + Sync,
+        T::Offset: Send + Sync,
+    {
+        self
+    }
+}
+
+impl LocalizeWithTz for PyLocale {
+    type WithCoord = Self;
+
+    fn with_coord(self, lat: f64, lon: f64) -> Self::WithCoord {
+        Self { coords: Some((lat, lon)), ..self }
     }
 }
 
@@ -93,63 +165,16 @@ pub struct RangeIterator {
 }
 
 impl RangeIterator {
-    pub fn new_naive(
-        td: &opening_hours::OpeningHours,
-        start: NaiveDateTime,
-        end: Option<NaiveDateTime>,
+    pub(crate) fn new(
+        td: &opening_hours::OpeningHours<PyLocale>,
+        start: InputTime,
+        end: Option<InputTime>,
     ) -> Self {
         let iter = {
             if let Some(end) = end {
-                Box::new(
-                    td.iter_range(start, end)
-                        .map(|rg| rg.map_dates(InputTime::Naive)),
-                ) as _
+                Box::new(td.iter_range(start, end)) as _
             } else {
-                Box::new(td.iter_from(start).map(|rg| rg.map_dates(InputTime::Naive))) as _
-            }
-        };
-
-        Self { iter }
-    }
-
-    pub fn new_tz_aware(
-        td: &opening_hours::OpeningHours<TzLocation<chrono_tz::Tz>>,
-        start: DateTime<chrono_tz::Tz>,
-        end: Option<DateTime<chrono_tz::Tz>>,
-    ) -> Self {
-        let iter = {
-            if let Some(end) = end {
-                Box::new(
-                    td.iter_range(start, end)
-                        .map(|rg| rg.map_dates(InputTime::TzAware)),
-                ) as _
-            } else {
-                Box::new(
-                    td.iter_from(start)
-                        .map(|rg| rg.map_dates(InputTime::TzAware)),
-                ) as _
-            }
-        };
-
-        Self { iter }
-    }
-
-    pub fn new_coords(
-        td: &opening_hours::OpeningHours<CoordLocation<chrono_tz::Tz>>,
-        start: DateTime<chrono_tz::Tz>,
-        end: Option<DateTime<chrono_tz::Tz>>,
-    ) -> Self {
-        let iter = {
-            if let Some(end) = end {
-                Box::new(
-                    td.iter_range(start, end)
-                        .map(|rg| rg.map_dates(InputTime::TzAware)),
-                ) as _
-            } else {
-                Box::new(
-                    td.iter_from(start)
-                        .map(|rg| rg.map_dates(InputTime::TzAware)),
-                ) as _
+                Box::new(td.iter_from(start)) as _
             }
         };
 
