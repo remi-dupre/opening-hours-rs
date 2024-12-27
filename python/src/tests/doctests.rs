@@ -6,21 +6,29 @@ fn run_doctests() {
         r#"
         import doctest
         import opening_hours
-        from opening_hours import OpeningHours
+        from datetime import datetime
+        from opening_hours import OpeningHours, State
 
 
         opening_hours.__test__ = dict(OpeningHours.__dict__) | {
-            "OpeningHours": OpeningHours
+            "OpeningHours": OpeningHours,
+            "State": State,
         }
 
         globs = {
+            "datetime": datetime,
             "opening_hours": opening_hours,
             "OpeningHours": OpeningHours,
         }
 
-        doctest.testmod(
-            opening_hours, globs=globs, optionflags=doctest.ELLIPSIS, verbose=True
+        result = doctest.testmod(
+            opening_hours,
+            globs=globs,
+            optionflags=doctest.ELLIPSIS,
+            verbose=True
         )
+
+        assert result.failed == 0
         "#,
     );
 }

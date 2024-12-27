@@ -65,6 +65,11 @@ fn validate(oh: &str) -> bool {
 /// >>> oh = OpeningHours("24/7")
 /// >>> oh.is_open()
 /// True
+///
+/// >>> dt = datetime.fromisoformat("2024-07-14 15:00")
+/// >>> oh = OpeningHours("sunrise-sunset ; PH off", country="FR", coords=(48.8535, 2.34839))
+/// >>> assert oh.is_closed(dt)
+/// >>> assert oh.next_change(dt).replace(tzinfo=None) == datetime.fromisoformat("2024-07-15 06:03")
 #[pyclass(frozen, name = "OpeningHours")]
 #[derive(PartialEq)]
 struct PyOpeningHours {
@@ -135,8 +140,7 @@ impl PyOpeningHours {
     /// Examples
     /// --------
     /// >>> OpeningHours("24/7 off").state()
-    /// 'closed'
-    // #[pyo3(text_signature = "(self, time=None, /)")]
+    /// State.CLOSED
     #[pyo3(signature = (time=None, /))]
     fn state(&self, time: Option<InputTime>) -> State {
         let time = InputTime::unwrap_or_now(time);
@@ -214,12 +218,7 @@ impl PyOpeningHours {
     #[pyo3(signature = (time=None, /))]
     fn next_change(&self, time: Option<InputTime>) -> Option<InputTime> {
         let time = InputTime::unwrap_or_now(time);
-
-        self.inner
-            .next_change(time)
-            .expect("unexpected date beyond year 10 000")
-            .map_date_limit()
-
+        self.inner.next_change(time)
         // TODO: prefer input timezone
     }
 
@@ -239,9 +238,9 @@ impl PyOpeningHours {
     /// --------
     /// >>> intervals = OpeningHours("2099Mo-Su 12:30-17:00").intervals()
     /// >>> next(intervals)
-    /// (..., datetime.datetime(2099, 1, 1, 12, 30), 'closed', [])
+    /// (..., datetime.datetime(2099, 1, 1, 12, 30), State.CLOSED, [])
     /// >>> next(intervals)
-    /// (datetime.datetime(2099, 1, 1, 12, 30), datetime.datetime(2099, 1, 1, 17, 0), 'open', [])
+    /// (datetime.datetime(2099, 1, 1, 12, 30), datetime.datetime(2099, 1, 1, 17, 0), State.OPEN, [])
     #[pyo3(signature = (start=None, end=None, /))]
     fn intervals(&self, start: Option<InputTime>, end: Option<InputTime>) -> RangeIterator {
         let start = InputTime::unwrap_or_now(start);

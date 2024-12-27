@@ -50,6 +50,7 @@ pub(crate) fn run_python(source: &str) {
 
     // Capture stdout into a buffer
     #[pyclass]
+    #[derive(Clone)]
     struct CaptureStdout(Arc<Mutex<String>>);
 
     #[pymethods]
@@ -83,6 +84,12 @@ pub(crate) fn run_python(source: &str) {
             CaptureStdout(buffer.clone()).into_pyobject(py).unwrap(),
         )
         .expect("could not intercept stdout");
+
+        sys.setattr(
+            "stderr",
+            CaptureStdout(buffer.clone()).into_pyobject(py).unwrap(),
+        )
+        .expect("could not intercept stderr");
 
         if let Err(err) = py.run(CString::new(source_wrapped).unwrap().as_c_str(), None, None) {
             let traceback = err

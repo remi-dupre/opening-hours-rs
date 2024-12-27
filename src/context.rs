@@ -250,7 +250,7 @@ where
         };
 
         let solar_day = SolarDay::new(self.lat, self.lon, date.year(), date.month(), date.day());
-        let timestamp = solar_day.event_time(dbg!(solar_event));
+        let timestamp = solar_day.event_time(solar_event);
 
         let dt = chrono::DateTime::<chrono::Utc>::from_timestamp(timestamp, 0)
             .expect("invalid timestamp")
