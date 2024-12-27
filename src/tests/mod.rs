@@ -117,15 +117,14 @@ macro_rules! schedule_at {
         $( , coord = $coord: expr )?
         $( , )?
     ) => {{
-        use $crate::{date, Context, OpeningHours,NoLocation };
+        use $crate::{date, Context, OpeningHours};
 
-        let ctx = Context::<NoLocation>::default()
+        let ctx = Context::default()
             $( .with_holidays($region.holidays()) )?
             $( .with_locale({
-                use $crate::Localize;
-                NoLocation::default().with_tz_from_coords($coord.0, $coord.1)
+                use $crate::{CoordLocation};
+                CoordLocation::from_coords($coord.0, $coord.1)
             }))?;
-
 
         $expression
             .parse::<OpeningHours>()?

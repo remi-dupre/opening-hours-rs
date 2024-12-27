@@ -1,10 +1,8 @@
 use std::ops::Add;
 
-use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, TimeDelta, TimeZone};
+use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, TimeDelta};
 use opening_hours::opening_hours::DATE_LIMIT;
-use opening_hours::{
-    CoordLocation, DateTimeRange, Localize, LocalizeWithTz, NoLocation, TzLocation,
-};
+use opening_hours::{CoordLocation, DateTimeRange, Localize, NoLocation, TzLocation};
 use opening_hours_syntax::rules::time::TimeEvent;
 use opening_hours_syntax::rules::RuleKind;
 use pyo3::prelude::*;
@@ -66,12 +64,6 @@ pub(crate) struct PyLocale {
 impl Localize for PyLocale {
     type DateTime = InputTime;
 
-    type WithTz<T>
-        = Self
-    where
-        T: TimeZone + Send + Sync,
-        T::Offset: Send + Sync;
-
     fn naive(&self, dt: Self::DateTime) -> NaiveDateTime {
         match dt {
             InputTime::Naive(dt) => dt,
@@ -95,26 +87,10 @@ impl Localize for PyLocale {
 
     fn event_time(&self, date: NaiveDate, event: TimeEvent) -> chrono::NaiveTime {
         if let (Some(tz), Some((lat, lon))) = (self.timezone, self.coords) {
-            CoordLocation { tz, lat, lon }.event_time(date, event)
+            CoordLocation::new(tz, lat, lon).event_time(date, event)
         } else {
             NoLocation::default().event_time(date, event)
         }
-    }
-
-    fn with_tz<T>(self, _tz: T) -> Self::WithTz<T>
-    where
-        T: TimeZone + Send + Sync,
-        T::Offset: Send + Sync,
-    {
-        self
-    }
-}
-
-impl LocalizeWithTz for PyLocale {
-    type WithCoord = Self;
-
-    fn with_coord(self, lat: f64, lon: f64) -> Self::WithCoord {
-        Self { coords: Some((lat, lon)), ..self }
     }
 }
 

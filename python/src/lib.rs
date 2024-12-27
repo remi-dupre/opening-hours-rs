@@ -4,6 +4,7 @@ pub(crate) mod types;
 #[cfg(test)]
 mod tests;
 
+use ::opening_hours::CoordLocation;
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 
@@ -12,7 +13,7 @@ use self::types::PyLocale;
 use crate::errors::ParserError;
 use crate::types::{RangeIterator, State};
 use ::opening_hours::country::Country;
-use ::opening_hours::{Context, Localize, NoLocation, OpeningHours};
+use ::opening_hours::{Context, OpeningHours};
 
 /// Validate that input string is a correct opening hours description.
 ///
@@ -115,11 +116,11 @@ impl PyOpeningHours {
                 PyLocale { timezone: Some(tz), coords: Some((lat, lon)) }
             }
             (None, Some((lat, lon)), true) => {
-                let tmp = NoLocation::default().with_tz_from_coords(lat, lon);
+                let tmp = CoordLocation::from_coords(lat, lon);
 
                 PyLocale {
-                    timezone: Some(tmp.tz),
-                    coords: Some((tmp.lat, tmp.lon)),
+                    timezone: Some(*tmp.get_timezone()),
+                    coords: Some((tmp.get_lat(), tmp.get_lon())),
                 }
             }
             _ => PyLocale::default(),

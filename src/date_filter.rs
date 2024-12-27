@@ -343,8 +343,8 @@ impl DateFilter for ds::WeekDayRange {
             }
             ds::WeekDayRange::Holiday { kind, offset } => {
                 let calendar = match kind {
-                    ds::HolidayKind::Public => &ctx.holidays.public,
-                    ds::HolidayKind::School => &ctx.holidays.school,
+                    ds::HolidayKind::Public => &ctx.holidays.get_public(),
+                    ds::HolidayKind::School => &ctx.holidays.get_school(),
                 };
 
                 let date = date - Duration::days(*offset);
@@ -360,8 +360,8 @@ impl DateFilter for ds::WeekDayRange {
         match self {
             ds::WeekDayRange::Holiday { kind, offset } => Some({
                 let calendar = match kind {
-                    ds::HolidayKind::Public => &ctx.holidays.public,
-                    ds::HolidayKind::School => &ctx.holidays.school,
+                    ds::HolidayKind::Public => &ctx.holidays.get_public(),
+                    ds::HolidayKind::School => &ctx.holidays.get_school(),
                 };
 
                 let date_with_offset = date - Duration::days(*offset);

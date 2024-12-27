@@ -50,7 +50,7 @@ impl Country {
     ///
     /// let holidays_fr = Country::FR.holidays();
     /// let date = NaiveDate::from_ymd_opt(2024, 7, 14).unwrap(); // french national day
-    /// assert!(holidays_fr.public.contains(date));
+    /// assert!(holidays_fr.get_public().contains(date));
     /// ```
     pub fn holidays(self) -> ContextHolidays {
         fn decode_holidays_db(
@@ -89,9 +89,9 @@ impl Country {
             )
         });
 
-        ContextHolidays {
-            public: DB_PUBLIC.get(&self).cloned().unwrap_or_default(),
-            school: DB_SCHOOL.get(&self).cloned().unwrap_or_default(),
-        }
+        ContextHolidays::new(
+            DB_PUBLIC.get(&self).cloned().unwrap_or_default(),
+            DB_SCHOOL.get(&self).cloned().unwrap_or_default(),
+        )
     }
 }

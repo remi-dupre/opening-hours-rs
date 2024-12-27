@@ -18,8 +18,25 @@ use crate::country::Country;
 /// Pairs a set of public holidays with a set of school holidays.
 #[derive(Clone, Default, Debug, Hash, PartialEq, Eq)]
 pub struct ContextHolidays {
-    pub public: Arc<CompactCalendar>,
-    pub school: Arc<CompactCalendar>,
+    public: Arc<CompactCalendar>,
+    school: Arc<CompactCalendar>,
+}
+
+impl ContextHolidays {
+    /// TODO: doc
+    pub fn new(public: Arc<CompactCalendar>, school: Arc<CompactCalendar>) -> Self {
+        Self { public, school }
+    }
+
+    /// TODO: doc
+    pub fn get_public(&self) -> &CompactCalendar {
+        &self.public
+    }
+
+    /// TODO: doc
+    pub fn get_school(&self) -> &CompactCalendar {
+        &self.school
+    }
 }
 
 // --
@@ -32,12 +49,6 @@ pub struct ContextHolidays {
 pub trait Localize: Clone + Send + Sync {
     /// The type for localized date & time.
     type DateTime: Clone + Add<Duration, Output = Self::DateTime>;
-
-    /// The type that results in specifying a new time zone.
-    type WithTz<T>: LocalizeWithTz
-    where
-        T: TimeZone + Send + Sync,
-        T::Offset: Send + Sync;
 
     /// Get naive local time.
     fn naive(&self, dt: Self::DateTime) -> NaiveDateTime;
@@ -54,50 +65,6 @@ pub trait Localize: Clone + Send + Sync {
             TimeEvent::Dusk => NaiveTime::from_hms_opt(20, 0, 0).unwrap(),
         }
     }
-
-    /// Specify a new time zone
-    fn with_tz<T>(self, tz: T) -> Self::WithTz<T>
-    where
-        T: TimeZone + Send + Sync,
-        T::Offset: Send + Sync;
-
-    /// Automatically infer timezone from input coordinates.
-    fn with_tz_from_coords(
-        self,
-        lat: f64,
-        lon: f64,
-    ) -> <Self::WithTz<chrono_tz::Tz> as LocalizeWithTz>::WithCoord {
-        static TZ_NAME_FINDER: LazyLock<tzf_rs::DefaultFinder> =
-            LazyLock::new(tzf_rs::DefaultFinder::new);
-
-        static TZ_BY_NAME: LazyLock<HashMap<&str, chrono_tz::Tz>> = LazyLock::new(|| {
-            chrono_tz::TZ_VARIANTS
-                .iter()
-                .copied()
-                .map(|tz| (tz.name(), tz))
-                .collect()
-        });
-
-        let tz_name = TZ_NAME_FINDER.get_tz_name(lon, lat);
-
-        let tz = TZ_BY_NAME.get(tz_name).copied().unwrap_or_else(|| {
-            log::warn!("Could not find time zone `{tz_name}` at {lat},{lon}");
-            chrono_tz::UTC
-        });
-
-        self.with_tz(tz).with_coord(lat, lon)
-    }
-}
-
-/// Extend the trait `Localize` for types that can be extended with
-/// coordinates. In general, you need to specify a timezone before you set
-/// coordinates.
-pub trait LocalizeWithTz: Localize {
-    /// The type that results in specifying new coordinates
-    type WithCoord: LocalizeWithTz;
-
-    /// Specify new coordinates
-    fn with_coord(self, lat: f64, lon: f64) -> Self::WithCoord;
 }
 
 // No location info.
@@ -109,26 +76,12 @@ pub struct NoLocation {
 impl Localize for NoLocation {
     type DateTime = NaiveDateTime;
 
-    type WithTz<Tz>
-        = TzLocation<Tz>
-    where
-        Tz: TimeZone + Send + Sync,
-        Tz::Offset: Send + Sync;
-
     fn naive(&self, dt: Self::DateTime) -> NaiveDateTime {
         dt
     }
 
     fn datetime(&self, naive: NaiveDateTime) -> Self::DateTime {
         naive
-    }
-
-    fn with_tz<Tz>(self, tz: Tz) -> Self::WithTz<Tz>
-    where
-        Tz: TimeZone + Send + Sync,
-        Tz::Offset: Send + Sync,
-    {
-        TzLocation { tz }
     }
 }
 
@@ -157,12 +110,6 @@ where
 {
     type DateTime = chrono::DateTime<Tz>;
 
-    type WithTz<T>
-        = TzLocation<T>
-    where
-        T: TimeZone + Send + Sync,
-        T::Offset: Send + Sync;
-
     fn naive(&self, dt: Self::DateTime) -> NaiveDateTime {
         dt.with_timezone(&self.tz).naive_local()
     }
@@ -178,26 +125,6 @@ where
                 .expect("no valid datetime for time zone");
         }
     }
-
-    fn with_tz<T>(self, tz: T) -> Self::WithTz<T>
-    where
-        T: TimeZone + Send + Sync,
-        T::Offset: Send + Sync,
-    {
-        TzLocation { tz }
-    }
-}
-
-impl<Tz> LocalizeWithTz for TzLocation<Tz>
-where
-    Tz: TimeZone + Send + Sync,
-    Tz::Offset: Send + Sync,
-{
-    type WithCoord = CoordLocation<Tz>;
-
-    fn with_coord(self, lat: f64, lon: f64) -> Self::WithCoord {
-        CoordLocation { tz: self.tz, lat, lon }
-    }
 }
 
 /// Timezone and coordinates are specified
@@ -206,9 +133,61 @@ pub struct CoordLocation<Tz>
 where
     Tz: TimeZone + Send + Sync,
 {
-    pub tz: Tz,
-    pub lat: f64,
-    pub lon: f64,
+    tz: Tz,
+    lat: f64,
+    lon: f64,
+}
+
+impl<Tz> CoordLocation<Tz>
+where
+    Tz: TimeZone + Send + Sync,
+{
+    /// TODO: doc
+    pub fn new(tz: Tz, lat: f64, lon: f64) -> Self {
+        Self { tz, lat, lon }
+    }
+
+    /// TODO: doc
+    pub fn get_timezone(&self) -> &Tz {
+        &self.tz
+    }
+
+    /// TODO: doc
+    pub fn get_lat(&self) -> f64 {
+        self.lat
+    }
+
+    /// TODO: doc
+    pub fn get_lon(&self) -> f64 {
+        self.lon
+    }
+}
+
+impl CoordLocation<chrono_tz::Tz> {
+    /// Automatically infer timezone from input coordinates.
+    ///
+    /// TODO: more doc & examples
+    pub fn from_coords(lat: f64, lon: f64) -> CoordLocation<chrono_tz::Tz> {
+        static TZ_NAME_FINDER: LazyLock<tzf_rs::DefaultFinder> =
+            LazyLock::new(tzf_rs::DefaultFinder::new);
+
+        static TZ_BY_NAME: LazyLock<HashMap<&str, chrono_tz::Tz>> = LazyLock::new(|| {
+            chrono_tz::TZ_VARIANTS
+                .iter()
+                .copied()
+                .map(|tz| (tz.name(), tz))
+                .collect()
+        });
+
+        let tz_name = TZ_NAME_FINDER.get_tz_name(lon, lat);
+
+        let tz = TZ_BY_NAME.get(tz_name).copied().unwrap_or_else(|| {
+            log::warn!("Could not find time zone `{tz_name}` at {lat},{lon}");
+            chrono_tz::UTC
+        });
+
+        CoordLocation { tz, lat, lon }
+    }
 }
 
 impl<Tz> Localize for CoordLocation<Tz>
@@ -217,13 +196,6 @@ where
     Tz::Offset: Send + Sync,
 {
     type DateTime = chrono::DateTime<Tz>;
-
-    // TODO: remove this builder pattern altogether
-    type WithTz<T>
-        = CoordLocation<T>
-    where
-        T: TimeZone + Send + Sync,
-        T::Offset: Send + Sync;
 
     fn naive(&self, dt: Self::DateTime) -> NaiveDateTime {
         dt.with_timezone(&self.tz).naive_local()
@@ -257,26 +229,6 @@ where
             .with_timezone(&self.tz);
 
         self.naive(dt).time()
-    }
-
-    fn with_tz<T>(self, tz: T) -> Self::WithTz<T>
-    where
-        T: TimeZone + Send + Sync,
-        T::Offset: Send + Sync,
-    {
-        CoordLocation { tz, lat: self.lat, lon: self.lon }
-    }
-}
-
-impl<Tz> LocalizeWithTz for CoordLocation<Tz>
-where
-    Tz: TimeZone + Send + Sync,
-    Tz::Offset: Send + Sync,
-{
-    type WithCoord = Self;
-
-    fn with_coord(self, lat: f64, lon: f64) -> Self::WithCoord {
-        Self { lat, lon, ..self }
     }
 }
 
@@ -315,7 +267,7 @@ impl Context<CoordLocation<chrono_tz::Tz>> {
             .map(Country::holidays)
             .unwrap_or_default();
 
-        let locale = NoLocation::default().with_tz_from_coords(lat, lon);
+        let locale = CoordLocation::from_coords(lat, lon);
         Self { holidays, locale }
     }
 }
