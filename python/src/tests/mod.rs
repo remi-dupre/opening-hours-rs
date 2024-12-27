@@ -4,7 +4,7 @@ mod doctests;
 use crate::opening_hours;
 use std::ffi::CString;
 use std::fmt::Write;
-use std::sync::Once;
+use std::sync::{Arc, Mutex, Once};
 
 use pyo3::prelude::*;
 
@@ -12,7 +12,7 @@ static INIT_PYTHON_GIL: Once = Once::new();
 
 pub(crate) fn run_python(source: &str) {
     #[pyclass]
-    struct CaptureStdout;
+    struct CaptureStdout(Arc<Mutex<String>>);
 
     #[pymethods]
     impl CaptureStdout {
@@ -21,7 +21,9 @@ pub(crate) fn run_python(source: &str) {
             "utf-8"
         }
 
-        fn write(&self, _data: &str) {}
+        fn write(&self, data: &str) {
+            self.0.lock().unwrap().push_str(data);
+        }
     }
 
     let common_prefix = source
@@ -53,9 +55,13 @@ pub(crate) fn run_python(source: &str) {
 
     Python::with_gil(|py| {
         let sys = py.import("sys").expect("could not import sys");
+        let buffer: Arc<Mutex<String>> = Arc::default();
 
-        sys.setattr("stdout", CaptureStdout.into_pyobject(py).unwrap())
-            .expect("could not intercept stdout");
+        sys.setattr(
+            "stdout",
+            CaptureStdout(buffer.clone()).into_pyobject(py).unwrap(),
+        )
+        .expect("could not intercept stdout");
 
         if let Err(err) = py.run(CString::new(without_indent).unwrap().as_c_str(), None, None) {
             let traceback = err
@@ -64,7 +70,10 @@ pub(crate) fn run_python(source: &str) {
                 .map(|s| "\n".to_string() + &s)
                 .unwrap_or_default();
 
-            panic!("Python Error {err:?}: {}.{traceback}", err.value(py))
+            println!("=== Captured stdout ===");
+            println!("{}", buffer.lock().unwrap());
+            println!("=== Captured stdout (end) ===");
+            panic!("Python Error ({err:?}): {traceback}")
         }
     });
 }

@@ -5,12 +5,14 @@
 ### Rust
 
 - Rust 1.83
+- Support localization (timezone & coords)
 
 ### Python
 
 - Add the `opening_hours.State` type.
 - Updated to latest maturin's workflow, which should ship precompiled binaries
-  for more older Python version
+  for more older Python version in the future.
+- Support localization (timezone & coords)
 
 ## 0.9.1
 

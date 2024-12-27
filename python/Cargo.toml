@@ -20,4 +20,12 @@ chrono-tz = { version = "0.10", default-features = false }
 opening-hours = { path = "..", version = "0.10.0" }
 opening-hours-syntax = { path = "../opening-hours-syntax", version = "0.10.0" }
 pyo3-log = "0.12"
-pyo3 = { version = "0.23", features = ["chrono", "chrono-tz", "generate-import-lib"] }
+
+[dependencies.pyo3]
+version = "0.23"
+features = [
+    "chrono", "chrono-tz", "generate-import-lib",
+    # This ensures that the package is only built with Python >=3.9, which is
+    # the first version supporting chrono-tz conversion.
+    "abi3-py39",
+]
