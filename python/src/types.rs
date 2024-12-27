@@ -13,7 +13,7 @@ use pyo3::prelude::*;
 // --- DateTime
 // ---
 
-#[derive(Clone, FromPyObject, IntoPyObject)]
+#[derive(Clone, Debug, FromPyObject, IntoPyObject)]
 pub(crate) enum InputTime {
     Naive(NaiveDateTime),
     TzAware(DateTime<chrono_tz::Tz>),

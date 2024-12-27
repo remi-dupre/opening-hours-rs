@@ -4,13 +4,15 @@ mod doctests;
 use crate::opening_hours;
 use std::ffi::CString;
 use std::fmt::Write;
-use std::sync::{Arc, Mutex, Once};
+use std::sync::{Arc, LazyLock, Mutex, Once};
 
 use pyo3::prelude::*;
 
 static INIT_PYTHON_GIL: Once = Once::new();
 
 pub(crate) fn run_python(source: &str) {
+    static GIL_LOCK: LazyLock<Mutex<()>> = LazyLock::new(Mutex::default);
+
     #[pyclass]
     struct CaptureStdout(Arc<Mutex<String>>);
 
@@ -52,6 +54,8 @@ pub(crate) fn run_python(source: &str) {
         pyo3::append_to_inittab!(opening_hours);
         pyo3::prepare_freethreaded_python();
     });
+
+    let _guard = GIL_LOCK.lock().expect("could not get exclusive GIL lock");
 
     Python::with_gil(|py| {
         let sys = py.import("sys").expect("could not import sys");

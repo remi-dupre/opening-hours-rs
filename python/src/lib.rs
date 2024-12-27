@@ -246,6 +246,7 @@ impl PyOpeningHours {
     fn intervals(&self, start: Option<InputTime>, end: Option<InputTime>) -> RangeIterator {
         let start = InputTime::unwrap_or_now(start);
         RangeIterator::new(&self.inner, start, end)
+        // TODO: prefer input timezone
     }
 
     #[pyo3()]
