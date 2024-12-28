@@ -4,16 +4,13 @@ pub(crate) mod types;
 #[cfg(test)]
 mod tests;
 
-use ::opening_hours::CoordLocation;
 use pyo3::prelude::*;
-use pyo3::wrap_pyfunction;
 
-use self::types::DateTimeMaybeAware;
-use self::types::PyLocale;
+use self::types::{DateTimeMaybeAware, PyLocation};
 use crate::errors::ParserError;
 use crate::types::{RangeIterator, State};
 use ::opening_hours::country::Country;
-use ::opening_hours::{Context, OpeningHours};
+use ::opening_hours::{Context, OpeningHours, TzLocation};
 
 /// Validate that input string is a correct opening hours description.
 ///
@@ -74,7 +71,7 @@ fn validate(oh: &str) -> bool {
 #[pyclass(frozen, name = "OpeningHours")]
 #[derive(PartialEq)]
 struct PyOpeningHours {
-    inner: OpeningHours<PyLocale>,
+    inner: OpeningHours<PyLocation>,
 }
 
 #[pymethods]
@@ -109,21 +106,12 @@ impl PyOpeningHours {
         }
 
         let locale = match (timezone, coords, auto_timezone) {
-            (Some(tz), None, _) | (Some(tz), _, false) => {
-                PyLocale { timezone: Some(tz), coords: None }
-            }
+            (Some(tz), None, _) | (Some(tz), _, false) => PyLocation::Aware(TzLocation::new(tz)),
             (Some(tz), Some((lat, lon)), _) => {
-                PyLocale { timezone: Some(tz), coords: Some((lat, lon)) }
+                PyLocation::Aware(TzLocation::new(tz).with_coords(lat, lon))
             }
-            (None, Some((lat, lon)), true) => {
-                let tmp = CoordLocation::from_coords(lat, lon);
-
-                PyLocale {
-                    timezone: Some(*tmp.get_timezone()),
-                    coords: Some((tmp.get_lat(), tmp.get_lon())),
-                }
-            }
-            _ => PyLocale::default(),
+            (None, Some((lat, lon)), true) => PyLocation::Aware(TzLocation::from_coords(lat, lon)),
+            _ => PyLocation::Naive,
         };
 
         Ok(PyOpeningHours { inner: oh.with_context(ctx.with_locale(locale)) })

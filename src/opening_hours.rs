@@ -72,11 +72,6 @@ impl<L: Localize> OpeningHours<L> {
         OpeningHours { expr: self.expr, ctx }
     }
 
-    /// Get the context attached to this expression.
-    pub fn get_context(&self) -> &Context<L> {
-        &self.ctx
-    }
-
     // --
     // -- Low level implementations.
     // --

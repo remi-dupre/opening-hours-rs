@@ -2,7 +2,7 @@ use std::ops::Add;
 
 use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, TimeDelta};
 use opening_hours::opening_hours::DATE_LIMIT;
-use opening_hours::{CoordLocation, DateTimeRange, Localize, NoLocation, TzLocation};
+use opening_hours::{DateTimeRange, Localize, NoLocation, TzLocation};
 use opening_hours_syntax::rules::time::TimeEvent;
 use opening_hours_syntax::rules::RuleKind;
 use pyo3::prelude::*;
@@ -14,7 +14,7 @@ use pyo3::prelude::*;
 #[derive(Clone, Copy, FromPyObject, IntoPyObject)]
 pub(crate) enum DateTimeMaybeAware {
     Naive(NaiveDateTime),
-    TzAware(DateTime<chrono_tz::Tz>),
+    Aware(DateTime<chrono_tz::Tz>),
 }
 
 impl DateTimeMaybeAware {
@@ -22,7 +22,7 @@ impl DateTimeMaybeAware {
     pub(crate) fn as_naive_local(&self) -> NaiveDateTime {
         match self {
             DateTimeMaybeAware::Naive(naive_date_time) => *naive_date_time,
-            DateTimeMaybeAware::TzAware(date_time) => date_time.naive_local(),
+            DateTimeMaybeAware::Aware(date_time) => date_time.naive_local(),
         }
     }
 
@@ -43,21 +43,21 @@ impl DateTimeMaybeAware {
     pub(crate) fn timezone(&self) -> Option<chrono_tz::Tz> {
         match self {
             Self::Naive(_) => None,
-            Self::TzAware(dt) => Some(dt.timezone()),
+            Self::Aware(dt) => Some(dt.timezone()),
         }
     }
 
     pub(crate) fn or_with_timezone(self, tz: chrono_tz::Tz) -> Self {
         match self {
-            Self::Naive(dt) => Self::TzAware(TzLocation::new(tz).datetime(dt)),
-            Self::TzAware(_) => self,
+            Self::Naive(dt) => Self::Aware(TzLocation::new(tz).datetime(dt)),
+            Self::Aware(_) => self,
         }
     }
 
     pub(crate) fn or_with_timezone_of(self, other: Self) -> Self {
         match other {
             Self::Naive(_) => self,
-            Self::TzAware(dt) => self.or_with_timezone(dt.timezone()),
+            Self::Aware(dt) => self.or_with_timezone(dt.timezone()),
         }
     }
 }
@@ -68,7 +68,7 @@ impl Add<TimeDelta> for DateTimeMaybeAware {
     fn add(self, rhs: TimeDelta) -> Self::Output {
         match self {
             DateTimeMaybeAware::Naive(dt) => DateTimeMaybeAware::Naive(dt + rhs),
-            DateTimeMaybeAware::TzAware(dt) => DateTimeMaybeAware::TzAware(dt + rhs),
+            DateTimeMaybeAware::Aware(dt) => DateTimeMaybeAware::Aware(dt + rhs),
         }
     }
 }
@@ -77,41 +77,36 @@ impl Add<TimeDelta> for DateTimeMaybeAware {
 // --- Localization
 // ---
 
-#[derive(Copy, Clone, Default, PartialEq)]
-pub(crate) struct PyLocale {
-    pub(crate) timezone: Option<chrono_tz::Tz>,
-    pub(crate) coords: Option<(f64, f64)>,
+#[derive(Clone, PartialEq)]
+pub(crate) enum PyLocation {
+    Naive,
+    Aware(TzLocation<chrono_tz::Tz>),
 }
 
-impl Localize for PyLocale {
+impl Localize for PyLocation {
     type DateTime = DateTimeMaybeAware;
 
     fn naive(&self, dt: Self::DateTime) -> NaiveDateTime {
-        match dt {
-            DateTimeMaybeAware::Naive(dt) => dt,
-            DateTimeMaybeAware::TzAware(dt) => {
-                if let Some(local_tz) = self.timezone {
-                    dt.with_timezone(&local_tz).naive_local()
-                } else {
-                    dt.naive_local()
-                }
-            }
+        match self {
+            PyLocation::Naive => NoLocation.naive(dt.as_naive_local()),
+            PyLocation::Aware(loc) => match dt {
+                DateTimeMaybeAware::Naive(dt) => dt,
+                DateTimeMaybeAware::Aware(dt) => loc.naive(dt),
+            },
         }
     }
 
     fn datetime(&self, naive: NaiveDateTime) -> Self::DateTime {
-        if let Some(local_tz) = self.timezone {
-            DateTimeMaybeAware::TzAware(TzLocation { tz: local_tz }.datetime(naive))
-        } else {
-            DateTimeMaybeAware::Naive(naive)
+        match self {
+            Self::Naive => DateTimeMaybeAware::Naive(NoLocation.datetime(naive)),
+            Self::Aware(loc) => DateTimeMaybeAware::Aware(loc.datetime(naive)),
         }
     }
 
     fn event_time(&self, date: NaiveDate, event: TimeEvent) -> chrono::NaiveTime {
-        if let (Some(tz), Some((lat, lon))) = (self.timezone, self.coords) {
-            CoordLocation::new(tz, lat, lon).event_time(date, event)
-        } else {
-            NoLocation::default().event_time(date, event)
+        match self {
+            PyLocation::Naive => NoLocation.event_time(date, event),
+            PyLocation::Aware(loc) => loc.event_time(date, event),
         }
     }
 }
@@ -165,7 +160,7 @@ pub struct RangeIterator {
 
 impl RangeIterator {
     pub(crate) fn new(
-        td: &opening_hours::OpeningHours<PyLocale>,
+        td: &opening_hours::OpeningHours<PyLocation>,
         start: DateTimeMaybeAware,
         end: Option<DateTimeMaybeAware>,
     ) -> Self {

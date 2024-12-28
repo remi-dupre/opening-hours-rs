@@ -1,4 +1,4 @@
-use crate::{datetime, Context, CoordLocation, OpeningHours, TzLocation};
+use crate::{datetime, Context, OpeningHours, TzLocation};
 
 #[test]
 fn ctx_with_tz() {
@@ -52,7 +52,7 @@ fn ends_at_ambiguous_time() {
 #[test]
 fn infer_tz() {
     let tz = chrono_tz::Europe::Paris; // will be infered for context
-    let ctx = Context::default().with_locale(CoordLocation::from_coords(48.8535, 2.34839));
+    let ctx = Context::default().with_locale(TzLocation::from_coords(48.8535, 2.34839));
 
     let oh = OpeningHours::parse("sunrise-sunset")
         .unwrap()

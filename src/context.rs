@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::fmt::Debug;
-use std::marker::PhantomData;
 use std::ops::Add;
 use std::sync::{Arc, LazyLock};
 
@@ -45,7 +44,8 @@ impl ContextHolidays {
 
 /// Specifies how dates should be localized while evaluating opening hours. No
 /// localisation is available by default but this can be used to specify a
-/// TimeZone and coordinates (which affect sun events).
+/// timezone and coordinates (which affect sun events).
+///
 /// TODO: Only export in a location module?
 pub trait Localize: Clone + Send + Sync {
     /// The type for localized date & time.
@@ -70,9 +70,7 @@ pub trait Localize: Clone + Send + Sync {
 
 // No location info.
 #[derive(Clone, Debug, Default, Hash, PartialEq, Eq)]
-pub struct NoLocation {
-    _private: PhantomData<()>,
-}
+pub struct NoLocation;
 
 impl Localize for NoLocation {
     type DateTime = NaiveDateTime;
@@ -86,23 +84,54 @@ impl Localize for NoLocation {
     }
 }
 
-/// Time zone is specified.
-///
-/// TODO: MERGE WITH CoordLocation
-#[derive(Clone, Debug, Default, Hash, PartialEq, Eq)]
+/// Time zone is specified and coordinates can optionally be specified for
+/// accurate sun events.
+#[derive(Clone, Debug, PartialEq)]
 pub struct TzLocation<Tz>
 where
     Tz: TimeZone + Send + Sync,
 {
-    pub tz: Tz,
+    tz: Tz,
+    coords: Option<[f64; 2]>,
 }
 
 impl<Tz> TzLocation<Tz>
 where
     Tz: TimeZone + Send + Sync,
 {
+    /// TODO: doc
     pub fn new(tz: Tz) -> Self {
-        Self { tz }
+        Self { tz, coords: None }
+    }
+
+    /// TODO: doc
+    pub fn with_coords(self, lat: f64, lon: f64) -> Self {
+        Self { tz: self.tz, coords: Some([lat, lon]) }
+    }
+}
+
+impl TzLocation<chrono_tz::Tz> {
+    /// TODO: doc
+    pub fn from_coords(lat: f64, lon: f64) -> Self {
+        static TZ_NAME_FINDER: LazyLock<tzf_rs::DefaultFinder> =
+            LazyLock::new(tzf_rs::DefaultFinder::new);
+
+        static TZ_BY_NAME: LazyLock<HashMap<&str, chrono_tz::Tz>> = LazyLock::new(|| {
+            chrono_tz::TZ_VARIANTS
+                .iter()
+                .copied()
+                .map(|tz| (tz.name(), tz))
+                .collect()
+        });
+
+        let tz_name = TZ_NAME_FINDER.get_tz_name(lon, lat);
+
+        let tz = TZ_BY_NAME.get(tz_name).copied().unwrap_or_else(|| {
+            log::warn!("Could not find time zone `{tz_name}` at {lat},{lon}");
+            chrono_tz::UTC
+        });
+
+        Self { tz, coords: Some([lat, lon]) }
     }
 }
 
@@ -128,95 +157,12 @@ where
                 .expect("no valid datetime for time zone");
         }
     }
-}
-
-/// Timezone and coordinates are specified
-#[derive(Clone, Debug, Default, PartialEq)]
-pub struct CoordLocation<Tz>
-where
-    Tz: TimeZone + Send + Sync,
-{
-    tz: Tz,
-    lat: f64,
-    lon: f64,
-}
-
-impl<Tz> CoordLocation<Tz>
-where
-    Tz: TimeZone + Send + Sync,
-{
-    /// TODO: doc
-    pub fn new(tz: Tz, lat: f64, lon: f64) -> Self {
-        Self { tz, lat, lon }
-    }
-
-    /// TODO: doc
-    pub fn get_timezone(&self) -> &Tz {
-        &self.tz
-    }
-
-    /// TODO: doc
-    pub fn get_lat(&self) -> f64 {
-        self.lat
-    }
-
-    /// TODO: doc
-    pub fn get_lon(&self) -> f64 {
-        self.lon
-    }
-}
-
-impl CoordLocation<chrono_tz::Tz> {
-    /// Automatically infer timezone from input coordinates.
-    ///
-    /// TODO: more doc & examples
-    pub fn from_coords(lat: f64, lon: f64) -> CoordLocation<chrono_tz::Tz> {
-        static TZ_NAME_FINDER: LazyLock<tzf_rs::DefaultFinder> =
-            LazyLock::new(tzf_rs::DefaultFinder::new);
-
-        static TZ_BY_NAME: LazyLock<HashMap<&str, chrono_tz::Tz>> = LazyLock::new(|| {
-            chrono_tz::TZ_VARIANTS
-                .iter()
-                .copied()
-                .map(|tz| (tz.name(), tz))
-                .collect()
-        });
-
-        let tz_name = TZ_NAME_FINDER.get_tz_name(lon, lat);
-
-        let tz = TZ_BY_NAME.get(tz_name).copied().unwrap_or_else(|| {
-            log::warn!("Could not find time zone `{tz_name}` at {lat},{lon}");
-            chrono_tz::UTC
-        });
-
-        CoordLocation { tz, lat, lon }
-    }
-}
-
-impl<Tz> Localize for CoordLocation<Tz>
-where
-    Tz: TimeZone + Send + Sync,
-    Tz::Offset: Send + Sync,
-{
-    type DateTime = chrono::DateTime<Tz>;
-
-    fn naive(&self, dt: Self::DateTime) -> NaiveDateTime {
-        dt.with_timezone(&self.tz).naive_local()
-    }
-
-    fn datetime(&self, mut naive: NaiveDateTime) -> Self::DateTime {
-        loop {
-            if let Some(dt) = self.tz.from_local_datetime(&naive).latest() {
-                return dt;
-            }
-
-            naive = naive
-                .checked_add_signed(TimeDelta::minutes(1))
-                .expect("no valid datetime for time zone");
-        }
-    }
 
     fn event_time(&self, date: NaiveDate, event: TimeEvent) -> NaiveTime {
+        let Some([lat, lon]) = self.coords else {
+            return NoLocation.event_time(date, event);
+        };
+
         let solar_event = match event {
             TimeEvent::Dawn => SolarEvent::Dawn(DawnType::Civil),
             TimeEvent::Sunrise => SolarEvent::Sunrise,
@@ -224,7 +170,7 @@ where
             TimeEvent::Dusk => SolarEvent::Dusk(DawnType::Civil),
         };
 
-        let solar_day = SolarDay::new(self.lat, self.lon, date.year(), date.month(), date.day());
+        let solar_day = SolarDay::new(lat, lon, date.year(), date.month(), date.day());
         let timestamp = solar_day.event_time(solar_event);
 
         let dt = chrono::DateTime::<chrono::Utc>::from_timestamp(timestamp, 0)
@@ -259,7 +205,7 @@ impl<L> Context<L> {
     }
 }
 
-impl Context<CoordLocation<chrono_tz::Tz>> {
+impl Context<TzLocation<chrono_tz::Tz>> {
     /// Create a context with given coordinates and try to infer a timezone and
     /// a local holiday calendar.
     ///
@@ -270,16 +216,13 @@ impl Context<CoordLocation<chrono_tz::Tz>> {
             .map(Country::holidays)
             .unwrap_or_default();
 
-        let locale = CoordLocation::from_coords(lat, lon);
+        let locale = TzLocation::from_coords(lat, lon);
         Self { holidays, locale }
     }
 }
 
 impl Default for Context<NoLocation> {
     fn default() -> Self {
-        Self {
-            holidays: Default::default(),
-            locale: Default::default(),
-        }
+        Self { holidays: Default::default(), locale: NoLocation }
     }
 }
