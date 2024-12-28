@@ -46,6 +46,7 @@ impl ContextHolidays {
 /// Specifies how dates should be localized while evaluating opening hours. No
 /// localisation is available by default but this can be used to specify a
 /// TimeZone and coordinates (which affect sun events).
+/// TODO: Only export in a location module?
 pub trait Localize: Clone + Send + Sync {
     /// The type for localized date & time.
     type DateTime: Clone + Add<Duration, Output = Self::DateTime>;
@@ -86,6 +87,8 @@ impl Localize for NoLocation {
 }
 
 /// Time zone is specified.
+///
+/// TODO: MERGE WITH CoordLocation
 #[derive(Clone, Debug, Default, Hash, PartialEq, Eq)]
 pub struct TzLocation<Tz>
 where

@@ -11,14 +11,15 @@ use pyo3::prelude::*;
 // --- DateTime
 // ---
 
-#[derive(Clone, Debug, FromPyObject, IntoPyObject)]
+#[derive(Clone, Copy, FromPyObject, IntoPyObject)]
 pub(crate) enum DateTimeMaybeAware {
     Naive(NaiveDateTime),
     TzAware(DateTime<chrono_tz::Tz>),
 }
 
 impl DateTimeMaybeAware {
-    fn as_naive_local(&self) -> NaiveDateTime {
+    /// Drop eventual timezone information.
+    pub(crate) fn as_naive_local(&self) -> NaiveDateTime {
         match self {
             DateTimeMaybeAware::Naive(naive_date_time) => *naive_date_time,
             DateTimeMaybeAware::TzAware(date_time) => date_time.naive_local(),
@@ -37,6 +38,27 @@ impl DateTimeMaybeAware {
     /// Fetch local time if value is `None`.
     pub(crate) fn unwrap_or_now(val: Option<Self>) -> Self {
         val.unwrap_or_else(|| Self::Naive(Local::now().naive_local()))
+    }
+
+    pub(crate) fn timezone(&self) -> Option<chrono_tz::Tz> {
+        match self {
+            Self::Naive(_) => None,
+            Self::TzAware(dt) => Some(dt.timezone()),
+        }
+    }
+
+    pub(crate) fn or_with_timezone(self, tz: chrono_tz::Tz) -> Self {
+        match self {
+            Self::Naive(dt) => Self::TzAware(TzLocation::new(tz).datetime(dt)),
+            Self::TzAware(_) => self,
+        }
+    }
+
+    pub(crate) fn or_with_timezone_of(self, other: Self) -> Self {
+        match other {
+            Self::Naive(_) => self,
+            Self::TzAware(dt) => self.or_with_timezone(dt.timezone()),
+        }
     }
 }
 
@@ -137,6 +159,7 @@ impl std::fmt::Display for State {
 /// Iterator over a range period of an [`OpeningHours`].
 #[pyclass()]
 pub struct RangeIterator {
+    prefer_timezone: Option<chrono_tz::Tz>,
     iter: Box<dyn Iterator<Item = DateTimeRange<DateTimeMaybeAware>> + Send + Sync>,
 }
 
@@ -154,7 +177,20 @@ impl RangeIterator {
             }
         };
 
-        Self { iter }
+        Self {
+            prefer_timezone: start
+                .timezone()
+                .or_else(|| end.and_then(|dt| dt.timezone())),
+            iter,
+        }
+    }
+
+    fn map_prefered_timezone(&self, dt: DateTimeMaybeAware) -> DateTimeMaybeAware {
+        if let Some(tz) = self.prefer_timezone {
+            dt.or_with_timezone(tz)
+        } else {
+            dt
+        }
     }
 }
 
@@ -175,8 +211,9 @@ impl RangeIterator {
         let dt_range = slf.iter.next()?;
 
         Some((
-            dt_range.range.start,
-            dt_range.range.end.map_date_limit(),
+            slf.map_prefered_timezone(dt_range.range.start),
+            slf.map_prefered_timezone(dt_range.range.end)
+                .map_date_limit(),
             dt_range.kind.into(),
             dt_range.comments.iter().map(|c| c.to_string()).collect(),
         ))

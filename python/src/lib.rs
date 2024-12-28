@@ -219,8 +219,10 @@ impl PyOpeningHours {
     #[pyo3(signature = (time=None, /))]
     fn next_change(&self, time: Option<DateTimeMaybeAware>) -> Option<DateTimeMaybeAware> {
         let time = DateTimeMaybeAware::unwrap_or_now(time);
-        self.inner.next_change(time)
-        // TODO: prefer input timezone
+
+        self.inner
+            .next_change(time)
+            .map(|dt| dt.or_with_timezone_of(time))
     }
 
     /// Give an iterator that yields successive time intervals of consistent
@@ -250,7 +252,6 @@ impl PyOpeningHours {
     ) -> RangeIterator {
         let start = DateTimeMaybeAware::unwrap_or_now(start);
         RangeIterator::new(&self.inner, start, end)
-        // TODO: prefer input timezone
     }
 
     #[pyo3()]

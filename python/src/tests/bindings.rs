@@ -69,3 +69,32 @@ fn auto_from_coord() {
         "#,
     )
 }
+
+#[test]
+fn return_date_limit() {
+    run_python(
+        r#"
+        from opening_hours import OpeningHours
+
+        oh = OpeningHours("24/7")
+        assert oh.next_change() is None
+        assert next(oh.intervals())[1] is None
+        "#,
+    )
+}
+
+#[test]
+fn prefer_input_timezone() {
+    run_python(
+        r#"
+        from datetime import datetime
+        from opening_hours import OpeningHours
+        from zoneinfo import ZoneInfo
+
+        tz = ZoneInfo("Europe/Paris")
+        dt = datetime.fromisoformat("2024-12-12 11:30")
+        oh = OpeningHours("10:00-12:00")
+        assert oh.next_change(dt.replace(tzinfo=tz)) == datetime.fromisoformat("2024-12-12 12:00:00").replace(tzinfo=tz)
+        "#,
+    )
+}
