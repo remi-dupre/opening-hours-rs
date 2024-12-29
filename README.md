@@ -10,8 +10,8 @@
 **🐍 Python bindings can be found [here](https://github.com/remi-dupre/opening-hours-rs/tree/master/opening-hours-py)**
 
 A Rust library for parsing and working with OSM's opening hours field. You can
-find its specification [here](https://wiki.openstreetmap.org/wiki/Key:opening_hours/specification)
-and the reference JS library [here](https://github.com/opening-hours/opening_hours.js).
+find its specification [here][grammar] and the reference JS library
+[here](https://github.com/opening-hours/opening_hours.js).
 
 Note that the specification is quite messy and that the JS library takes
 liberty to extend it quite a lot. This means that most of the real world data
@@ -73,8 +73,9 @@ also automatically infer the timezone from coordinates.
 The **log** feature can be enabled to emit warnings the [crate-log] crate.
 
 [codecov]: https://app.codecov.io/gh/remi-dupre/opening-hours-rs "Code coverage"
-[crate-log]: https://crates.io/crates/log
+[crate-log]: https://crates.io/crates/log "crates.io page for 'log'"
 [docs]: https://docs.rs/opening-hours "Documentation"
+[grammar]: https://wiki.openstreetmap.org/wiki/Key:opening_hours/specification "OSM specification for opening hours"
 [nager]: https://date.nager.at/api/v3 "Worldwide holidays (REST API)"
 [opening-hours]: https://crates.io/crates/opening-hours "Package"
 [opening-hours-syntax]: https://crates.io/crates/opening-hours-syntax "Syntax Package"
