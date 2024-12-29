@@ -1,16 +1,41 @@
-pub(crate) mod errors;
 pub(crate) mod types;
 
 #[cfg(test)]
 mod tests;
 
+use pyo3::exceptions::PyException;
 use pyo3::prelude::*;
 
-use self::types::{DateTimeMaybeAware, PyLocation};
-use crate::errors::ParserError;
-use crate::types::{RangeIterator, State};
 use ::opening_hours::country::Country;
 use ::opening_hours::{Context, OpeningHours, TzLocation};
+
+use crate::types::datetime::DateTimeMaybeAware;
+use crate::types::iterator::RangeIterator;
+use crate::types::location::PyLocation;
+use crate::types::state::State;
+
+pyo3::create_exception!(
+    opening_hours,
+    ParserError,
+    PyException,
+    concat!(
+        "The opening hours expression has an invalid syntax.\n",
+        "\n",
+        "See https://wiki.openstreetmap.org/wiki/Key:opening_hours/specification\n",
+        "for a specification.",
+    )
+);
+
+pyo3::create_exception!(
+    opening_hours,
+    UnknownCountryError,
+    PyException,
+    concat!(
+        "The provided country code is not known.\n",
+        "\n",
+        "See https://en.wikipedia.org/wiki/List_of_ISO_3166_country_codes.",
+    )
+);
 
 /// Validate that input string is a correct opening hours description.
 ///
@@ -88,15 +113,16 @@ impl PyOpeningHours {
     ) -> PyResult<Self> {
         let auto_country = auto_country.unwrap_or(true);
         let auto_timezone = auto_timezone.unwrap_or(true);
-
         let mut ctx = Context::default();
-        let oh = OpeningHours::parse(oh).map_err(ParserError::from)?;
+
+        let oh = OpeningHours::parse(oh)
+            .map_err(|err| ParserError::new_err(format!("Failed to parse expression: {err}")))?;
 
         if let Some(iso_code) = country {
             ctx = ctx.with_holidays(
                 iso_code
                     .parse::<Country>()
-                    .expect("unknown country") // TODO: exception
+                    .map_err(|err| UnknownCountryError::new_err(err.to_string()))?
                     .holidays(),
             );
         } else if let Some((lat, lon)) = coords {
@@ -266,8 +292,10 @@ impl PyOpeningHours {
 /// The main structure you will have to interact with is OpeningHours, which
 /// represents a parsed definition of opening hours.
 #[pymodule]
-fn opening_hours(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn opening_hours(py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     pyo3_log::init();
+    m.add("ParserError", py.get_type::<ParserError>())?;
+    m.add("UnknownCountryError", py.get_type::<UnknownCountryError>())?;
     m.add_function(wrap_pyfunction!(validate, m)?)?;
     m.add_class::<State>()?;
     m.add_class::<PyOpeningHours>()?;

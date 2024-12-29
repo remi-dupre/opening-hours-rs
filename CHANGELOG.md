@@ -13,6 +13,7 @@
 - Updated to latest maturin's workflow, which should ship precompiled binaries
   for more older Python version in the future.
 - Support localization (timezone & coords)
+- Add exception types `ParserError` and `UnknownCountryError`
 
 ## 0.9.1
 

@@ -98,3 +98,26 @@ fn prefer_input_timezone() {
         "#,
     )
 }
+
+#[test]
+fn parser_exception() {
+    run_python(
+        r#"
+        from opening_hours import OpeningHours, ParserError, UnknownCountryError
+
+        try:
+            OpeningHours("not a valid expression")
+        except ParserError:
+            pass
+        else:
+            raise Exception
+
+        try:
+            OpeningHours("24/7", country="FF")
+        except UnknownCountryError:
+            pass
+        else:
+            raise Exception
+        "#,
+    )
+}
