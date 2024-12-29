@@ -42,7 +42,7 @@ impl Country {
         None
     }
 
-    /// Load holidays for this country from a compact embeded database.
+    /// Load holidays for this country from a compact embedded database.
     ///
     /// ```
     /// use chrono::NaiveDate;

@@ -17,22 +17,22 @@ use crate::country::Country;
 /// Pairs a set of public holidays with a set of school holidays.
 #[derive(Clone, Default, Debug, Hash, PartialEq, Eq)]
 pub struct ContextHolidays {
-    public: Arc<CompactCalendar>,
-    school: Arc<CompactCalendar>,
+    pub(crate) public: Arc<CompactCalendar>,
+    pub(crate) school: Arc<CompactCalendar>,
 }
 
 impl ContextHolidays {
-    /// TODO: doc
+    /// Create a new holidays context from sets of public and school holidays.
     pub fn new(public: Arc<CompactCalendar>, school: Arc<CompactCalendar>) -> Self {
         Self { public, school }
     }
 
-    /// TODO: doc
+    /// Get the set of public holidays attached to this context.
     pub fn get_public(&self) -> &CompactCalendar {
         &self.public
     }
 
-    /// TODO: doc
+    /// Get the set of school holidays attached to this context.
     pub fn get_school(&self) -> &CompactCalendar {
         &self.school
     }
@@ -99,19 +99,33 @@ impl<Tz> TzLocation<Tz>
 where
     Tz: TimeZone + Send + Sync,
 {
-    /// TODO: doc
+    /// Create a new location context which only contains timezone information.
     pub fn new(tz: Tz) -> Self {
         Self { tz, coords: None }
     }
 
-    /// TODO: doc
+    /// Attach coordinates to the location context.
+    ///
+    /// If coordinates where already specified, they will be replaced with the
+    /// new ones.
     pub fn with_coords(self, lat: f64, lon: f64) -> Self {
         Self { tz: self.tz, coords: Some([lat, lon]) }
     }
 }
 
 impl TzLocation<chrono_tz::Tz> {
-    /// TODO: doc
+    /// Create a new location context from a set of coordinates and with timezone
+    /// information inferred from this localization.
+    ///
+    /// ```
+    /// use chrono_tz::Europe;
+    /// use opening_hours::TzLocation;
+    ///
+    /// assert_eq!(
+    ///     TzLocation::from_coords(48.8535, 2.34839),
+    ///     TzLocation::new(Europe::Paris).with_coords(48.8535, 2.34839),
+    /// );
+    /// ```
     pub fn from_coords(lat: f64, lon: f64) -> Self {
         static TZ_NAME_FINDER: LazyLock<tzf_rs::DefaultFinder> =
             LazyLock::new(tzf_rs::DefaultFinder::new);
@@ -209,8 +223,17 @@ impl Context<TzLocation<chrono_tz::Tz>> {
     /// Create a context with given coordinates and try to infer a timezone and
     /// a local holiday calendar.
     ///
-    /// TODO: test?
-    /// TODO: example?
+    /// ```
+    /// use opening_hours::{Context, TzLocation};
+    /// use opening_hours::country::Country;
+    ///
+    /// assert_eq!(
+    ///     Context::from_coords(48.8535, 2.34839),
+    ///     Context::default()
+    ///         .with_holidays(Country::FR.holidays())
+    ///         .with_locale(TzLocation::from_coords(48.8535, 2.34839)),
+    /// );
+    /// ```
     pub fn from_coords(lat: f64, lon: f64) -> Self {
         let holidays = Country::try_from_coords(lat, lon)
             .map(Country::holidays)
