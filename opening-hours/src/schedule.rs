@@ -207,7 +207,7 @@ impl IntoIterator for Schedule {
     }
 }
 
-/// Return value for [`Schedule::into_iter_filled`].
+/// Return value for [`Schedule::into_iter`].
 #[derive(Debug)]
 pub struct IntoIter {
     last_end: ExtendedTime,

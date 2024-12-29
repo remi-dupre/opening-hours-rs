@@ -51,6 +51,7 @@ fn events() -> Result<(), Error> {
     Ok(())
 }
 
+#[cfg(feature = "auto-timezone")]
 #[test]
 fn events_localized() -> Result<(), Error> {
     assert_eq!(

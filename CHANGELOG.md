@@ -8,6 +8,7 @@
 - Support localization (timezone & coords)
 - add default feature _log_
 - add optional feature _auto-country_
+- add optional feature _auto-timezone_
 
 ### Python
 

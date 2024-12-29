@@ -1,7 +1,6 @@
-use std::collections::HashMap;
 use std::fmt::Debug;
 use std::ops::Add;
-use std::sync::{Arc, LazyLock};
+use std::sync::Arc;
 
 use chrono::{Datelike, Duration, NaiveDate, NaiveDateTime, NaiveTime, TimeDelta, TimeZone};
 use compact_calendar::CompactCalendar;
@@ -109,6 +108,7 @@ where
     }
 }
 
+#[cfg(feature = "auto-timezone")]
 impl TzLocation<chrono_tz::Tz> {
     /// Create a new location context from a set of coordinates and with timezone
     /// information inferred from this localization.
@@ -123,6 +123,9 @@ impl TzLocation<chrono_tz::Tz> {
     /// );
     /// ```
     pub fn from_coords(lat: f64, lon: f64) -> Self {
+        use std::collections::HashMap;
+        use std::sync::LazyLock;
+
         static TZ_NAME_FINDER: LazyLock<tzf_rs::DefaultFinder> =
             LazyLock::new(tzf_rs::DefaultFinder::new);
 
@@ -217,6 +220,7 @@ impl<L> Context<L> {
     }
 }
 
+#[cfg(feature = "auto-timezone")]
 impl Context<TzLocation<chrono_tz::Tz>> {
     /// Create a context with given coordinates and try to infer a timezone and
     /// a local holiday calendar.

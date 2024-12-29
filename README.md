@@ -7,7 +7,7 @@
 [![](https://img.shields.io/codecov/c/github/remi-dupre/opening-hours-rs)][codecov]
 [![](https://img.shields.io/crates/d/opening-hours)][opening-hours]
 
-**🐍 Python bindings can be found [here](https://github.com/remi-dupre/opening-hours-rs/tree/master/python)**
+**🐍 Python bindings can be found [here](https://github.com/remi-dupre/opening-hours-rs/tree/master/opening-hours-py)**
 
 A Rust library for parsing and working with OSM's opening hours field. You can
 find its specification [here](https://wiki.openstreetmap.org/wiki/Key:opening_hours/specification)
@@ -61,6 +61,12 @@ country of a point of interest from its coordinate.
 If you are only interested in parsing expressions but not on the evaluation or
 if you want to build your own evaluation engine, you should probably rely on
 the [opening-hours-syntax] crate.
+
+### Timezone
+
+You can attach the timezone of the POI corresponding to your opening hours in
+the evaluation context. If you enable the **auto-timezone** feature, you can
+also automatically infer the timezone from coordinates.
 
 ### Logging
 

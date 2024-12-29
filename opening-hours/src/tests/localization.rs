@@ -49,6 +49,7 @@ fn ends_at_ambiguous_time() {
     );
 }
 
+#[cfg(feature = "auto-timezone")]
 #[test]
 fn infer_tz() {
     let tz = chrono_tz::Europe::Paris; // will be infered for context

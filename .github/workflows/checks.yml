@@ -22,9 +22,11 @@ jobs:
           - crate: "."
             features: "log"
           - crate: "."
-            features: "auto-country"
+            features: "log,auto-country"
           - crate: "."
-            features: "auto-country,log"
+            features: "log,auto-country,auto-timezone"
+          - crate: "."
+            features: "log,auto-timezone"
           - crate: "opening-hours-syntax"
             features: "log"
     defaults:

@@ -26,22 +26,25 @@ disable-test-timeouts = []
 
 default = ["log"]
 auto-country = ["dep:country-boundaries"]
+auto-timezone = ["dep:chrono-tz", "dep:tzf-rs"]
 log = ["opening-hours-syntax/log", "dep:log"]
 
 [dependencies]
 compact-calendar = { path = "compact-calendar", version = "0.10.0" }
 opening-hours-syntax = { path = "opening-hours-syntax", version = "0.10.0" }
 chrono = "0.4"
-chrono-tz = "0.10"  # TODO: feature flag
-flate2 = "1.0"  # TODO: feature flag
-sunrise-next = "1.2"  # TODO: feature flag
-tzf-rs = { version = "0.4", default-features = false }  # TODO: feature flag
+flate2 = "1.0"
+sunrise-next = "1.2"
 
-# Feature: log
+# Feature: log (default)
 log = { version = "0.4", features = [ "kv" ], optional = true }
 
 # Feature: auto-country
 country-boundaries = { version = "1.2", optional = true }
+
+# Feature: auto-timezone
+chrono-tz = { version = "0.10", optional = true }
+tzf-rs = { version = "0.4", default-features = false, optional = true }
 
 [build-dependencies]
 compact-calendar = { path = "compact-calendar", version = "0.10.0" }
