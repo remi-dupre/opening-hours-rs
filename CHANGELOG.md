@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.10.1
+
+### Rust
+
+- Fix missing items in documentation
+
 ## 0.10.0
 
 ### Rust

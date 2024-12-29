@@ -1,4 +1,8 @@
 #![doc = include_str!("../../README.md")]
+// Enable doc_auto_cfg feature when building docs on the nightly channel
+// (which will be the case for docs.rs).
+#![allow(unexpected_cfgs)]
+#![cfg_attr(all(doc, CHANNEL_NIGHTLY), feature(doc_auto_cfg))]
 
 pub mod date_filter;
 pub mod error;
