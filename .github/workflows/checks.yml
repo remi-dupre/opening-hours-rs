@@ -15,8 +15,20 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        crate: ["opening-hours-syntax", ".", "compact-calendar"]
-        toolchain: ["stable", "beta", "nightly"]
+        crate:
+          [".", "compact-calendar", "opening-hours-py", "opening-hours-syntax"]
+        features: [""]
+        include:
+          - crate: "."
+            features: "log"
+          - crate: "."
+            features: "log,auto-country"
+          - crate: "."
+            features: "log,auto-country,auto-timezone"
+          - crate: "."
+            features: "log,auto-timezone"
+          - crate: "opening-hours-syntax"
+            features: "log"
     defaults:
       run:
         working-directory: ${{ matrix.crate }}
@@ -24,7 +36,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: ${{ matrix.toolchain }}
+          toolchain: stable
           components: rustfmt, clippy
       - name: Display rust version
         run: |
@@ -32,36 +44,11 @@ jobs:
           cargo clippy -- --version
           cargo fmt -- --version
       - name: Lint
-        run: cargo clippy -- -D warnings
-        if: matrix.toolchain != 'nightly'
+        run: cargo clippy --no-default-features --features "${{ matrix.features }}" -- -D warnings
       - name: Format
         run: cargo fmt -- --check
-        if: matrix.toolchain != 'nightly'
       - name: Tests
-        run: cargo test
-
-  # ---
-  # --- Execute tests for python package
-  # ---
-
-  test-python:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
-      - name: Install poetry
-        run: |
-          python -m pip install --upgrade pip
-          pip install poetry
-      - name: Install dev dependancies
-        run: poetry install
-      - name: Build Python package
-        run: poetry run maturin develop
-      - name: Run doctests
-        run: poetry run python/run_doctests.py
+        run: cargo test --no-default-features --features "${{ matrix.features }}"
 
   # ---
   # --- Check that all versions are consistency accross packages
@@ -74,9 +61,6 @@ jobs:
         working-directory: scripts
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
       - name: Install poetry
         run: |
           python -m pip install --upgrade pip
@@ -98,15 +82,15 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
-
+      - name: Install Python library
+        run: apt-get update && apt-get install -yy python3-dev && apt-get clean
       - name: Generate code coverage
         run: >-
           cargo +nightly tarpaulin --out xml
           --ignore-panics --ignore-tests
-          --features disable-test-timeouts
+          --all-features
           --run-types Tests --run-types Doctests
-          -p opening-hours -p opening-hours-syntax -p compact-calendar
-
+          -p opening-hours -p opening-hours-syntax -p compact-calendar -p opening-hours-py
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v2
         with:

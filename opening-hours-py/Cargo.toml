@@ -1,0 +1,39 @@
+[package]
+name = "opening-hours-py"
+version = "0.10.0"
+authors = ["Rémi Dupré <remi@dupre.io>"]
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+repository = "https://github.com/remi-dupre/opening-hours-rs"
+documentation = "https://remi-dupre.github.io/opening-hours-rs/opening_hours.html"
+homepage = "https://github.com/remi-dupre/opening-hours-rs/tree/master/opening-hours-py"
+description = "A parser and toolkit for the opening_hours in OpenStreetMap written in Rust."
+edition = "2021"
+
+[lib]
+name = "opening_hours"
+crate-type = ["cdylib"]
+
+[dependencies]
+chrono = { version = "0.4", default-features = false }
+chrono-tz = { version = "0.10", default-features = false }
+pyo3-log = "0.12"
+
+[dependencies.opening-hours]
+path = ".."
+version = "0.10.0"
+features = ["log", "auto-country", "auto-timezone"]
+
+[dependencies.opening-hours-syntax]
+path = "../opening-hours-syntax"
+version = "0.10.0"
+features = ["log"]
+
+[dependencies.pyo3]
+version = "0.23"
+features = [
+    "chrono", "chrono-tz", "generate-import-lib",
+    # This ensures that the package is only built with Python >=3.9, which is
+    # the first version supporting chrono-tz conversion.
+    "abi3-py39",
+]

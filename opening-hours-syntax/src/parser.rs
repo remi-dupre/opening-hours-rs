@@ -3,7 +3,7 @@ use std::convert::TryInto;
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::ops::RangeInclusive;
-use std::sync::{Arc, Once};
+use std::sync::Arc;
 
 use chrono::Duration;
 
@@ -16,7 +16,8 @@ use crate::rules as rl;
 use crate::rules::day as ds;
 use crate::rules::time as ts;
 
-static WARN_EASTER: Once = Once::new();
+#[cfg(feature = "log")]
+static WARN_EASTER: std::sync::Once = std::sync::Once::new();
 
 #[derive(Parser)]
 #[grammar = "grammar.pest"]
@@ -43,7 +44,7 @@ pub fn parse(data: &str) -> Result<rl::OpeningHoursExpression> {
 // ---
 
 fn unexpected_token<T>(token: Rule, parent: Rule) -> T {
-    unreachable!("grammar error: found `{token:?}` inside of `{parent:?}`")
+    unreachable!("Grammar error: found `{token:?}` inside of `{parent:?}`")
 }
 
 fn build_opening_hours(pair: Pair<Rule>) -> Result<Vec<rl::RuleSequence>> {
@@ -584,6 +585,7 @@ fn build_date_from(pair: Pair<Rule>) -> ds::Date {
 
     match pairs.peek().expect("empty date (from)").as_rule() {
         Rule::variable_date => {
+            #[cfg(feature = "log")]
             WARN_EASTER.call_once(|| log::warn!("Easter is not supported yet"));
             ds::Date::Easter { year }
         }
@@ -764,11 +766,13 @@ fn build_daynum(pair: Pair<Rule>) -> u8 {
     let daynum = pair.as_str().parse().expect("invalid month format");
 
     if daynum == 0 {
+        #[cfg(feature = "log")]
         log::warn!("Found day number 0 in opening hours: specify the 1st or 31st instead.");
         return 1;
     }
 
     if daynum > 31 {
+        #[cfg(feature = "log")]
         log::warn!("Found day number {daynum} in opening hours");
         return 31;
     }

@@ -207,7 +207,7 @@ impl IntoIterator for Schedule {
     }
 }
 
-/// Return value for [`Schedule::into_iter_filled`].
+/// Return value for [`Schedule::into_iter`].
 #[derive(Debug)]
 pub struct IntoIter {
     last_end: ExtendedTime,
@@ -219,20 +219,10 @@ impl IntoIter {
     const HOLES_STATE: RuleKind = RuleKind::Closed;
 
     /// First minute of the schedule
-    const START_TIME: ExtendedTime = {
-        match ExtendedTime::new(0, 0) {
-            Some(time) => time,
-            None => unreachable!(),
-        }
-    };
+    const START_TIME: ExtendedTime = ExtendedTime::new(0, 0).unwrap();
 
     /// Last minute of the schedule
-    const END_TIME: ExtendedTime = {
-        match ExtendedTime::new(24, 0) {
-            Some(time) => time,
-            None => unreachable!(),
-        }
-    };
+    const END_TIME: ExtendedTime = ExtendedTime::new(24, 0).unwrap();
 
     /// Create a new iterator from a schedule.
     fn new(schedule: Schedule) -> Self {

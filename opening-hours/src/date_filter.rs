@@ -6,7 +6,7 @@ use chrono::{Duration, NaiveDate};
 
 use opening_hours_syntax::rules::day::{self as ds, Month};
 
-use crate::context::Context;
+use crate::context::{Context, Localize};
 use crate::opening_hours::DATE_LIMIT;
 use crate::utils::dates::count_days_in_month;
 use crate::utils::range::{RangeExt, WrappingRange};
@@ -24,20 +24,28 @@ fn first_valid_ymd(year: i32, month: u32, day: u32) -> NaiveDate {
 
 /// Generic trait to specify the behavior of a selector over dates.
 pub trait DateFilter {
-    fn filter(&self, date: NaiveDate, ctx: &Context) -> bool;
+    fn filter<L>(&self, date: NaiveDate, ctx: &Context<L>) -> bool
+    where
+        L: Localize;
 
     /// Provide a lower bound to the next date with a different result to `filter`.
-    fn next_change_hint(&self, _date: NaiveDate, _ctx: &Context) -> Option<NaiveDate> {
-        None
-    }
+    fn next_change_hint<L>(&self, _date: NaiveDate, _ctx: &Context<L>) -> Option<NaiveDate>
+    where
+        L: Localize;
 }
 
 impl<T: DateFilter> DateFilter for [T] {
-    fn filter(&self, date: NaiveDate, ctx: &Context) -> bool {
+    fn filter<L>(&self, date: NaiveDate, ctx: &Context<L>) -> bool
+    where
+        L: Localize,
+    {
         self.is_empty() || self.iter().any(|x| x.filter(date, ctx))
     }
 
-    fn next_change_hint(&self, date: NaiveDate, ctx: &Context) -> Option<NaiveDate> {
+    fn next_change_hint<L>(&self, date: NaiveDate, ctx: &Context<L>) -> Option<NaiveDate>
+    where
+        L: Localize,
+    {
         self.iter()
             .map(|selector| selector.next_change_hint(date, ctx))
             .min()
@@ -46,14 +54,20 @@ impl<T: DateFilter> DateFilter for [T] {
 }
 
 impl DateFilter for ds::DaySelector {
-    fn filter(&self, date: NaiveDate, ctx: &Context) -> bool {
+    fn filter<L>(&self, date: NaiveDate, ctx: &Context<L>) -> bool
+    where
+        L: Localize,
+    {
         self.year.filter(date, ctx)
             && self.monthday.filter(date, ctx)
             && self.week.filter(date, ctx)
             && self.weekday.filter(date, ctx)
     }
 
-    fn next_change_hint(&self, date: NaiveDate, ctx: &Context) -> Option<NaiveDate> {
+    fn next_change_hint<L>(&self, date: NaiveDate, ctx: &Context<L>) -> Option<NaiveDate>
+    where
+        L: Localize,
+    {
         // If there is no date filter, then all dates shall match
         if self.is_empty() {
             return date.succ_opt();
@@ -72,7 +86,10 @@ impl DateFilter for ds::DaySelector {
 }
 
 impl DateFilter for ds::YearRange {
-    fn filter(&self, date: NaiveDate, _ctx: &Context) -> bool {
+    fn filter<L>(&self, date: NaiveDate, _ctx: &Context<L>) -> bool
+    where
+        L: Localize,
+    {
         let Ok(year) = date.year().try_into() else {
             return false;
         };
@@ -80,7 +97,10 @@ impl DateFilter for ds::YearRange {
         self.range.contains(&year) && (year - self.range.start()) % self.step == 0
     }
 
-    fn next_change_hint(&self, date: NaiveDate, _ctx: &Context) -> Option<NaiveDate> {
+    fn next_change_hint<L>(&self, date: NaiveDate, _ctx: &Context<L>) -> Option<NaiveDate>
+    where
+        L: Localize,
+    {
         let Ok(curr_year) = date.year().try_into() else {
             return Some(DATE_LIMIT.date());
         };
@@ -110,7 +130,10 @@ impl DateFilter for ds::YearRange {
 }
 
 impl DateFilter for ds::MonthdayRange {
-    fn filter(&self, date: NaiveDate, _ctx: &Context) -> bool {
+    fn filter<L>(&self, date: NaiveDate, _ctx: &Context<L>) -> bool
+    where
+        L: Localize,
+    {
         let in_year = date.year() as u16;
         let in_month = Month::from_date(date);
 
@@ -168,7 +191,10 @@ impl DateFilter for ds::MonthdayRange {
         }
     }
 
-    fn next_change_hint(&self, date: NaiveDate, _ctx: &Context) -> Option<NaiveDate> {
+    fn next_change_hint<L>(&self, date: NaiveDate, _ctx: &Context<L>) -> Option<NaiveDate>
+    where
+        L: Localize,
+    {
         match self {
             ds::MonthdayRange::Month { range, year: None } => {
                 let month = Month::from_date(date);
@@ -300,7 +326,10 @@ impl DateFilter for ds::MonthdayRange {
 }
 
 impl DateFilter for ds::WeekDayRange {
-    fn filter(&self, date: NaiveDate, ctx: &Context) -> bool {
+    fn filter<L>(&self, date: NaiveDate, ctx: &Context<L>) -> bool
+    where
+        L: Localize,
+    {
         match self {
             ds::WeekDayRange::Fixed { range, offset, nth_from_start, nth_from_end } => {
                 let date = date - Duration::days(*offset);
@@ -324,7 +353,10 @@ impl DateFilter for ds::WeekDayRange {
         }
     }
 
-    fn next_change_hint(&self, date: NaiveDate, ctx: &Context) -> Option<NaiveDate> {
+    fn next_change_hint<L>(&self, date: NaiveDate, ctx: &Context<L>) -> Option<NaiveDate>
+    where
+        L: Localize,
+    {
         match self {
             ds::WeekDayRange::Holiday { kind, offset } => Some({
                 let calendar = match kind {
@@ -354,12 +386,18 @@ impl DateFilter for ds::WeekDayRange {
 }
 
 impl DateFilter for ds::WeekRange {
-    fn filter(&self, date: NaiveDate, _ctx: &Context) -> bool {
+    fn filter<L>(&self, date: NaiveDate, _ctx: &Context<L>) -> bool
+    where
+        L: Localize,
+    {
         let week = date.iso_week().week() as u8;
         self.range.wrapping_contains(&week) && (week - self.range.start()) % self.step == 0
     }
 
-    fn next_change_hint(&self, date: NaiveDate, _ctx: &Context) -> Option<NaiveDate> {
+    fn next_change_hint<L>(&self, date: NaiveDate, _ctx: &Context<L>) -> Option<NaiveDate>
+    where
+        L: Localize,
+    {
         let week = date.iso_week().week() as u8;
 
         if self.range.wrapping_contains(&week) {

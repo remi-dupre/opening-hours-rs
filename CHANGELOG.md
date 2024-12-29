@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.10.0
+
+### Rust
+
+- Rust 1.83
+- Support localization (timezone & coords)
+- add default feature _log_
+- add optional feature _auto-country_
+- add optional feature _auto-timezone_
+
+### Python
+
+- Add the `opening_hours.State` type.
+- Updated to latest maturin's workflow, which should ship precompiled binaries
+  for more older Python version in the future.
+- Support localization (timezone & coords)
+- Add exception types `ParserError` and `UnknownCountryError`
+
 ## 0.9.1
 
 ### Fixes

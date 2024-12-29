@@ -10,19 +10,27 @@ use opening_hours_syntax::sorted_vec::UniqueSortedVec;
 
 #[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct DateTimeRange {
-    pub range: Range<NaiveDateTime>,
+pub struct DateTimeRange<D = NaiveDateTime> {
+    pub range: Range<D>,
     pub kind: RuleKind,
     pub comments: UniqueSortedVec<Arc<str>>,
 }
 
-impl DateTimeRange {
+impl<D> DateTimeRange<D> {
     pub(crate) fn new_with_sorted_comments(
-        range: Range<NaiveDateTime>,
+        range: Range<D>,
         kind: RuleKind,
         comments: UniqueSortedVec<Arc<str>>,
     ) -> Self {
         Self { range, kind, comments }
+    }
+
+    pub fn map_dates<D2>(self, mut map: impl FnMut(D) -> D2) -> DateTimeRange<D2> {
+        DateTimeRange {
+            range: map(self.range.start)..map(self.range.end),
+            kind: self.kind,
+            comments: self.comments,
+        }
     }
 
     pub fn comments(&self) -> &[Arc<str>] {

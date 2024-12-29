@@ -8,7 +8,7 @@ use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime};
 use opening_hours_syntax::extended_time::ExtendedTime;
 use opening_hours_syntax::rules::{OpeningHoursExpression, RuleKind, RuleOperator, RuleSequence};
 
-use crate::context::Context;
+use crate::context::{Context, Localize, NoLocation};
 use crate::date_filter::DateFilter;
 use crate::error::ParserError;
 use crate::schedule::Schedule;
@@ -19,14 +19,8 @@ use crate::DateTimeRange;
 
 /// The upper bound of dates handled by specification
 pub const DATE_LIMIT: NaiveDateTime = {
-    let Some(date) = NaiveDate::from_ymd_opt(10_000, 1, 1) else {
-        unreachable!()
-    };
-
-    let Some(time) = NaiveTime::from_hms_opt(0, 0, 0) else {
-        unreachable!()
-    };
-
+    let date = NaiveDate::from_ymd_opt(10_000, 1, 1).unwrap();
+    let time = NaiveTime::from_hms_opt(0, 0, 0).unwrap();
     NaiveDateTime::new(date, time)
 };
 
@@ -37,18 +31,14 @@ pub const DATE_LIMIT: NaiveDateTime = {
 /// Note that all big inner structures are immutable and wrapped by an `Arc`
 /// so this is safe and fast to clone.
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
-pub struct OpeningHours {
+pub struct OpeningHours<L: Localize = NoLocation> {
     /// Rules describing opening hours
     expr: Arc<OpeningHoursExpression>,
     /// Evalutation context
-    ctx: Context,
+    ctx: Context<L>,
 }
 
-impl OpeningHours {
-    // --
-    // -- Builder Methods
-    // --
-
+impl OpeningHours<NoLocation> {
     /// Parse a raw opening hours expression.
     ///
     /// ```
@@ -61,6 +51,12 @@ impl OpeningHours {
         let expr = Arc::new(opening_hours_syntax::parse(raw_oh)?);
         Ok(Self { expr, ctx: Context::default() })
     }
+}
+
+impl<L: Localize> OpeningHours<L> {
+    // --
+    // -- Builder Methods
+    // --
 
     /// Set a new evaluation context for this expression.
     ///
@@ -72,9 +68,8 @@ impl OpeningHours {
     ///     .unwrap()
     ///     .with_context(Context::default());
     /// ```
-    pub fn with_context(mut self, ctx: Context) -> Self {
-        self.ctx = ctx;
-        self
+    pub fn with_context<L2: Localize>(self, ctx: Context<L2>) -> OpeningHours<L2> {
+        OpeningHours { expr: self.expr, ctx }
     }
 
     // --
@@ -144,9 +139,8 @@ impl OpeningHours {
         prev_eval.unwrap_or_else(Schedule::new)
     }
 
-    /// Iterate over disjoint intervals of different state restricted to the
-    /// time interval `from..to`.
-    pub fn iter_range(
+    /// Same as [`iter_range`], but with naive date input and outputs.
+    fn iter_range_naive(
         &self,
         from: NaiveDateTime,
         to: NaiveDateTime,
@@ -167,12 +161,32 @@ impl OpeningHours {
     // -- High level implementations / Syntactic sugar
     // --
 
+    /// Iterate over disjoint intervals of different state restricted to the
+    /// time interval `from..to`.
+    pub fn iter_range(
+        &self,
+        from: L::DateTime,
+        to: L::DateTime,
+    ) -> impl Iterator<Item = DateTimeRange<L::DateTime>> + Send + Sync {
+        let locale = self.ctx.locale.clone();
+        let naive_from = std::cmp::min(DATE_LIMIT, locale.naive(from));
+        let naive_to = std::cmp::min(DATE_LIMIT, locale.naive(to));
+
+        self.iter_range_naive(naive_from, naive_to).map(move |dtr| {
+            DateTimeRange::new_with_sorted_comments(
+                locale.datetime(dtr.range.start)..locale.datetime(dtr.range.end),
+                dtr.kind,
+                dtr.comments,
+            )
+        })
+    }
+
     // Same as [`OpeningHours::iter_range`] but with an open end.
     pub fn iter_from(
         &self,
-        from: NaiveDateTime,
-    ) -> impl Iterator<Item = DateTimeRange> + Send + Sync {
-        self.iter_range(from, DATE_LIMIT)
+        from: L::DateTime,
+    ) -> impl Iterator<Item = DateTimeRange<L::DateTime>> + Send + Sync {
+        self.iter_range(from, self.ctx.locale.datetime(DATE_LIMIT))
     }
 
     /// Get the next time where the state will change.
@@ -187,10 +201,10 @@ impl OpeningHours {
     /// let date_2 = NaiveDateTime::parse_from_str("2024-11-18 18:00", "%Y-%m-%d %H:%M").unwrap();
     /// assert_eq!(oh.next_change(date_1), Some(date_2));
     /// ```
-    pub fn next_change(&self, current_time: NaiveDateTime) -> Option<NaiveDateTime> {
+    pub fn next_change(&self, current_time: L::DateTime) -> Option<L::DateTime> {
         let interval = self.iter_from(current_time).next()?;
 
-        if interval.range.end == DATE_LIMIT {
+        if self.ctx.locale.naive(interval.range.end.clone()) >= DATE_LIMIT {
             None
         } else {
             Some(interval.range.end)
@@ -210,8 +224,8 @@ impl OpeningHours {
     /// assert_eq!(oh.state(date_1), RuleKind::Open);
     /// assert_eq!(oh.state(date_2), RuleKind::Unknown);
     /// ```
-    pub fn state(&self, current_time: NaiveDateTime) -> RuleKind {
-        self.iter_range(current_time, current_time + Duration::minutes(1))
+    pub fn state(&self, current_time: L::DateTime) -> RuleKind {
+        self.iter_range(current_time.clone(), current_time + Duration::minutes(1))
             .next()
             .map(|dtr| dtr.kind)
             .unwrap_or(RuleKind::Unknown)
@@ -229,7 +243,7 @@ impl OpeningHours {
     /// assert!(oh.is_open(date_1));
     /// assert!(!oh.is_open(date_2));
     /// ```
-    pub fn is_open(&self, current_time: NaiveDateTime) -> bool {
+    pub fn is_open(&self, current_time: L::DateTime) -> bool {
         self.state(current_time) == RuleKind::Open
     }
 
@@ -245,7 +259,7 @@ impl OpeningHours {
     /// assert!(oh.is_closed(date_1));
     /// assert!(!oh.is_closed(date_2));
     /// ```
-    pub fn is_closed(&self, current_time: NaiveDateTime) -> bool {
+    pub fn is_closed(&self, current_time: L::DateTime) -> bool {
         self.state(current_time) == RuleKind::Closed
     }
 
@@ -261,7 +275,7 @@ impl OpeningHours {
     /// assert!(oh.is_unknown(date_1));
     /// assert!(!oh.is_unknown(date_2));
     /// ```
-    pub fn is_unknown(&self, current_time: NaiveDateTime) -> bool {
+    pub fn is_unknown(&self, current_time: L::DateTime) -> bool {
         self.state(current_time) == RuleKind::Unknown
     }
 }
@@ -274,25 +288,25 @@ impl FromStr for OpeningHours {
     }
 }
 
-impl Display for OpeningHours {
+impl<L: Localize> Display for OpeningHours<L> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.expr)
     }
 }
 
-fn rule_sequence_schedule_at(
+fn rule_sequence_schedule_at<L: Localize>(
     rule_sequence: &RuleSequence,
     date: NaiveDate,
-    ctx: &Context,
+    ctx: &Context<L>,
 ) -> Option<Schedule> {
     let from_today = Some(date)
         .filter(|date| rule_sequence.day_selector.filter(*date, ctx))
-        .map(|date| time_selector_intervals_at(&rule_sequence.time_selector, date))
+        .map(|date| time_selector_intervals_at(ctx, &rule_sequence.time_selector, date))
         .map(|rgs| Schedule::from_ranges(rgs, rule_sequence.kind, &rule_sequence.comments));
 
     let from_yesterday = (date.pred_opt())
         .filter(|prev| rule_sequence.day_selector.filter(*prev, ctx))
-        .map(|prev| time_selector_intervals_at_next_day(&rule_sequence.time_selector, prev))
+        .map(|prev| time_selector_intervals_at_next_day(ctx, &rule_sequence.time_selector, prev))
         .map(|rgs| Schedule::from_ranges(rgs, rule_sequence.kind, &rule_sequence.comments));
 
     match (from_today, from_yesterday) {
@@ -303,16 +317,16 @@ fn rule_sequence_schedule_at(
 
 // TimeDomainIterator
 
-pub struct TimeDomainIterator {
-    opening_hours: OpeningHours,
+pub struct TimeDomainIterator<L: Clone + Localize> {
+    opening_hours: OpeningHours<L>,
     curr_date: NaiveDate,
     curr_schedule: Peekable<crate::schedule::IntoIter>,
     end_datetime: NaiveDateTime,
 }
 
-impl TimeDomainIterator {
+impl<L: Localize> TimeDomainIterator<L> {
     fn new(
-        opening_hours: &OpeningHours,
+        opening_hours: &OpeningHours<L>,
         start_datetime: NaiveDateTime,
         end_datetime: NaiveDateTime,
     ) -> Self {
@@ -367,7 +381,7 @@ impl TimeDomainIterator {
     }
 }
 
-impl Iterator for TimeDomainIterator {
+impl<L: Localize> Iterator for TimeDomainIterator<L> {
     type Item = DateTimeRange;
 
     fn next(&mut self) -> Option<Self::Item> {

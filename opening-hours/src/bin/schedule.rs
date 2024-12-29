@@ -17,16 +17,17 @@ fn main() {
     let oh = match expression.parse::<OpeningHours>() {
         Ok(val) => val.with_context(Context::default().with_holidays(COUNTRY.holidays())),
         Err(err) => {
-            println!("{}", err);
-            return;
+            panic!("{err}");
         }
     };
 
     println!(" - formatted: {oh}");
     println!(" - date: {start_date:?}");
     println!(" - current status: {:?}", oh.state(start_datetime));
-    let next_change = oh.next_change(start_datetime).unwrap();
-    println!(" - next change: {next_change:?}");
+
+    if let Some(next_change) = oh.next_change(start_datetime) {
+        println!(" - next change: {next_change:?}");
+    }
 
     for day in 0..7 {
         let date = start_date + Duration::days(day);
