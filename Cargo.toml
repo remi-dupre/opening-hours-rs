@@ -24,6 +24,8 @@ path = "opening-hours/src/lib.rs"
 # measuring coverage.
 disable-test-timeouts = []
 
+log = ["opening-hours-syntax/log", "dep:log"]
+
 [dependencies]
 compact-calendar = { path = "compact-calendar", version = "0.10.0" }
 opening-hours-syntax = { path = "opening-hours-syntax", version = "0.10.0" }
@@ -31,7 +33,7 @@ chrono = "0.4"
 chrono-tz = "0.10"  # TODO: feature flag
 country-boundaries = "1.2"  # TODO: feature flag
 flate2 = "1.0"  # TODO: feature flag
-log = { version = "0.4", features = [ "kv" ] }
+log = { version = "0.4", features = [ "kv" ], optional = true }
 sunrise-next = "1.2"  # TODO: feature flag
 tzf-rs = { version = "0.4", default-features = false }  # TODO: feature flag
 

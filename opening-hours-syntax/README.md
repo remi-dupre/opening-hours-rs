@@ -1,14 +1,11 @@
-Rust parser for OSM Opening Hours
-=================================
+# Rust parser for OSM Opening Hours
 
 [![](https://img.shields.io/crates/v/opening-hours-syntax)][opening-hours-syntax]
 [![](https://img.shields.io/docsrs/opening-hours-syntax)][docs]
 
 Parsing component of [opening-hours] crate.
 
-
-Usage
------
+## Usage
 
 Add this to your `Cargo.toml`:
 
@@ -31,13 +28,12 @@ fn main() {
 }
 ```
 
+## Supported features
 
-[opening-hours]: https://crates.io/crates/opening-hours
-    "Root Package"
+### Logging
 
-[opening-hours-syntax]: https://crates.io/crates/opening-hours
-    "Package"
+The **log** feature can be enabled to emit warnings the [crate-log] crate.
 
-[docs]: https://docs.rs/opening-hours-syntax
-    "Documentation"
-
+[docs]: https://docs.rs/opening-hours-syntax "Documentation"
+[opening-hours]: https://crates.io/crates/opening-hours "Root Package"
+[opening-hours-syntax]: https://crates.io/crates/opening-hours "Package"

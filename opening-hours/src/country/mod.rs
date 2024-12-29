@@ -66,6 +66,7 @@ impl Country {
                         .expect("unable to parse holiday data");
 
                     let Ok(country) = region.parse() else {
+                        #[cfg(feature = "log")]
                         log::warn!("Unknown initialized country code {region}");
                         return None;
                     };

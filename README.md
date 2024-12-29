@@ -1,5 +1,4 @@
-🦀 Rust implementation for OSM Opening Hours
-============================================
+# 🦀 Rust implementation for OSM Opening Hours
 
 [![](https://img.shields.io/crates/v/opening-hours)][opening-hours]
 [![](https://img.shields.io/pypi/v/opening-hours-py)][pypy]
@@ -7,7 +6,6 @@
 [![](https://img.shields.io/crates/l/opening-hours)][opening-hours]
 [![](https://img.shields.io/codecov/c/github/remi-dupre/opening-hours-rs)][codecov]
 [![](https://img.shields.io/crates/d/opening-hours)][opening-hours]
-
 
 **🐍 Python bindings can be found [here](https://github.com/remi-dupre/opening-hours-rs/tree/master/python)**
 
@@ -21,9 +19,7 @@ don't actually comply to the very restrictive grammar detailed in the official
 specification. This library tries to fit with the real world data while
 remaining as close as possible to the core specification.
 
-
-Usage
------
+## Usage
 
 Add this to your `Cargo.toml`:
 
@@ -50,15 +46,12 @@ fn main() {
 }
 ```
 
-
-Supported features
-------------------
+## Supported features
 
 ### Holidays
 
 A public holiday database is loaded using [nager]. You can refer to their
 website for more detail on supported country or if you want to contribute.
-
 
 ### Syntax
 
@@ -66,25 +59,15 @@ If you are only interested in parsing expressions but not on the evaluation or
 if you want to build your own evaluation engine, you should probably rely on
 the [opening-hours-syntax] crate.
 
+### Logging
 
+The **log** feature can be enabled to emit warnings the [crate-log] crate.
 
-[opening-hours]: https://crates.io/crates/opening-hours
-    "Package"
-
-[opening-hours-syntax]: https://crates.io/crates/opening-hours-syntax
-    "Syntax Package"
-
-[docs]: https://docs.rs/opening-hours
-    "Documentation"
-
-[pypy]: https://pypi.org/project/opening-hours-py
-    "Python package"
-
-[codecov]: https://app.codecov.io/gh/remi-dupre/opening-hours-rs
-    "Code coverage"
-
-[workalendar]: https://pypi.org/project/workalendar/
-    "Worldwide holidays and working days helper and toolkit."
-
-[nager]: https://date.nager.at/api/v3
-    "Worldwide holidays (REST API)"
+[codecov]: https://app.codecov.io/gh/remi-dupre/opening-hours-rs "Code coverage"
+[crate-log]: https://crates.io/crates/log
+[docs]: https://docs.rs/opening-hours "Documentation"
+[nager]: https://date.nager.at/api/v3 "Worldwide holidays (REST API)"
+[opening-hours]: https://crates.io/crates/opening-hours "Package"
+[opening-hours-syntax]: https://crates.io/crates/opening-hours-syntax "Syntax Package"
+[pypy]: https://pypi.org/project/opening-hours-py "Python package"
+[workalendar]: https://pypi.org/project/workalendar/ "Worldwide holidays and working days helper and toolkit."

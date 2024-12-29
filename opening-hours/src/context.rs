@@ -45,8 +45,6 @@ impl ContextHolidays {
 /// Specifies how dates should be localized while evaluating opening hours. No
 /// localisation is available by default but this can be used to specify a
 /// timezone and coordinates (which affect sun events).
-///
-/// TODO: Only export in a location module?
 pub trait Localize: Clone + Send + Sync {
     /// The type for localized date & time.
     type DateTime: Clone + Add<Duration, Output = Self::DateTime>;
@@ -141,6 +139,7 @@ impl TzLocation<chrono_tz::Tz> {
         let tz_name = TZ_NAME_FINDER.get_tz_name(lon, lat);
 
         let tz = TZ_BY_NAME.get(tz_name).copied().unwrap_or_else(|| {
+            #[cfg(feature = "log")]
             log::warn!("Could not find time zone `{tz_name}` at {lat},{lon}");
             chrono_tz::UTC
         });
