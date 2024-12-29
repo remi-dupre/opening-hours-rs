@@ -138,6 +138,7 @@ impl TzLocation<chrono_tz::Tz> {
 
         let tz_name = TZ_NAME_FINDER.get_tz_name(lon, lat);
 
+        #[allow(clippy::unnecessary_lazy_evaluations)]
         let tz = TZ_BY_NAME.get(tz_name).copied().unwrap_or_else(|| {
             #[cfg(feature = "log")]
             log::warn!("Could not find time zone `{tz_name}` at {lat},{lon}");
