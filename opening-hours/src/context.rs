@@ -8,8 +8,6 @@ use compact_calendar::CompactCalendar;
 use opening_hours_syntax::rules::time::TimeEvent;
 use sunrise_next::{DawnType, SolarDay, SolarEvent};
 
-use crate::country::Country;
-
 // --
 // -- Holidays
 // --
@@ -234,7 +232,10 @@ impl Context<TzLocation<chrono_tz::Tz>> {
     ///         .with_locale(TzLocation::from_coords(48.8535, 2.34839)),
     /// );
     /// ```
+    #[cfg(feature = "auto-country")]
     pub fn from_coords(lat: f64, lon: f64) -> Self {
+        use crate::country::Country;
+
         let holidays = Country::try_from_coords(lat, lon)
             .map(Country::holidays)
             .unwrap_or_default();

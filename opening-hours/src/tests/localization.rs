@@ -64,6 +64,7 @@ fn infer_tz() {
     );
 }
 
+#[cfg(feature = "auto-country")]
 #[test]
 fn infer_all() {
     let tz = chrono_tz::Europe::Paris; // Will be infered for context

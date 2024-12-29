@@ -21,6 +21,10 @@ jobs:
         include:
           - crate: "."
             features: "log"
+          - crate: "."
+            features: "auto-country"
+          - crate: "."
+            features: "auto-country,log"
           - crate: "opening-hours-syntax"
             features: "log"
     defaults:
@@ -82,7 +86,7 @@ jobs:
         run: >-
           cargo +nightly tarpaulin --out xml
           --ignore-panics --ignore-tests
-          --features disable-test-timeouts
+          --all-features
           --run-types Tests --run-types Doctests
           -p opening-hours -p opening-hours-syntax -p compact-calendar -p opening-hours-py
       - name: Upload to codecov.io

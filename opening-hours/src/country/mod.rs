@@ -1,11 +1,9 @@
 mod generated;
 
 use std::collections::HashMap;
-use std::io::Read;
 use std::sync::{Arc, LazyLock};
 
 use compact_calendar::CompactCalendar;
-use country_boundaries::CountryBoundaries;
 use flate2::bufread::DeflateDecoder;
 
 use crate::context::ContextHolidays;
@@ -21,7 +19,11 @@ impl Country {
     /// let country_paris = Country::try_from_coords(48.86, 2.34).unwrap();
     /// assert_eq!(country_paris, Country::FR);
     /// ```
+    #[cfg(feature = "auto-country")]
     pub fn try_from_coords(lat: f64, lon: f64) -> Option<Self> {
+        use country_boundaries::CountryBoundaries;
+        use std::io::Read;
+
         static BOUNDARIES: LazyLock<CountryBoundaries> = LazyLock::new(|| {
             let mut buffer = Vec::new();
 

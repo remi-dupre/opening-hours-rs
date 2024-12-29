@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::env;
 use std::fs::File;
-use std::io::{BufRead, BufReader, BufWriter, Write};
+use std::io::{BufRead, BufReader, BufWriter};
 use std::path::{Path, PathBuf};
 
 use chrono::NaiveDate;
@@ -9,7 +9,6 @@ use flate2::write::DeflateEncoder;
 use flate2::Compression;
 
 use compact_calendar::CompactCalendar;
-use country_boundaries::BOUNDARIES_ODBL_60X30;
 
 fn generate_holiday_database(out_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
     const PATH_ENV_IN_OUT: [[&str; 3]; 2] = [
@@ -82,10 +81,13 @@ fn generate_holiday_database(out_dir: &Path) -> Result<(), Box<dyn std::error::E
     Ok(())
 }
 
+#[cfg(feature = "auto-country")]
 fn generate_coutry_bounds_database(out_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    use std::io::Write;
+
     let out_path = out_dir.join("country_boundaries.bin");
     let mut output = DeflateEncoder::new(File::create(&out_path)?, Compression::best());
-    output.write_all(BOUNDARIES_ODBL_60X30)?;
+    output.write_all(country_boundaries::BOUNDARIES_ODBL_60X30)?;
     output.finish()?;
 
     println!(
@@ -102,7 +104,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .into();
 
     generate_holiday_database(&out_dir)?;
+
+    #[cfg(feature = "auto-country")]
     generate_coutry_bounds_database(&out_dir)?;
+
     println!("cargo::rerun-if-changed=build.rs");
     Ok(())
 }

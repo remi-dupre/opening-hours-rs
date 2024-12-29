@@ -6,7 +6,8 @@
 
 - Rust 1.83
 - Support localization (timezone & coords)
-- add optional feature "log" for syntax & root crate
+- add default feature _log_
+- add optional feature _auto-country_
 
 ### Python
 

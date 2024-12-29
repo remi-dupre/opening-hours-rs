@@ -53,6 +53,9 @@ fn main() {
 A public holiday database is loaded using [nager]. You can refer to their
 website for more detail on supported country or if you want to contribute.
 
+If you enable the **auto-country** feature, you can automatically detect the
+country of a point of interest from its coordinate.
+
 ### Syntax
 
 If you are only interested in parsing expressions but not on the evaluation or
