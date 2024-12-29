@@ -216,7 +216,7 @@ checksum = "f46ad14479a25103f283c0f10005961cf086d8dc42205bb44c46ac563475dca6"
 
 [[package]]
 name = "compact-calendar"
-version = "0.10.0"
+version = "0.10.1"
 dependencies = [
  "chrono",
 ]
@@ -642,7 +642,7 @@ checksum = "b410bbe7e14ab526a0e86877eb47c6996a2bd7746f027ba551028c925390e4e9"
 
 [[package]]
 name = "opening-hours"
-version = "0.10.0"
+version = "0.10.1"
 dependencies = [
  "chrono",
  "chrono-tz",
@@ -652,13 +652,14 @@ dependencies = [
  "flate2",
  "log",
  "opening-hours-syntax",
+ "rustc_version",
  "sunrise-next",
  "tzf-rs",
 ]
 
 [[package]]
 name = "opening-hours-py"
-version = "0.10.0"
+version = "0.10.1"
 dependencies = [
  "chrono",
  "chrono-tz",
@@ -670,7 +671,7 @@ dependencies = [
 
 [[package]]
 name = "opening-hours-syntax"
-version = "0.10.0"
+version = "0.10.1"
 dependencies = [
  "chrono",
  "log",
@@ -1084,6 +1085,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustc_version"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cfcb3a22ef46e85b45de6ee7e79d063319ebb6594faafcf1c225ea92ab6e9b92"
+dependencies = [
+ "semver",
+]
+
+[[package]]
 name = "rustix"
 version = "0.38.42"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1110,6 +1120,12 @@ checksum = "93fc1dc3aaa9bfed95e02e6eadabb4baf7e3078b0bd1b4d7b6b0b68378900502"
 dependencies = [
  "winapi-util",
 ]
+
+[[package]]
+name = "semver"
+version = "1.0.24"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3cb6eb87a131f756572d7fb904f6e7b68633f09cca868c5df1c4b8d1a694bbba"
 
 [[package]]
 name = "serde"

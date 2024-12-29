@@ -1,6 +1,6 @@
 [package]
 name = "opening-hours-py"
-version = "0.10.0"
+version = "0.10.1"
 authors = ["Rémi Dupré <remi@dupre.io>"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
@@ -21,12 +21,12 @@ pyo3-log = "0.12"
 
 [dependencies.opening-hours]
 path = ".."
-version = "0.10.0"
+version = "0.10.1"
 features = ["log", "auto-country", "auto-timezone"]
 
 [dependencies.opening-hours-syntax]
 path = "../opening-hours-syntax"
-version = "0.10.0"
+version = "0.10.1"
 features = ["log"]
 
 [dependencies.pyo3]
