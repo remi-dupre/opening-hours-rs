@@ -15,7 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        crate: ["opening-hours-syntax", ".", "compact-calendar", "python"]
+        crate:
+          [".", "compact-calendar", "opening-hours-py", "opening-hours-syntax"]
         toolchain: ["stable", "beta", "nightly"]
     defaults:
       run:

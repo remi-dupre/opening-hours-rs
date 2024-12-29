@@ -16,7 +16,7 @@ requires = ["poetry>=0.12", "maturin>=1,<2"]
 build-backend = "maturin"
 
 [tool.maturin]
-manifest-path = "python/Cargo.toml"
+manifest-path = "opening-hours-py/Cargo.toml"
 features = [
     # This feature must only be enabled during builds as it would break tests, see
     # https://pyo3.rs/v0.23.3/faq.html#i-cant-run-cargo-test-or-i-cant-build-in-a-cargo-workspace-im-having-linker-issues-like-symbol-not-found-or-undefined-reference-to-_pyexc_systemerror

@@ -47,7 +47,7 @@ async def main():
     rs_version = toml.load(rt / "Cargo.toml")["package"]["version"]
     sy_version = toml.load(rt / "opening-hours-syntax/Cargo.toml")["package"]["version"]
     cc_version = toml.load(rt / "compact-calendar/Cargo.toml")["package"]["version"]
-    py_version = toml.load(rt / "python/Cargo.toml")["package"]["version"]
+    py_version = toml.load(rt / "opening-hours-py/Cargo.toml")["package"]["version"]
     pt_version = toml.load(rt / "pyproject.toml")["tool"]["poetry"]["version"]
 
     print("Checking local packages:")

@@ -20,7 +20,7 @@ async def main():
     page = 1
 
     async with aiohttp.ClientSession() as http:
-        with open(CRATE_ROOT / "data" / "osm_examples.txt", "w") as f:
+        with open(CRATE_ROOT / "opening-hours" / "data" / "osm_examples.txt", "w") as f:
             while True:
                 async with http.get(
                     API_URL,

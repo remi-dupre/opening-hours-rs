@@ -13,8 +13,16 @@ use country_boundaries::BOUNDARIES_ODBL_60X30;
 
 fn generate_holiday_database(out_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
     const PATH_ENV_IN_OUT: [[&str; 3]; 2] = [
-        ["PUBLIC", "data/holidays_public.txt", "holidays_public.bin"],
-        ["SCHOOL", "data/holidays_school.txt", "holidays_school.bin"],
+        [
+            "PUBLIC",
+            "opening-hours/data/holidays_public.txt",
+            "holidays_public.bin",
+        ],
+        [
+            "SCHOOL",
+            "opening-hours/data/holidays_school.txt",
+            "holidays_school.bin",
+        ],
     ];
 
     for [env, in_path, out_path] in &PATH_ENV_IN_OUT {
