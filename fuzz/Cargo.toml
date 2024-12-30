@@ -5,8 +5,8 @@ authors = ["Rémi Dupré <remi@dupre.io>"]
 edition = "2021"
 
 [[bin]]
-name = "parse_oh"
-path = "fuzz_targets/oh.rs"
+name = "fuzz_oh"
+path = "fuzz_targets/fuzz_oh.rs"
 
 [package.metadata]
 cargo-fuzz = true
@@ -15,4 +15,4 @@ cargo-fuzz = true
 arbitrary = { version = "1", features = ["derive"] }
 chrono = "0.4"
 libfuzzer-sys = "0.4"
-opening-hours = { path = ".." }
+opening-hours = { path = "..", features = ["auto-country", "auto-timezone"] }

@@ -3,7 +3,7 @@
 use std::fmt::Display;
 use std::str::FromStr;
 
-use crate::error::UnknownCountryCode;
+use super::UnknownCountryCode;
 
 /// An enum for selecting a country.
 ///

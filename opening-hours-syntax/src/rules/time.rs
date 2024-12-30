@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::fmt::Display;
 use std::ops::Range;
 
@@ -115,13 +116,11 @@ impl Display for VariableTime {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.event)?;
 
-        if self.offset > 0 {
-            write!(f, "+{}", self.offset)?;
-        } else {
-            write!(f, "{}", self.offset)?;
+        match self.offset.cmp(&0) {
+            Ordering::Less => write!(f, "{}", self.offset),
+            Ordering::Greater => write!(f, "+{}", self.offset),
+            Ordering::Equal => Ok(()),
         }
-
-        Ok(())
     }
 }
 

@@ -8,19 +8,42 @@ use flate2::bufread::DeflateDecoder;
 
 use crate::context::ContextHolidays;
 
+// Fetch generated code
 pub use generated::*;
+
+// --
+// -- Errors
+// --
+
+/// Could not find input ISO code.
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct UnknownCountryCode(pub String);
+
+impl std::fmt::Display for UnknownCountryCode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Unknown ISO code `{}`", self.0)
+    }
+}
+
+impl std::error::Error for UnknownCountryCode {}
+
+// --
+// -- Country Implems
+// --
 
 impl Country {
     /// Attempt to automatically detect a country from coordinates.
     ///
     /// ```
+    /// use opening_hours::Coordinates;
     /// use opening_hours::country::Country;
     ///
-    /// let country_paris = Country::try_from_coords(48.86, 2.34).unwrap();
+    /// let coords = Coordinates::new(48.86, 2.34).unwrap();
+    /// let country_paris = Country::try_from_coords(coords).unwrap();
     /// assert_eq!(country_paris, Country::FR);
     /// ```
     #[cfg(feature = "auto-country")]
-    pub fn try_from_coords(lat: f64, lon: f64) -> Option<Self> {
+    pub fn try_from_coords(coords: crate::context::Coordinates) -> Option<Self> {
         use country_boundaries::CountryBoundaries;
         use std::io::Read;
 
@@ -35,7 +58,8 @@ impl Country {
                 .expect("failed to load country boundaries database")
         });
 
-        for cc in BOUNDARIES.ids(country_boundaries::LatLon::new(lat, lon).ok()?) {
+        for cc in BOUNDARIES.ids(country_boundaries::LatLon::new(coords.lat(), coords.lon()).ok()?)
+        {
             if let Ok(res) = cc.parse() {
                 return Some(res);
             }

@@ -7,10 +7,10 @@ use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime};
 
 use opening_hours_syntax::extended_time::ExtendedTime;
 use opening_hours_syntax::rules::{OpeningHoursExpression, RuleKind, RuleOperator, RuleSequence};
+use opening_hours_syntax::Error as ParserError;
 
 use crate::context::{Context, Localize, NoLocation};
 use crate::date_filter::DateFilter;
-use crate::error::ParserError;
 use crate::schedule::Schedule;
 use crate::time_filter::{
     time_selector_intervals_at, time_selector_intervals_at_next_day, TimeFilter,

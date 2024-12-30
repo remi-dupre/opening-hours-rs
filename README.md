@@ -72,6 +72,15 @@ also automatically infer the timezone from coordinates.
 
 The **log** feature can be enabled to emit warnings the [crate-log] crate.
 
+## Contributing
+
+### Running tests
+
+Tests can be run by running `cargo test`.
+
+A fuzzing can be run using _cargo-fuzz_ by running
+`cargo +nightly fuzz run -j 4 parse_oh`.
+
 [codecov]: https://app.codecov.io/gh/remi-dupre/opening-hours-rs "Code coverage"
 [crate-log]: https://crates.io/crates/log "crates.io page for 'log'"
 [docs]: https://docs.rs/opening-hours "Documentation"

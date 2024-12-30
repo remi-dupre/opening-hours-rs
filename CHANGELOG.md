@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.11.0
+
+### General
+
+- General reorganisation of modules
+- TODO: integrated fuzzer corpus into CI
+
+### Rust
+
+- Coordinates validation
+- Add fuzzing corpus
+
 ## 0.10.1
 
 ### Rust

@@ -36,6 +36,63 @@ impl ContextHolidays {
 }
 
 // --
+// -- Coordinates
+// --
+
+/// A valid pair of geographic coordinates.
+///
+/// See https://en.wikipedia.org/wiki/Geographic_coordinate_system
+#[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
+pub struct Coordinates {
+    lat: f64,
+    lon: f64,
+}
+
+impl Coordinates {
+    /// Validate a pair of latitude / longitude.
+    ///
+    /// Return `None` if values are out of range (`abs(lat) > 90` or
+    /// `abs(lon) > 180`).
+    pub const fn new(lat: f64, lon: f64) -> Option<Self> {
+        if lat < -90.0 || lat > 90.0 || lon < -180.0 || lon > 180.0 {
+            return None;
+        }
+
+        Some(Self { lat, lon })
+    }
+
+    /// Get the time for a sun event at a given date.
+    pub fn event_time(&self, date: NaiveDate, event: TimeEvent) -> chrono::DateTime<chrono::Utc> {
+        let solar_event = match event {
+            TimeEvent::Dawn => SolarEvent::Dawn(DawnType::Civil),
+            TimeEvent::Sunrise => SolarEvent::Sunrise,
+            TimeEvent::Sunset => SolarEvent::Sunset,
+            TimeEvent::Dusk => SolarEvent::Dusk(DawnType::Civil),
+        };
+
+        let solar_day = SolarDay::new(self.lat, self.lon, date.year(), date.month(), date.day());
+        let timestamp = solar_day.event_time(solar_event);
+        chrono::DateTime::from_timestamp(timestamp, 0).expect("invalid timestamp")
+    }
+
+    /// Get latitude component.
+    pub fn lat(&self) -> f64 {
+        self.lat
+    }
+
+    /// Get longitude component.
+    pub fn lon(&self) -> f64 {
+        self.lon
+    }
+}
+
+impl std::fmt::Display for Coordinates {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({}, {})", self.lat, self.lon)
+    }
+}
+
+// --
 // -- Localization
 // --
 
@@ -87,7 +144,7 @@ where
     Tz: TimeZone + Send + Sync,
 {
     tz: Tz,
-    coords: Option<[f64; 2]>,
+    coords: Option<Coordinates>,
 }
 
 impl<Tz> TzLocation<Tz>
@@ -99,12 +156,17 @@ where
         Self { tz, coords: None }
     }
 
+    /// Extract the timezone for this location.
+    pub fn get_timezone(&self) -> &Tz {
+        &self.tz
+    }
+
     /// Attach coordinates to the location context.
     ///
     /// If coordinates where already specified, they will be replaced with the
     /// new ones.
-    pub fn with_coords(self, lat: f64, lon: f64) -> Self {
-        Self { tz: self.tz, coords: Some([lat, lon]) }
+    pub fn with_coords(self, coords: Coordinates) -> Self {
+        Self { tz: self.tz, coords: Some(coords) }
     }
 }
 
@@ -113,16 +175,20 @@ impl TzLocation<chrono_tz::Tz> {
     /// Create a new location context from a set of coordinates and with timezone
     /// information inferred from this localization.
     ///
+    /// Returns `None` if latitude or longitude is invalid.
+    ///
     /// ```
     /// use chrono_tz::Europe;
-    /// use opening_hours::TzLocation;
+    /// use opening_hours::{Coordinates, TzLocation};
+    ///
+    /// let coords = Coordinates::new(48.8535, 2.34839).unwrap();
     ///
     /// assert_eq!(
-    ///     TzLocation::from_coords(48.8535, 2.34839),
-    ///     TzLocation::new(Europe::Paris).with_coords(48.8535, 2.34839),
+    ///     TzLocation::from_coords(coords),
+    ///     TzLocation::new(Europe::Paris).with_coords(coords),
     /// );
     /// ```
-    pub fn from_coords(lat: f64, lon: f64) -> Self {
+    pub fn from_coords(coords: Coordinates) -> Self {
         use std::collections::HashMap;
         use std::sync::LazyLock;
 
@@ -137,16 +203,16 @@ impl TzLocation<chrono_tz::Tz> {
                 .collect()
         });
 
-        let tz_name = TZ_NAME_FINDER.get_tz_name(lon, lat);
+        let tz_name = TZ_NAME_FINDER.get_tz_name(coords.lon, coords.lat);
 
         #[allow(clippy::unnecessary_lazy_evaluations)]
         let tz = TZ_BY_NAME.get(tz_name).copied().unwrap_or_else(|| {
             #[cfg(feature = "log")]
-            log::warn!("Could not find time zone `{tz_name}` at {lat},{lon}");
+            log::warn!("Could not find time zone `{tz_name}` at {coords}");
             chrono_tz::UTC
         });
 
-        Self { tz, coords: Some([lat, lon]) }
+        Self::new(tz).with_coords(coords)
     }
 }
 
@@ -174,24 +240,11 @@ where
     }
 
     fn event_time(&self, date: NaiveDate, event: TimeEvent) -> NaiveTime {
-        let Some([lat, lon]) = self.coords else {
+        let Some(coords) = self.coords else {
             return NoLocation.event_time(date, event);
         };
 
-        let solar_event = match event {
-            TimeEvent::Dawn => SolarEvent::Dawn(DawnType::Civil),
-            TimeEvent::Sunrise => SolarEvent::Sunrise,
-            TimeEvent::Sunset => SolarEvent::Sunset,
-            TimeEvent::Dusk => SolarEvent::Dusk(DawnType::Civil),
-        };
-
-        let solar_day = SolarDay::new(lat, lon, date.year(), date.month(), date.day());
-        let timestamp = solar_day.event_time(solar_event);
-
-        let dt = chrono::DateTime::<chrono::Utc>::from_timestamp(timestamp, 0)
-            .expect("invalid timestamp")
-            .with_timezone(&self.tz);
-
+        let dt = coords.event_time(date, event).with_timezone(&self.tz);
         self.naive(dt).time()
     }
 }
@@ -226,25 +279,27 @@ impl Context<TzLocation<chrono_tz::Tz>> {
     /// a local holiday calendar.
     ///
     /// ```
-    /// use opening_hours::{Context, TzLocation};
+    /// use opening_hours::{Context, Coordinates, TzLocation};
     /// use opening_hours::country::Country;
     ///
+    /// let coords = Coordinates::new(48.8535, 2.34839).unwrap();
+    ///
     /// assert_eq!(
-    ///     Context::from_coords(48.8535, 2.34839),
+    ///     Context::from_coords(coords),
     ///     Context::default()
     ///         .with_holidays(Country::FR.holidays())
-    ///         .with_locale(TzLocation::from_coords(48.8535, 2.34839)),
+    ///         .with_locale(TzLocation::from_coords(coords)),
     /// );
     /// ```
     #[cfg(feature = "auto-country")]
-    pub fn from_coords(lat: f64, lon: f64) -> Self {
+    pub fn from_coords(coords: Coordinates) -> Self {
         use crate::country::Country;
 
-        let holidays = Country::try_from_coords(lat, lon)
+        let holidays = Country::try_from_coords(coords)
             .map(Country::holidays)
             .unwrap_or_default();
 
-        let locale = TzLocation::from_coords(lat, lon);
+        let locale = TzLocation::from_coords(coords);
         Self { holidays, locale }
     }
 }

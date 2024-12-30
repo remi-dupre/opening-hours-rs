@@ -8,6 +8,7 @@ const SCH_24_7: &str = "24/7";
 const SCH_ADDITION: &str = "10:00-12:00 open, 14:00-16:00 unknown, 16:00-23:00 closed";
 const SCH_HOLIDAY: &str = "PH";
 const SCH_JAN_DEC: &str = "Jan-Dec";
+const PARIS_COORDS: [f64; 2] = [48.8535, 2.34839];
 
 fn bench_parse(c: &mut Criterion) {
     let mut group = c.benchmark_group("parse");
@@ -18,6 +19,14 @@ fn bench_parse(c: &mut Criterion) {
 
     group.bench_function("addition", |b| {
         b.iter(|| OpeningHours::parse(black_box(SCH_ADDITION)).unwrap())
+    });
+}
+
+fn bench_context(c: &mut Criterion) {
+    let mut group = c.benchmark_group("context");
+
+    group.bench_function("infer_from_coords", |b| {
+        b.iter(|| Context::from_coords(black_box(PARIS_COORDS[0]), black_box(PARIS_COORDS[1])))
     });
 }
 
@@ -70,5 +79,5 @@ fn bench_eval(c: &mut Criterion) {
     }
 }
 
-criterion_group!(benches, bench_parse, bench_eval);
+criterion_group!(benches, bench_parse, bench_context, bench_eval);
 criterion_main!(benches);
