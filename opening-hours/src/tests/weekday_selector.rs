@@ -1,7 +1,7 @@
 use opening_hours_syntax::error::Error;
 use opening_hours_syntax::rules::RuleKind::*;
 
-use crate::country::Country;
+use crate::localization::Country;
 use crate::{datetime, schedule_at, Context, OpeningHours};
 
 //       June 2020

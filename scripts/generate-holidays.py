@@ -21,7 +21,7 @@ CRATE_ROOT_SRC = CRATE_ROOT / "opening-hours"
 FILE_PUBLIC_HOLIDAYS = CRATE_ROOT_SRC / "data" / "holidays_public.txt"
 FILE_SCHOOL_HOLIDAYS = CRATE_ROOT_SRC / "data" / "holidays_school.txt"
 FILE_ENUM_TEMPLATE = CRATE_ROOT_SRC / "data" / "templates" / "countries.rs.jinja"
-FILE_ENUM_OUTPUT = CRATE_ROOT_SRC / "src" / "country" / "generated.rs"
+FILE_ENUM_OUTPUT = CRATE_ROOT_SRC / "src" / "localization" / "country" / "generated.rs"
 
 
 class Dates(Tap):

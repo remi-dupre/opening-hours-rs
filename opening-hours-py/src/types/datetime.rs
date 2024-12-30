@@ -3,8 +3,8 @@ use std::ops::Add;
 use chrono::{DateTime, Local, NaiveDateTime, TimeDelta};
 use pyo3::prelude::*;
 
-use opening_hours::opening_hours::DATE_LIMIT;
-use opening_hours::{Localize, TzLocation};
+use opening_hours::localization::{Localize, TzLocation};
+use opening_hours::DATE_LIMIT;
 
 #[derive(Clone, Copy, FromPyObject, IntoPyObject)]
 pub(crate) enum DateTimeMaybeAware {

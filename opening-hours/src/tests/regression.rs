@@ -230,14 +230,16 @@ fn s016_fuzz_week01_sh() -> Result<(), Error> {
 fn s017_fuzz_open_range_timeout() -> Result<(), Error> {
     exec_with_timeout(Duration::from_millis(100), || {
         assert_eq!(
-            dbg!("May2+".parse::<OpeningHours>()?)
+            "May2+"
+                .parse::<OpeningHours>()?
                 .next_change(datetime!("2020-01-01 12:00"))
                 .unwrap(),
             datetime!("2020-05-02 00:00")
         );
 
         assert_eq!(
-            dbg!("May2+".parse::<OpeningHours>()?)
+            "May2+"
+                .parse::<OpeningHours>()?
                 .next_change(datetime!("2020-05-15 12:00"))
                 .unwrap(),
             datetime!("2021-01-01 00:00")
@@ -245,4 +247,25 @@ fn s017_fuzz_open_range_timeout() -> Result<(), Error> {
 
         Ok(())
     })
+}
+
+#[cfg(feature = "auto-country")]
+#[cfg(feature = "auto-timezone")]
+#[test]
+fn s018_fuzz_ph_infinite_loop() -> Result<(), Error> {
+    use crate::localization::Coordinates;
+    use crate::Context;
+
+    let ctx = Context::from_coords(Coordinates::new(0.0, 4.2619).unwrap());
+    let tz = *ctx.locale.get_timezone();
+    let oh = OpeningHours::parse("PH")?.with_context(ctx);
+    oh.next_change(datetime!("2106-02-12 13:54", tz));
+    Ok(())
+}
+
+#[test]
+fn s019_fuzz_stringify_dusk() -> Result<(), Error> {
+    let oh: OpeningHours = "dusk".parse()?;
+    assert!(OpeningHours::parse(&oh.to_string()).is_ok());
+    Ok(())
 }

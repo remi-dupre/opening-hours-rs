@@ -1,6 +1,5 @@
 opening-hours/data/osm_examples.txt
 docs
 fuzz/artifacts
-fuzz/corpus
 __pycache__
 **/target

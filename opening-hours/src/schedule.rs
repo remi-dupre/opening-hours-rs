@@ -331,7 +331,7 @@ macro_rules! schedule {
         $( ; )?
     ) => {{
         #[allow(unused_imports)]
-        use $crate::{schedule::{Schedule, TimeRange}};
+        use $crate::schedule::{Schedule, TimeRange};
 
         #[allow(unused_imports)]
         use opening_hours_syntax::extended_time::ExtendedTime;

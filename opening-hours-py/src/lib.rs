@@ -6,8 +6,8 @@ mod tests;
 use pyo3::exceptions::PyException;
 use pyo3::prelude::*;
 
-use ::opening_hours::country::Country;
-use ::opening_hours::{Context, OpeningHours, TzLocation};
+use ::opening_hours::localization::{Coordinates, Country, TzLocation};
+use ::opening_hours::{Context, OpeningHours};
 
 use crate::types::datetime::DateTimeMaybeAware;
 use crate::types::iterator::RangeIterator;
@@ -35,6 +35,13 @@ pyo3::create_exception!(
         "\n",
         "See https://en.wikipedia.org/wiki/List_of_ISO_3166_country_codes.",
     )
+);
+
+pyo3::create_exception!(
+    opening_hours,
+    InvalidCoordinatesError,
+    PyException,
+    concat!("Input coordinates are not valid.")
 );
 
 /// Validate that input string is a correct opening hours description.
@@ -115,6 +122,14 @@ impl PyOpeningHours {
         let auto_timezone = auto_timezone.unwrap_or(true);
         let mut ctx = Context::default();
 
+        let coords = coords
+            .map(|(lat, lon)| {
+                Coordinates::new(lat, lon).ok_or_else(|| {
+                    InvalidCoordinatesError::new_err(format!("Invalid coordinates ({lat}, {lon})"))
+                })
+            })
+            .transpose()?;
+
         let oh = OpeningHours::parse(oh)
             .map_err(|err| ParserError::new_err(format!("Failed to parse expression: {err}")))?;
 
@@ -125,18 +140,18 @@ impl PyOpeningHours {
                     .map_err(|err| UnknownCountryError::new_err(err.to_string()))?
                     .holidays(),
             );
-        } else if let Some((lat, lon)) = coords {
+        } else if let Some(coords) = coords {
             if auto_country {
-                ctx = ctx.with_holidays(Context::from_coords(lat, lon).holidays);
+                ctx = ctx.with_holidays(Context::from_coords(coords).holidays);
             }
         }
 
         let locale = match (timezone, coords, auto_timezone) {
             (Some(tz), None, _) | (Some(tz), _, false) => PyLocation::Aware(TzLocation::new(tz)),
-            (Some(tz), Some((lat, lon)), _) => {
-                PyLocation::Aware(TzLocation::new(tz).with_coords(lat, lon))
+            (Some(tz), Some(coords), _) => {
+                PyLocation::Aware(TzLocation::new(tz).with_coords(coords))
             }
-            (None, Some((lat, lon)), true) => PyLocation::Aware(TzLocation::from_coords(lat, lon)),
+            (None, Some(coords), true) => PyLocation::Aware(TzLocation::from_coords(coords)),
             _ => PyLocation::Naive,
         };
 
@@ -294,6 +309,12 @@ impl PyOpeningHours {
 #[pymodule]
 fn opening_hours(py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     pyo3_log::init();
+
+    m.add(
+        "InvalidCoordinatesError",
+        py.get_type::<InvalidCoordinatesError>(),
+    )?;
+
     m.add("ParserError", py.get_type::<ParserError>())?;
     m.add("UnknownCountryError", py.get_type::<UnknownCountryError>())?;
     m.add_function(wrap_pyfunction!(validate, m)?)?;

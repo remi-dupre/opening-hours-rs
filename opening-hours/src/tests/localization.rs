@@ -1,4 +1,8 @@
-use crate::{datetime, Context, OpeningHours, TzLocation};
+use crate::localization::{Coordinates, TzLocation};
+use crate::{datetime, Context, OpeningHours};
+
+#[cfg(feature = "auto-timezone")]
+const COORDS_PARIS: Coordinates = Coordinates::new(48.8535, 2.34839).unwrap();
 
 #[test]
 fn ctx_with_tz() {
@@ -53,7 +57,7 @@ fn ends_at_ambiguous_time() {
 #[test]
 fn infer_tz() {
     let tz = chrono_tz::Europe::Paris; // will be infered for context
-    let ctx = Context::default().with_locale(TzLocation::from_coords(48.8535, 2.34839));
+    let ctx = Context::default().with_locale(TzLocation::from_coords(COORDS_PARIS));
 
     let oh = OpeningHours::parse("sunrise-sunset")
         .unwrap()
@@ -65,12 +69,18 @@ fn infer_tz() {
     );
 }
 
+#[test]
+fn invalid_coord() {
+    assert!(Coordinates::new(2000.0, 0.0).is_none());
+    assert!(Coordinates::new(0.0, 2000.0).is_none());
+}
+
 #[cfg(feature = "auto-country")]
 #[cfg(feature = "auto-timezone")]
 #[test]
 fn infer_all() {
     let tz = chrono_tz::Europe::Paris; // Will be infered for context
-    let ctx = Context::from_coords(48.8535, 2.34839);
+    let ctx = Context::from_coords(COORDS_PARIS);
 
     let oh = OpeningHours::parse("sunrise-sunset; PH off")
         .unwrap()

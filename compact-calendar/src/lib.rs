@@ -202,8 +202,10 @@ impl CompactCalendar {
                         )
                     })
             })
-        } else {
+        } else if date.year() < self.first_year {
             self.iter().next()
+        } else {
+            None
         }
     }
 
