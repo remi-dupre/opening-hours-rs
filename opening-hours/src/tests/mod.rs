@@ -122,7 +122,7 @@ macro_rules! schedule_at {
         let ctx = Context::default()
             $( .with_holidays($region.holidays()) )?
             $( .with_locale({
-                use $crate::{Coordinates, TzLocation};
+                use $crate::localization::{Coordinates, TzLocation};
                 let coords = Coordinates::new($coord.0, $coord.1).unwrap();
                 TzLocation::from_coords(coords)
             }))?;

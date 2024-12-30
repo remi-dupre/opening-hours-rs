@@ -2,9 +2,8 @@ use std::env;
 
 use chrono::{Duration, Local};
 
-use opening_hours::context::Context;
-use opening_hours::country::Country;
-use opening_hours::OpeningHours;
+use opening_hours::localization::Country;
+use opening_hours::{Context, OpeningHours};
 
 const COUNTRY: Country = Country::FR;
 

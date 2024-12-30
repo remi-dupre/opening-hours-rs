@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crate::country::Country;
+use crate::localization::Country;
 
 #[test]
 fn test_parse_bijective() {

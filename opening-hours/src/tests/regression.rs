@@ -253,7 +253,8 @@ fn s017_fuzz_open_range_timeout() -> Result<(), Error> {
 #[cfg(feature = "auto-timezone")]
 #[test]
 fn s018_fuzz_ph_infinite_loop() -> Result<(), Error> {
-    use crate::{Context, Coordinates};
+    use crate::localization::Coordinates;
+    use crate::Context;
 
     let ctx = Context::from_coords(Coordinates::new(0.0, 4.2619).unwrap());
     let tz = *ctx.locale.get_timezone();

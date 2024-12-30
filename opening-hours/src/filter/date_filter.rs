@@ -6,10 +6,11 @@ use chrono::{Duration, NaiveDate};
 
 use opening_hours_syntax::rules::day::{self as ds, Month};
 
-use crate::context::{Context, Localize};
+use crate::localization::Localize;
 use crate::opening_hours::DATE_LIMIT;
 use crate::utils::dates::count_days_in_month;
 use crate::utils::range::{RangeExt, WrappingRange};
+use crate::Context;
 
 /// Get the first valid date before give "yyyy/mm/dd", for example if
 /// 2021/02/30 is given, this will return february 28th as 2021 is not a leap

@@ -8,7 +8,7 @@ use super::UnknownCountryCode;
 /// An enum for selecting a country.
 ///
 /// ```
-/// use opening_hours::country::Country;
+/// use opening_hours::localization::Country;
 ///
 /// let country: Country = "FR".parse().unwrap();
 /// assert_eq!(country, Country::FR);
@@ -366,7 +366,7 @@ impl Country {
     /// Get the country's full name.
     ///
     /// ```
-    /// use opening_hours::country::Country;
+    /// use opening_hours::localization::Country;
     ///
     /// assert_eq!(Country::FR.name(), "France");
     /// ```
@@ -492,7 +492,7 @@ impl Country {
     /// Get the country's iso code.
     ///
     /// ```
-    /// use opening_hours::country::Country;
+    /// use opening_hours::localization::Country;
     ///
     /// assert_eq!(Country::FR.iso_code(), "FR");
     /// ```

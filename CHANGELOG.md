@@ -5,7 +5,6 @@
 ### General
 
 - General reorganisation of modules
-- TODO: integrated fuzzer corpus into CI
 
 ### Rust
 

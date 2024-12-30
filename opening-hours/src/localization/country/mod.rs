@@ -6,7 +6,7 @@ use std::sync::{Arc, LazyLock};
 use compact_calendar::CompactCalendar;
 use flate2::bufread::DeflateDecoder;
 
-use crate::context::ContextHolidays;
+use crate::ContextHolidays;
 
 // Fetch generated code
 pub use generated::*;
@@ -35,15 +35,14 @@ impl Country {
     /// Attempt to automatically detect a country from coordinates.
     ///
     /// ```
-    /// use opening_hours::Coordinates;
-    /// use opening_hours::country::Country;
+    /// use opening_hours::localization::{Coordinates, Country};
     ///
     /// let coords = Coordinates::new(48.86, 2.34).unwrap();
     /// let country_paris = Country::try_from_coords(coords).unwrap();
     /// assert_eq!(country_paris, Country::FR);
     /// ```
     #[cfg(feature = "auto-country")]
-    pub fn try_from_coords(coords: crate::context::Coordinates) -> Option<Self> {
+    pub fn try_from_coords(coords: crate::localization::Coordinates) -> Option<Self> {
         use country_boundaries::CountryBoundaries;
         use std::io::Read;
 
@@ -72,7 +71,7 @@ impl Country {
     ///
     /// ```
     /// use chrono::NaiveDate;
-    /// use opening_hours::country::Country;
+    /// use opening_hours::localization::Country;
     ///
     /// let holidays_fr = Country::FR.holidays();
     /// let date = NaiveDate::from_ymd_opt(2024, 7, 14).unwrap(); // french national day

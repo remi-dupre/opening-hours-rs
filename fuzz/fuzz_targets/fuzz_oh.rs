@@ -5,7 +5,8 @@ use libfuzzer_sys::{fuzz_target, Corpus};
 
 use std::fmt::Debug;
 
-use opening_hours::{Context, Coordinates, Localize, OpeningHours};
+use opening_hours::localization::{Coordinates, Localize};
+use opening_hours::{Context, OpeningHours};
 
 #[derive(Arbitrary, Clone)]
 pub struct Data {

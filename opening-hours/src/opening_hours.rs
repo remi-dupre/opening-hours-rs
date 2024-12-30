@@ -9,12 +9,13 @@ use opening_hours_syntax::extended_time::ExtendedTime;
 use opening_hours_syntax::rules::{OpeningHoursExpression, RuleKind, RuleOperator, RuleSequence};
 use opening_hours_syntax::Error as ParserError;
 
-use crate::context::{Context, Localize, NoLocation};
-use crate::date_filter::DateFilter;
-use crate::schedule::Schedule;
-use crate::time_filter::{
+use crate::filter::date_filter::DateFilter;
+use crate::filter::time_filter::{
     time_selector_intervals_at, time_selector_intervals_at_next_day, TimeFilter,
 };
+use crate::localization::{Localize, NoLocation};
+use crate::schedule::Schedule;
+use crate::Context;
 use crate::DateTimeRange;
 
 /// The upper bound of dates handled by specification
@@ -42,7 +43,7 @@ impl OpeningHours<NoLocation> {
     /// Parse a raw opening hours expression.
     ///
     /// ```
-    /// use opening_hours::OpeningHours;
+    /// use opening_hours::{Context, OpeningHours};
     ///
     /// assert!(OpeningHours::parse("24/7 open").is_ok());
     /// assert!(OpeningHours::parse("not a valid expression").is_err());
@@ -61,8 +62,7 @@ impl<L: Localize> OpeningHours<L> {
     /// Set a new evaluation context for this expression.
     ///
     /// ```
-    /// use opening_hours::OpeningHours;
-    /// use opening_hours::context::Context;
+    /// use opening_hours::{Context, OpeningHours};
     ///
     /// let oh = OpeningHours::parse("Mo-Fr open")
     ///     .unwrap()

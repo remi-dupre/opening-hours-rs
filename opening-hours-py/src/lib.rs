@@ -6,8 +6,8 @@ mod tests;
 use pyo3::exceptions::PyException;
 use pyo3::prelude::*;
 
-use ::opening_hours::country::Country;
-use ::opening_hours::{Context, Coordinates, OpeningHours, TzLocation};
+use ::opening_hours::localization::{Coordinates, Country, TzLocation};
+use ::opening_hours::{Context, OpeningHours};
 
 use crate::types::datetime::DateTimeMaybeAware;
 use crate::types::iterator::RangeIterator;
