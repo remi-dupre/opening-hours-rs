@@ -49,7 +49,7 @@ impl OpeningHours<NoLocation> {
     /// assert!(OpeningHours::parse("not a valid expression").is_err());
     /// ```
     pub fn parse(raw_oh: &str) -> Result<Self, ParserError> {
-        let expr = Arc::new(opening_hours_syntax::parse(raw_oh)?);
+        let expr = Arc::new(opening_hours_syntax::parse(raw_oh)?.simplify());
         Ok(Self { expr, ctx: Context::default() })
     }
 }

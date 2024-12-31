@@ -36,7 +36,4 @@ features = [
     # This ensures that the package is only built with Python >=3.9, which is
     # the first version supporting chrono-tz conversion.
     "abi3-py39",
-    "abi3-py310",
-    "abi3-py311",
-    "abi3-py312",
 ]

@@ -120,6 +120,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     generate_holiday_database(&out_dir)?;
     detect_build_channel();
-    println!("cargo::rerun-if-changed=build.rs");
+    println!("cargo::rerun-if-changed=opening-hours/build.rs");
     Ok(())
 }
