@@ -4,6 +4,7 @@ pub mod time;
 use std::fmt::Display;
 use std::sync::Arc;
 
+use crate::rewrite::simplify_expression;
 use crate::sorted_vec::UniqueSortedVec;
 
 // OpeningHoursExpression
@@ -11,6 +12,13 @@ use crate::sorted_vec::UniqueSortedVec;
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct OpeningHoursExpression {
     pub rules: Vec<RuleSequence>,
+}
+
+impl OpeningHoursExpression {
+    /// TODO: doc
+    pub fn simplify(self) -> Self {
+        simplify_expression(self)
+    }
 }
 
 impl Display for OpeningHoursExpression {
