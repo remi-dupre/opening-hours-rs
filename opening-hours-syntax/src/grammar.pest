@@ -154,7 +154,7 @@ day_offset = { space ~ plus_or_minus ~ positive_number ~ space ~ "day" ~ "s"? }
 
 // Week selector
 
-week_selector = { "week" ~ week ~ ( "," ~ week )* }
+week_selector = { "week" ~ space? ~ week ~ ( "," ~ week )* }
 
 week = { weeknum ~ ( "-" ~ weeknum ~  ( "/" ~ positive_number )? )? }
 
@@ -252,9 +252,9 @@ daynum_digits = {
 }
 
 weeknum = @{
-           "0" ~ '1'..'9'  // 01 -> 09
-    | '1'..'4' ~ '0'..'9'  // 10 -> 49
+      '1'..'4' ~ '0'..'9'  // 10 -> 49
     |      "5" ~ '0'..'3'  // 50 -> 53
+    |     "0"? ~ '1'..'9'  // 01 -> 09
 }
 
 month = {
