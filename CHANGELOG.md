@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.11.1
+
+### Rust
+
+- More robust week selector
+
 ## 0.11.0
 
 ### General
