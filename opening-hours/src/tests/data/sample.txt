@@ -154,6 +154,51 @@ We-Fr 12:00-24:00 ; Sa 11:00-24:00 ; Su 11:00-22:30 ; PH off ; 2021 Mar 26-Apr 1
 We-Sa 10:00-23:00 ; Su 10:00-21:00 ; PH off
 We-Su 11:00-23:55 ; PH off
 Mo-Sa 07:00-19:00; PH Su off
+# Examples from https://openingh.ypid.de/evaluation_tool/
+Mo-Fr 10:00-20:00; PH off
+Mo,Tu,Th,Fr 12:00-18:00; Sa,PH 12:00-17:00; Th[3],Th[-1] off
+00:00-24:00; Tu-Su,PH 08:30-09:00 off; Tu-Su 14:00-14:30 off; Mo 08:00-13:00 off
+Fr-Sa 18:00-06:00; PH off
+Mo 10:00-12:00,12:30-15:00
+Mo 10:00-12:00,12:30-15:00; Tu-Fr 08:00-12:00,12:30-15:00; Sa 08:00-12:00
+24/7
+"only after registration"; PH off
+22:00-23:00; PH off
+08:00-11:00; PH off
+open; Mo 15:00-16:00 off; PH off
+Mo-Su 22:00-23:00; We,PH off
+We-Fr 10:00-24:00 open "it is open" || "please call"; PH off
+Mo-Fr 08:00-11:00 || Tu-Th,PH open "Emergency only"
+Tu-Th,We 22:00-23:00 open "Hot meals"; PH off
+Mo 12:00-14:00 open "female only", Mo 14:00-16:00 open "male only"; PH off
+Apr: 22:00-23:00; PH off
+Jul-Jan: 22:00-23:00; PH off
+Jan-Jul: 22:00-23:00; PH off
+Jul 23-Jan 3: "needs reservation by phone"; PH off
+Jul 23-Jan 3: 22:00-23:00 "Please make a reservation by phone."; PH off
+Jul 23-Jan 3: 08:00-11:00 "Please make a reservation by phone."; PH off
+Jan 23-Jul 3: 22:00-23:00 "Please make a reservation by phone."; PH off
+# Mar Su[-1]-Dec Su[1] -2 days: 22:00-23:00; PH off
+Sa[1],Sa[1] +1 day 10:00-12:00 open "first weekend in the month"; PH off
+# Sa[-1],Sa[-1] +1 day 10:00-12:00 open "last weekend in the month"; PH off
+Sa-Su 00:00-24:00; PH off
+Mo-Fr 00:00-24:00; PH off
+sunrise-sunset open "Beware of sunburn!"; PH off
+sunset-sunrise open "Beware of vampires!"; PH off
+# (sunset+01:00)-24:00 || closed "No drink before sunset!"; PH off
+22:00+; PH off
+Tu,PH 23:59-22:59
+We-Mo,PH 23:59-22:59
+week 2-52/2 We 00:00-24:00; week 1-53/2 Sa 00:00-24:00; PH off
+week 4-16 We 00:00-24:00; week 38-42 Sa 00:00-24:00; PH off
+2012 easter -2 days-2012 easter +2 days: open "Around easter"; PH off
+24/7 closed "always closed"
+# 2013,2015,2050-2053,2055/2,2020-2029/3,2060+ Jan 1, documentation
+Jan 23-Feb 11,Feb 12 00:00-24:00; PH off
+Apr-Oct Su[2] 14:00-18:00; Aug Su[-1] -1 day 10:00-18:00; Aug Su[-1] 10:00-18:00; PH off
+Mo-Fr 08:00-12:00, We 14:00-18:00; Su,PH off
+# 00:00-24:00 week 6 Mo-Su Feb; PH off, (check out the error correction and the prettify function for the opening_hours value)
+# monday, Tu, wE, TH 12:00 - 20:00 ; 14:00-16:00 Off ; closed public Holiday, (check out the error correction and the prettify function for the opening_hours value)
 
 # This is a tough one, according to the grammar weekday should not be part of an interval.
 # "check website http://www.senat.fr/visite/jardin/horaires.html"; Mar Su[-1]-Sep 30 07:30-19:15+ open "check closing time on website http://www.senat.fr/visite/jardin/horaires.html"; (sunset-00:10)-(sunrise-00:50) closed; 21:30-07:30 closed
