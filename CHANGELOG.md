@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.0
+
+That's not really a huge milestone, but:
+
+- Every "obviously missing things" that I had in mind are implemented now.
+- The API proved itself to be quite stable.
+
+### General
+
+- Add easter support
+
 ## 0.11.1
 
 ### Rust

@@ -56,9 +56,3 @@ fn range() -> Result<(), Error> {
 
     Ok(())
 }
-
-#[test]
-fn easter() -> Result<(), Error> {
-    assert_eq!(schedule_at!("easter", "2024-03-31"), schedule! {});
-    Ok(())
-}
