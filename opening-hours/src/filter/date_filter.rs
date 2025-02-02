@@ -8,11 +8,11 @@ use opening_hours_syntax::rules::day::{self as ds, Month};
 
 use crate::localization::Localize;
 use crate::opening_hours::DATE_LIMIT;
-use crate::utils::dates::count_days_in_month;
+use crate::utils::dates::{count_days_in_month, easter};
 use crate::utils::range::{RangeExt, WrappingRange};
 use crate::Context;
 
-/// Get the first valid date before give "yyyy/mm/dd", for example if
+/// Get the first valid date before given "yyyy/mm/dd", for example if
 /// 2021/02/30 is given, this will return february 28th as 2021 is not a leap
 /// year.
 fn first_valid_ymd(year: i32, month: u32, day: u32) -> NaiveDate {
@@ -138,6 +138,29 @@ impl DateFilter for ds::MonthdayRange {
         let in_year = date.year() as u16;
         let in_month = Month::from_date(date);
 
+        fn on_year(date: ds::Date, for_year: i32) -> Option<NaiveDate> {
+            match date {
+                ds::Date::Fixed { year, month, day } => {
+                    if year.is_some() && i32::from(year.unwrap()) != for_year {
+                        return None;
+                    }
+
+                    Some(first_valid_ymd(
+                        year.map(Into::into).unwrap_or(for_year),
+                        month.into(),
+                        day.into(),
+                    ))
+                }
+                ds::Date::Easter { year } => {
+                    if year.is_some() && i32::from(year.unwrap()) != for_year {
+                        return None;
+                    }
+
+                    easter(year.map(Into::into).unwrap_or(for_year))
+                }
+            }
+        }
+
         match self {
             ds::MonthdayRange::Month { year, range } => {
                 year.unwrap_or(in_year) == in_year && range.wrapping_contains(&in_month)
@@ -146,48 +169,31 @@ impl DateFilter for ds::MonthdayRange {
                 start: (start, start_offset),
                 end: (end, end_offset),
             } => {
-                match (start, end) {
-                    (
-                        &ds::Date::Fixed { year: year_1, month: month_1, day: day_1 },
-                        &ds::Date::Fixed { year: year_2, month: month_2, day: day_2 },
-                    ) => {
-                        let mut start = start_offset.apply(first_valid_ymd(
-                            year_1.map(Into::into).unwrap_or(date.year()),
-                            month_1.into(),
-                            day_1.into(),
-                        ));
+                let mut start_date = match on_year(*start, date.year()) {
+                    Some(date) => start_offset.apply(date),
+                    None => return false,
+                };
 
-                        // If no year is specified we can shift of as many years as needed.
-                        if year_1.is_none() && start > date {
-                            start = start_offset.apply(first_valid_ymd(
-                                year_1.map(Into::into).unwrap_or(date.year()) - 1,
-                                month_1.into(),
-                                day_1.into(),
-                            ))
-                        }
-
-                        let mut end = end_offset.apply(first_valid_ymd(
-                            year_2.map(Into::into).unwrap_or(start.year()),
-                            month_2.into(),
-                            day_2.into(),
-                        ));
-
-                        // If no year is specified we can shift of as many years as needed.
-                        if year_2.is_none() && end < start {
-                            end = end_offset.apply(first_valid_ymd(
-                                year_2.map(Into::into).unwrap_or(start.year()) + 1,
-                                month_2.into(),
-                                day_2.into(),
-                            ))
-                        }
-
-                        (start..=end).contains(&date)
-                    }
-                    (_, ds::Date::Easter { year: _ }) | (ds::Date::Easter { year: _ }, _) => {
-                        // TODO: Easter support
-                        false
-                    }
+                if start_date > date {
+                    start_date = match on_year(*start, date.year() - 1) {
+                        Some(date) => start_offset.apply(date),
+                        None => return false,
+                    };
                 }
+
+                let mut end_date = match on_year(*end, start_date.year()) {
+                    Some(date) => end_offset.apply(date),
+                    None => return false,
+                };
+
+                if end_date < start_date {
+                    end_date = match on_year(*end, start_date.year() + 1) {
+                        Some(date) => end_offset.apply(date),
+                        None => return false,
+                    };
+                }
+
+                (start_date..=end_date).contains(&date)
             }
         }
     }

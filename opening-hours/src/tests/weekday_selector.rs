@@ -166,3 +166,43 @@ fn holiday() {
     assert!(oh.is_open(datetime!("2024-07-14 12:00")));
     assert!(oh.is_closed(datetime!("2024-07-13 12:00")));
 }
+
+#[test]
+fn easter_days() {
+    let oh = OpeningHours::parse("24/7 open ; easter off").unwrap();
+    assert!(oh.is_open(datetime!("2024-03-30 12:00")));
+    assert!(oh.is_closed(datetime!("2024-03-31 12:00")));
+    assert!(oh.is_open(datetime!("2024-04-01 12:00")));
+}
+
+#[test]
+fn easter_interval() {
+    let oh = OpeningHours::parse("Jan01-easter").unwrap();
+    assert!(oh.is_closed(datetime!("2023-12-31 12:00")));
+    assert!(oh.is_open(datetime!("2024-01-01 12:00")));
+    assert!(oh.is_open(datetime!("2024-03-30 12:00")));
+    assert!(oh.is_open(datetime!("2024-03-31 12:00")));
+    assert!(oh.is_closed(datetime!("2024-04-01 12:00")));
+
+    let oh = OpeningHours::parse("easter-Dec31").unwrap();
+    assert!(oh.is_closed(datetime!("2024-03-30 12:00")));
+    assert!(oh.is_open(datetime!("2024-03-31 12:00")));
+    assert!(oh.is_open(datetime!("2024-12-31 12:00")));
+    assert!(oh.is_closed(datetime!("2025-01-01 12:00")));
+}
+
+#[test]
+fn easter_interval_with_year() {
+    let oh = OpeningHours::parse("Jan01-easter").unwrap();
+    assert!(oh.is_closed(datetime!("2023-12-31 12:00")));
+    assert!(oh.is_open(datetime!("2024-01-01 12:00")));
+    assert!(oh.is_open(datetime!("2024-03-30 12:00")));
+    assert!(oh.is_open(datetime!("2024-03-31 12:00")));
+    assert!(oh.is_closed(datetime!("2024-04-01 12:00")));
+
+    let oh = OpeningHours::parse("easter-Dec31").unwrap();
+    assert!(oh.is_closed(datetime!("2024-03-30 12:00")));
+    assert!(oh.is_open(datetime!("2024-03-31 12:00")));
+    assert!(oh.is_open(datetime!("2024-12-31 12:00")));
+    assert!(oh.is_closed(datetime!("2025-01-01 12:00")));
+}
