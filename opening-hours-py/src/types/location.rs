@@ -1,6 +1,6 @@
 use chrono::{NaiveDate, NaiveDateTime};
 
-use opening_hours::localization::{Localize, NoLocation, TzLocation};
+use opening_hours_rs::localization::{Localize, NoLocation, TzLocation};
 use opening_hours_syntax::rules::time::TimeEvent;
 
 use super::datetime::DateTimeMaybeAware;

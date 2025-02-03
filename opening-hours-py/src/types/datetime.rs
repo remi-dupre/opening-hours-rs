@@ -2,9 +2,10 @@ use std::ops::Add;
 
 use chrono::{DateTime, Local, NaiveDateTime, TimeDelta};
 use pyo3::prelude::*;
+use pyo3_stub_gen::{PyStubType, TypeInfo};
 
-use opening_hours::localization::{Localize, TzLocation};
-use opening_hours::DATE_LIMIT;
+use opening_hours_rs::localization::{Localize, TzLocation};
+use opening_hours_rs::DATE_LIMIT;
 
 #[derive(Clone, Copy, FromPyObject, IntoPyObject)]
 pub(crate) enum DateTimeMaybeAware {
@@ -65,5 +66,11 @@ impl Add<TimeDelta> for DateTimeMaybeAware {
             DateTimeMaybeAware::Naive(dt) => DateTimeMaybeAware::Naive(dt + rhs),
             DateTimeMaybeAware::Aware(dt) => DateTimeMaybeAware::Aware(dt + rhs),
         }
+    }
+}
+
+impl PyStubType for DateTimeMaybeAware {
+    fn type_output() -> TypeInfo {
+        TypeInfo::with_module("datetime.datetime", "datetime".into())
     }
 }

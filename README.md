@@ -81,6 +81,20 @@ Tests can be run by running `cargo test`.
 A fuzzing can be run using _cargo-fuzz_ by running
 `cargo +nightly fuzz run -j 4 parse_oh`.
 
+### Re-generating Python stub file
+
+_opening_hours.pyi_ should not be edited manually, if you make changes to
+Python bindings, you need to update it automatically:
+
+```bash
+# Install required dev dependencies
+poetry install --with dev
+
+# Generate stub file
+cd opening-hours-py
+cargo run --bin stub_gen
+```
+
 [codecov]: https://app.codecov.io/gh/remi-dupre/opening-hours-rs "Code coverage"
 [crate-log]: https://crates.io/crates/log "crates.io page for 'log'"
 [docs]: https://docs.rs/opening-hours "Documentation"
@@ -89,4 +103,3 @@ A fuzzing can be run using _cargo-fuzz_ by running
 [opening-hours]: https://crates.io/crates/opening-hours "Package"
 [opening-hours-syntax]: https://crates.io/crates/opening-hours-syntax "Syntax Package"
 [pypy]: https://pypi.org/project/opening-hours-py "Python package"
-[workalendar]: https://pypi.org/project/workalendar/ "Worldwide holidays and working days helper and toolkit."

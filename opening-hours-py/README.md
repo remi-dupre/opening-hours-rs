@@ -45,7 +45,7 @@ documentation [here](https://remi-dupre.github.io/opening-hours-rs/opening_hours
 - 🧮 Evaluation of state and next change
 - ⏳ Lazy infinite iterator
 - 🌅 Accurate sun events
-- 📅 Embedded public holidays database for many countries (from [nagger])
+- 📅 Embedded public holidays database for many countries (from [nager])
 - 🌍 Timezone support
 - 🔥 Fast and memory-safe implementation using Rust
 

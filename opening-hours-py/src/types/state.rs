@@ -1,8 +1,10 @@
 use pyo3::prelude::*;
+use pyo3_stub_gen::derive::gen_stub_pyclass_enum;
 
 use opening_hours_syntax::rules::RuleKind;
 
 /// Specify the state of an opening hours interval.
+#[gen_stub_pyclass_enum]
 #[pyclass(ord, eq, frozen, hash, str, rename_all = "UPPERCASE")]
 #[derive(Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub enum State {
