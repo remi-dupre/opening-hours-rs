@@ -4,7 +4,7 @@
 
 ### Python
 
-- Add auto-generated Python stubs.
+- Add auto-generated Python stub file.
 
 ## 1.0.0
 
