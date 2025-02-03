@@ -4,7 +4,7 @@
 use std::fs::File;
 use std::io::Read;
 
-const STUB_SOURCE_PATH: &str = "opening_hours.pyi";
+const STUB_SOURCE_PATH: &str = "opening_hours_py.pyi";
 const STUB_TARGET_PATH: &str = "../opening_hours.pyi";
 
 // ⚠️  Do not copy this code as it is optimized for concision and not performance.

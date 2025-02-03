@@ -19,16 +19,11 @@ jobs:
           [".", "compact-calendar", "opening-hours-py", "opening-hours-syntax"]
         features: [""]
         include:
-          - crate: "."
-            features: "log"
-          - crate: "."
-            features: "log,auto-country"
-          - crate: "."
-            features: "log,auto-country,auto-timezone"
-          - crate: "."
-            features: "log,auto-timezone"
-          - crate: "opening-hours-syntax"
-            features: "log"
+          - { crate: ".", features: "log" }
+          - { crate: ".", features: "log,auto-country" }
+          - { crate: ".", features: "log,auto-country,auto-timezone" }
+          - { crate: ".", features: "log,auto-timezone" }
+          - { crate: "opening-hours-syntax", features: "log" }
     defaults:
       run:
         working-directory: ${{ matrix.crate }}

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.2
+
+### Python
+
+- Fix deployment.
+
 ## 1.0.1
 
 ### Python
