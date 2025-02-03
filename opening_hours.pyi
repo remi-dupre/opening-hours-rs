@@ -10,7 +10,7 @@ from enum import Enum, auto
 class OpeningHours:
     r"""
     Parse input opening hours description.
-    
+
     Parameters
     ----------
     oh : str
@@ -35,35 +35,43 @@ class OpeningHours:
     auto_timezone : bool (default: `True`)
         If set to `True`, the timezone will automatically be inferred from
         coordinates when they are specified.
-    
+
     Raises
     ------
     SyntaxError
         Given string is not in valid opening hours format.
-    
+
     Examples
     --------
     >>> oh = OpeningHours("24/7")
     >>> oh.is_open()
     True
-    
+
     >>> dt = datetime.fromisoformat("2024-07-14 15:00")
     >>> oh = OpeningHours("sunrise-sunset ; PH off", country="FR", coords=(48.8535, 2.34839))
     >>> assert oh.is_closed(dt)
     >>> assert oh.next_change(dt).replace(tzinfo=None) == datetime.fromisoformat("2024-07-15 06:03")
     """
-    def __new__(cls,oh:builtins.str, timezone:typing.Optional[zoneinfo.ZoneInfo]=None, country:typing.Optional[builtins.str]=None, coords:typing.Optional[tuple[builtins.float, builtins.float]]=None, auto_country:typing.Optional[builtins.bool]=True, auto_timezone:typing.Optional[builtins.bool]=True): ...
-    def state(self, time:typing.Optional[datetime.datetime]=None) -> State:
+    def __new__(
+        cls,
+        oh: builtins.str,
+        timezone: typing.Optional[zoneinfo.ZoneInfo] = None,
+        country: typing.Optional[builtins.str] = None,
+        coords: typing.Optional[tuple[builtins.float, builtins.float]] = None,
+        auto_country: typing.Optional[builtins.bool] = True,
+        auto_timezone: typing.Optional[builtins.bool] = True,
+    ): ...
+    def state(self, time: typing.Optional[datetime.datetime] = None) -> State:
         r"""
         Get current state of the time domain, the state can be either "open",
         "closed" or "unknown".
-        
+
         Parameters
         ----------
         time : Optional[datetime]
             Base time for the evaluation, current time will be used if it is
             not specified.
-        
+
         Examples
         --------
         >>> OpeningHours("24/7 off").state()
@@ -71,16 +79,16 @@ class OpeningHours:
         """
         ...
 
-    def is_open(self, time:typing.Optional[datetime.datetime]=None) -> builtins.bool:
+    def is_open(self, time: typing.Optional[datetime.datetime] = None) -> builtins.bool:
         r"""
         Check if current state is open.
-        
+
         Parameters
         ----------
         time : Optional[datetime]
             Base time for the evaluation, current time will be used if it is
             not specified.
-        
+
         Examples
         --------
         >>> OpeningHours("24/7").is_open()
@@ -88,16 +96,18 @@ class OpeningHours:
         """
         ...
 
-    def is_closed(self, time:typing.Optional[datetime.datetime]=None) -> builtins.bool:
+    def is_closed(
+        self, time: typing.Optional[datetime.datetime] = None
+    ) -> builtins.bool:
         r"""
         Check if current state is closed.
-        
+
         Parameters
         ----------
         time : Optional[datetime]
             Base time for the evaluation, current time will be used if it is
             not specified.
-        
+
         Examples
         --------
         >>> OpeningHours("24/7 off").is_closed()
@@ -105,16 +115,18 @@ class OpeningHours:
         """
         ...
 
-    def is_unknown(self, time:typing.Optional[datetime.datetime]=None) -> builtins.bool:
+    def is_unknown(
+        self, time: typing.Optional[datetime.datetime] = None
+    ) -> builtins.bool:
         r"""
         Check if current state is unknown.
-        
+
         Parameters
         ----------
         time : Optional[datetime]
             Base time for the evaluation, current time will be used if it is
             not specified.
-        
+
         Examples
         --------
         >>> OpeningHours("24/7 unknown").is_unknown()
@@ -122,17 +134,19 @@ class OpeningHours:
         """
         ...
 
-    def next_change(self, time:typing.Optional[datetime.datetime]=None) -> typing.Optional[datetime.datetime]:
+    def next_change(
+        self, time: typing.Optional[datetime.datetime] = None
+    ) -> typing.Optional[datetime.datetime]:
         r"""
         Get the date for next change of state.
         If the date exceed the limit date, returns None.
-        
+
         Parameters
         ----------
         time : Optional[datetime]
             Base time for the evaluation, current time will be used if it is
             not specified.
-        
+
         Examples
         --------
         >>> OpeningHours("24/7").next_change() # None
@@ -141,11 +155,17 @@ class OpeningHours:
         """
         ...
 
-    def intervals(self, start:typing.Optional[datetime.datetime]=None, end:typing.Optional[datetime.datetime]=None) -> typing.Iterator[builtins.tuple[datetime.datetime, datetime.datetime, State, builtins.str]]:
+    def intervals(
+        self,
+        start: typing.Optional[datetime.datetime] = None,
+        end: typing.Optional[datetime.datetime] = None,
+    ) -> typing.Iterator[
+        builtins.tuple[datetime.datetime, datetime.datetime, State, builtins.str]
+    ]:
         r"""
         Give an iterator that yields successive time intervals of consistent
         state.
-        
+
         Parameters
         ----------
         start: Optional[datetime]
@@ -154,7 +174,7 @@ class OpeningHours:
         end : Optional[datetime]
             Maximal time for the iterator, the iterator will continue until
             year 9999 if it no max is specified.
-        
+
         Examples
         --------
         >>> intervals = OpeningHours("2099Mo-Su 12:30-17:00").intervals()
@@ -165,25 +185,22 @@ class OpeningHours:
         """
         ...
 
-    def __str__(self) -> builtins.str:
-        ...
-
-    def __repr__(self) -> builtins.str:
-        ...
-
+    def __str__(self) -> builtins.str: ...
+    def __repr__(self) -> builtins.str: ...
 
 class State(Enum):
     r"""
     Specify the state of an opening hours interval.
     """
+
     Open = auto()
     Closed = auto()
     Unknown = auto()
 
-def validate(oh:builtins.str) -> builtins.bool:
+def validate(oh: builtins.str) -> builtins.bool:
     r"""
     Validate that input string is a correct opening hours description.
-    
+
     Examples
     --------
     >>> opening_hours.validate("24/7")
@@ -192,4 +209,3 @@ def validate(oh:builtins.str) -> builtins.bool:
     False
     """
     ...
-
