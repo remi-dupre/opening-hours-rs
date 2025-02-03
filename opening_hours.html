@@ -117,7 +117,7 @@ represents a parsed definition of opening hours.</p>
 
                         <label class="view-source-button" for="mod-opening_hours-view-source"><span>View Source</span></label>
 
-                        <div class="pdoc-code codehilite"><pre><span></span><span id="L-1"><a href="#L-1"><span class="linenos">1</span></a><span class="kn">from</span> <span class="nn">.opening_hours</span> <span class="kn">import</span> <span class="o">*</span>
+                        <div class="pdoc-code codehilite"><pre><span></span><span id="L-1"><a href="#L-1"><span class="linenos">1</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.opening_hours</span><span class="w"> </span><span class="kn">import</span> <span class="o">*</span>
 </span><span id="L-2"><a href="#L-2"><span class="linenos">2</span></a>
 </span><span id="L-3"><a href="#L-3"><span class="linenos">3</span></a><span class="vm">__doc__</span> <span class="o">=</span> <span class="n">opening_hours</span><span class="o">.</span><span class="vm">__doc__</span>
 </span><span id="L-4"><a href="#L-4"><span class="linenos">4</span></a><span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">opening_hours</span><span class="p">,</span> <span class="s2">&quot;__all__&quot;</span><span class="p">):</span>
@@ -267,28 +267,20 @@ for a specification.</p>
 <h6 id="parameters">Parameters</h6>
 
 <ul>
-<li><strong>oh</strong> (str):
-Opening hours expression as defined in OSM (eg. "24/7").
-See <a href="https://wiki.openstreetmap.org/wiki/Key:opening_hours/specification">https://wiki.openstreetmap.org/wiki/Key:opening_hours/specification</a></li>
-<li><strong>timezone</strong> (Optional[zoneinfo.ZoneInfo]):
-Timezone where the physical place attached to these opening hours lives
-in. When specified, operations on this expression will return dates
-attached to this timezone and input times in other timezones will be
-converted.</li>
-<li><strong>country</strong> (Optional[str]):
-ISO code of the country this physical place lives in. This will be used
-to load a calendar of local public holidays.</li>
-<li><strong>coords</strong> (Optional[tuple[float, float]]):
-(latitude, longitude) of this place. When this is specified together
-with a timezone sun events will be accurate (sunrise, sunset, dusk,
-dawn). By default, this will be used to automatically detect the
-timezone and a country code.</li>
-<li><strong>auto_country : bool (default</strong> (<code>True</code>)):
-If set to <code>True</code>, the country code will automatically be inferred from
+<li><strong>- oh</strong> (Opening hours expression as defined in OSM (eg. "24/7"). See):
+<a href="https://wiki.openstreetmap.org/wiki/Key:opening_hours/specification">https://wiki.openstreetmap.org/wiki/Key:opening_hours/specification</a></li>
+<li><strong>- timezone</strong> (Timezone where the physical place attached to these opening hours lives in. When):
+specified, operations on this expression will return dates attached to this timezone and
+input times in other timezones will be converted.</li>
+<li><strong>- country</strong> (ISO code of the country this physical place lives in. This will be used to load a):
+calendar of local public holidays.</li>
+<li><strong>- coords</strong> ((latitude, longitude) of this place. When this is specified together with a timezone):
+sun events will be accurate (sunrise, sunset, dusk, dawn). By default, this will be used to
+automatically detect the timezone and a country code.</li>
+<li><strong>- auto_country</strong> (If set to <code>True</code>, the country code will automatically be inferred from):
 coordinates when they are specified.</li>
-<li><strong>auto_timezone : bool (default</strong> (<code>True</code>)):
-If set to <code>True</code>, the timezone will automatically be inferred from
-coordinates when they are specified.</li>
+<li><strong>- auto_timezone</strong> (If set to <code>True</code>, the timezone will automatically be inferred from coordinates):
+when they are specified.</li>
 </ul>
 
 <h6 id="raises">Raises</h6>
@@ -320,7 +312,7 @@ coordinates when they are specified.</li>
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">state</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">time</span><span class="o">=</span><span class="kc">None</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+        <span class="name">state</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">time</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
@@ -332,9 +324,7 @@ coordinates when they are specified.</li>
 <h6 id="parameters">Parameters</h6>
 
 <ul>
-<li><strong>time</strong> (Optional[datetime]):
-Base time for the evaluation, current time will be used if it is
-not specified.</li>
+<li><strong>- time</strong> (Base time for the evaluation, current time will be used if it is not specified.):</li>
 </ul>
 
 <h6 id="examples">Examples</h6>
@@ -352,7 +342,7 @@ not specified.</li>
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">is_open</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">time</span><span class="o">=</span><span class="kc">None</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+        <span class="name">is_open</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">time</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
@@ -363,9 +353,7 @@ not specified.</li>
 <h6 id="parameters">Parameters</h6>
 
 <ul>
-<li><strong>time</strong> (Optional[datetime]):
-Base time for the evaluation, current time will be used if it is
-not specified.</li>
+<li><strong>- time</strong> (Base time for the evaluation, current time will be used if it is not specified.):</li>
 </ul>
 
 <h6 id="examples">Examples</h6>
@@ -383,7 +371,7 @@ not specified.</li>
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">is_closed</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">time</span><span class="o">=</span><span class="kc">None</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+        <span class="name">is_closed</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">time</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
@@ -394,9 +382,7 @@ not specified.</li>
 <h6 id="parameters">Parameters</h6>
 
 <ul>
-<li><strong>time</strong> (Optional[datetime]):
-Base time for the evaluation, current time will be used if it is
-not specified.</li>
+<li><strong>- time</strong> (Base time for the evaluation, current time will be used if it is not specified.):</li>
 </ul>
 
 <h6 id="examples">Examples</h6>
@@ -414,7 +400,7 @@ not specified.</li>
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">is_unknown</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">time</span><span class="o">=</span><span class="kc">None</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+        <span class="name">is_unknown</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">time</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
@@ -425,9 +411,7 @@ not specified.</li>
 <h6 id="parameters">Parameters</h6>
 
 <ul>
-<li><strong>time</strong> (Optional[datetime]):
-Base time for the evaluation, current time will be used if it is
-not specified.</li>
+<li><strong>- time</strong> (Base time for the evaluation, current time will be used if it is not specified.):</li>
 </ul>
 
 <h6 id="examples">Examples</h6>
@@ -445,7 +429,7 @@ not specified.</li>
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">next_change</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">time</span><span class="o">=</span><span class="kc">None</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+        <span class="name">next_change</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">time</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
@@ -457,9 +441,7 @@ If the date exceed the limit date, returns None.</p>
 <h6 id="parameters">Parameters</h6>
 
 <ul>
-<li><strong>time</strong> (Optional[datetime]):
-Base time for the evaluation, current time will be used if it is
-not specified.</li>
+<li><strong>- time</strong> (Base time for the evaluation, current time will be used if it is not specified.):</li>
 </ul>
 
 <h6 id="examples">Examples</h6>
@@ -478,7 +460,7 @@ not specified.</li>
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">intervals</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">start</span><span class="o">=</span><span class="kc">None</span>, </span><span class="param"><span class="n">end</span><span class="o">=</span><span class="kc">None</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+        <span class="name">intervals</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">start</span><span class="o">=</span><span class="kc">None</span>, </span><span class="param"><span class="n">end</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
@@ -490,12 +472,9 @@ state.</p>
 <h6 id="parameters">Parameters</h6>
 
 <ul>
-<li><strong>start</strong> (Optional[datetime]):
-Initial time for the iterator, current time will be used if it is
-not specified.</li>
-<li><strong>end</strong> (Optional[datetime]):
-Maximal time for the iterator, the iterator will continue until
-year 9999 if it no max is specified.</li>
+<li><p><strong>- start</strong> (Initial time for the iterator, current time will be used if it is not specified.):</p></li>
+<li><p><strong>- end</strong> (Maximal time for the iterator, the iterator will continue until year 9999 if it no):
+max is specified.</p></li>
 </ul>
 
 <h6 id="examples">Examples</h6>
