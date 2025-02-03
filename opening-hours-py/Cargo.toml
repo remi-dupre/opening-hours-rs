@@ -12,14 +12,16 @@ edition = "2021"
 
 [lib]
 name = "opening_hours"
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-chrono = { version = "0.4", default-features = false }
 chrono-tz = { version = "0.10", default-features = false }
+chrono = { version = "0.4", default-features = false }
 pyo3-log = "0.12"
+pyo3-stub-gen = "0.7"
 
-[dependencies.opening-hours]
+[dependencies.opening-hours-rs]
+package = "opening-hours"
 path = ".."
 version = "1.0.0"
 features = ["log", "auto-country", "auto-timezone"]

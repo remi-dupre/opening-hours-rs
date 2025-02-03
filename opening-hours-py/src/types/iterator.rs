@@ -1,6 +1,7 @@
 use pyo3::prelude::*;
+use pyo3_stub_gen::{PyStubType, TypeInfo};
 
-use opening_hours::DateTimeRange;
+use opening_hours_rs::DateTimeRange;
 
 use super::datetime::DateTimeMaybeAware;
 use super::location::PyLocation;
@@ -15,7 +16,7 @@ pub struct RangeIterator {
 
 impl RangeIterator {
     pub(crate) fn new(
-        td: &opening_hours::OpeningHours<PyLocation>,
+        td: &opening_hours_rs::OpeningHours<PyLocation>,
         start: DateTimeMaybeAware,
         end: Option<DateTimeMaybeAware>,
     ) -> Self {
@@ -67,5 +68,19 @@ impl RangeIterator {
             dt_range.kind.into(),
             dt_range.comments.iter().map(|c| c.to_string()).collect(),
         ))
+    }
+}
+
+impl PyStubType for RangeIterator {
+    fn type_output() -> TypeInfo {
+        let dt = "datetime.datetime";
+
+        TypeInfo {
+            name: format!("typing.Iterator[builtins.tuple[{dt}, {dt}, State, builtins.str]]"),
+            import: ["builtins", "datetime", "typing"]
+                .into_iter()
+                .map(Into::into)
+                .collect(),
+        }
     }
 }

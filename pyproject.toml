@@ -1,5 +1,9 @@
+[project]
+name = "opening_hours"
+dynamic = ["version"]
+
 [tool.poetry]
-name = "opening-hours-py"
+name = "opening_hours"
 version = "1.0.0"
 description = "A parser for the opening_hours fields from OpenStreetMap."
 authors = ["Rémi Dupré <remi@dupre.io>"]

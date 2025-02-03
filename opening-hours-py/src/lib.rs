@@ -5,14 +5,16 @@ mod tests;
 
 use pyo3::exceptions::PyException;
 use pyo3::prelude::*;
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods};
 
-use ::opening_hours::localization::{Coordinates, Country, TzLocation};
-use ::opening_hours::{Context, OpeningHours};
+use ::opening_hours_rs::localization::{Coordinates, Country, TzLocation};
+use ::opening_hours_rs::{Context, OpeningHours};
 
 use crate::types::datetime::DateTimeMaybeAware;
 use crate::types::iterator::RangeIterator;
 use crate::types::location::PyLocation;
 use crate::types::state::State;
+use crate::types::timezone::TimeZoneWrapper;
 
 pyo3::create_exception!(
     opening_hours,
@@ -52,6 +54,7 @@ pyo3::create_exception!(
 /// True
 /// >>> opening_hours.validate("24/24")
 /// False
+#[gen_stub_pyfunction]
 #[pyfunction]
 #[pyo3(text_signature = "(oh, /)")]
 fn validate(oh: &str) -> bool {
@@ -100,19 +103,21 @@ fn validate(oh: &str) -> bool {
 /// >>> oh = OpeningHours("sunrise-sunset ; PH off", country="FR", coords=(48.8535, 2.34839))
 /// >>> assert oh.is_closed(dt)
 /// >>> assert oh.next_change(dt).replace(tzinfo=None) == datetime.fromisoformat("2024-07-15 06:03")
+#[gen_stub_pyclass]
 #[pyclass(frozen, name = "OpeningHours")]
 #[derive(PartialEq)]
 struct PyOpeningHours {
     inner: OpeningHours<PyLocation>,
 }
 
+#[gen_stub_pymethods]
 #[pymethods]
 impl PyOpeningHours {
     #[new]
-    #[pyo3(signature = (oh, /, timezone=None, country=None, coords=None, auto_country=true, auto_timezone=true))]
+    #[pyo3(signature = (oh, timezone=None, country=None, coords=None, auto_country=Some(true), auto_timezone=Some(true)))]
     fn new(
         oh: &str,
-        timezone: Option<chrono_tz::Tz>,
+        timezone: Option<TimeZoneWrapper>,
         country: Option<String>,
         coords: Option<(f64, f64)>,
         auto_country: Option<bool>,
@@ -147,9 +152,11 @@ impl PyOpeningHours {
         }
 
         let locale = match (timezone, coords, auto_timezone) {
-            (Some(tz), None, _) | (Some(tz), _, false) => PyLocation::Aware(TzLocation::new(tz)),
+            (Some(tz), None, _) | (Some(tz), _, false) => {
+                PyLocation::Aware(TzLocation::new(tz.into()))
+            }
             (Some(tz), Some(coords), _) => {
-                PyLocation::Aware(TzLocation::new(tz).with_coords(coords))
+                PyLocation::Aware(TzLocation::new(tz.into()).with_coords(coords))
             }
             (None, Some(coords), true) => PyLocation::Aware(TzLocation::from_coords(coords)),
             _ => PyLocation::Naive,
@@ -171,7 +178,7 @@ impl PyOpeningHours {
     /// --------
     /// >>> OpeningHours("24/7 off").state()
     /// State.CLOSED
-    #[pyo3(signature = (time=None, /))]
+    #[pyo3(signature = (time=None))]
     fn state(&self, time: Option<DateTimeMaybeAware>) -> State {
         let time = DateTimeMaybeAware::unwrap_or_now(time);
         self.inner.state(time).into()
@@ -189,7 +196,7 @@ impl PyOpeningHours {
     /// --------
     /// >>> OpeningHours("24/7").is_open()
     /// True
-    #[pyo3(signature = (time=None, /))]
+    #[pyo3(signature = (time=None))]
     fn is_open(&self, time: Option<DateTimeMaybeAware>) -> bool {
         let time = DateTimeMaybeAware::unwrap_or_now(time);
         self.inner.is_open(time)
@@ -207,7 +214,7 @@ impl PyOpeningHours {
     /// --------
     /// >>> OpeningHours("24/7 off").is_closed()
     /// True
-    #[pyo3(signature = (time=None, /))]
+    #[pyo3(signature = (time=None))]
     fn is_closed(&self, time: Option<DateTimeMaybeAware>) -> bool {
         let time = DateTimeMaybeAware::unwrap_or_now(time);
         self.inner.is_closed(time)
@@ -225,7 +232,7 @@ impl PyOpeningHours {
     /// --------
     /// >>> OpeningHours("24/7 unknown").is_unknown()
     /// True
-    #[pyo3(signature = (time=None, /))]
+    #[pyo3(signature = (time=None))]
     fn is_unknown(&self, time: Option<DateTimeMaybeAware>) -> bool {
         let time = DateTimeMaybeAware::unwrap_or_now(time);
         self.inner.is_unknown(time)
@@ -245,7 +252,7 @@ impl PyOpeningHours {
     /// >>> OpeningHours("24/7").next_change() # None
     /// >>> OpeningHours("2099Mo-Su 12:30-17:00").next_change()
     /// datetime.datetime(2099, 1, 1, 12, 30)
-    #[pyo3(signature = (time=None, /))]
+    #[pyo3(signature = (time=None))]
     fn next_change(&self, time: Option<DateTimeMaybeAware>) -> Option<DateTimeMaybeAware> {
         let time = DateTimeMaybeAware::unwrap_or_now(time);
 
@@ -273,7 +280,7 @@ impl PyOpeningHours {
     /// (..., datetime.datetime(2099, 1, 1, 12, 30), State.CLOSED, [])
     /// >>> next(intervals)
     /// (datetime.datetime(2099, 1, 1, 12, 30), datetime.datetime(2099, 1, 1, 17, 0), State.OPEN, [])
-    #[pyo3(signature = (start=None, end=None, /))]
+    #[pyo3(signature = (start=None, end=None))]
     fn intervals(
         &self,
         start: Option<DateTimeMaybeAware>,
@@ -321,4 +328,15 @@ fn opening_hours(py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<State>()?;
     m.add_class::<PyOpeningHours>()?;
     Ok(())
+}
+
+pub fn stub_info() -> pyo3_stub_gen::Result<pyo3_stub_gen::StubInfo> {
+    let manifest_dir: &::std::path::Path = env!("CARGO_MANIFEST_DIR").as_ref();
+
+    pyo3_stub_gen::StubInfo::from_pyproject_toml(
+        manifest_dir
+            .parent()
+            .expect("could not locate crate root")
+            .join("pyproject.toml"),
+    )
 }

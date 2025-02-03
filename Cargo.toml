@@ -22,15 +22,15 @@ members = ["compact-calendar", "opening-hours-syntax", "opening-hours-py", "fuzz
 path = "opening-hours/src/lib.rs"
 
 [features]
-# Disable timeout behavior for performance tests. This is useful when tests
-# need to be in slow environments or with high overhead, for example when
-# measuring coverage.
-disable-test-timeouts = []
-
 default = ["log"]
 auto-country = ["dep:country-boundaries"]
 auto-timezone = ["dep:chrono-tz", "dep:tzf-rs"]
 log = ["opening-hours-syntax/log", "dep:log"]
+
+# Disable timeout behavior for performance tests. This is useful when tests
+# need to be in slow environments or with high overhead, for example when
+# measuring coverage.
+disable-test-timeouts = []
 
 [dependencies]
 chrono = "0.4"
