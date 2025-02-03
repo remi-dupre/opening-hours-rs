@@ -140,24 +140,12 @@ impl DateFilter for ds::MonthdayRange {
 
         fn on_year(date: ds::Date, for_year: i32) -> Option<NaiveDate> {
             match date {
-                ds::Date::Fixed { year, month, day } => {
-                    if year.is_some() && i32::from(year.unwrap()) != for_year {
-                        return None;
-                    }
-
-                    Some(first_valid_ymd(
-                        year.map(Into::into).unwrap_or(for_year),
-                        month.into(),
-                        day.into(),
-                    ))
-                }
-                ds::Date::Easter { year } => {
-                    if year.is_some() && i32::from(year.unwrap()) != for_year {
-                        return None;
-                    }
-
-                    easter(year.map(Into::into).unwrap_or(for_year))
-                }
+                ds::Date::Easter { year } => easter(year.map(Into::into).unwrap_or(for_year)),
+                ds::Date::Fixed { year, month, day } => Some(first_valid_ymd(
+                    year.map(Into::into).unwrap_or(for_year),
+                    month.into(),
+                    day.into(),
+                )),
             }
         }
 
