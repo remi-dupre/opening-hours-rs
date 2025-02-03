@@ -1,10 +1,10 @@
 [project]
-name = "opening_hours"
+name = "opening_hours_py"
 dynamic = ["version"]
 
 [tool.poetry]
-name = "opening_hours"
-version = "1.0.1"
+name = "opening_hours_py"
+version = "1.0.2"
 description = "A parser for the opening_hours fields from OpenStreetMap."
 authors = ["Rémi Dupré <remi@dupre.io>"]
 package-mode = false
