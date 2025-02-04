@@ -10,12 +10,6 @@
 
 ### Python
 
-- Fix deployment.
-
-## 1.0.1
-
-### Python
-
 - Add auto-generated Python stub file.
 
 ## 1.0.0

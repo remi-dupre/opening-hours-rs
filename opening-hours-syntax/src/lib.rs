@@ -8,6 +8,7 @@ mod parser;
 
 pub mod error;
 pub mod extended_time;
+pub mod rubik;
 pub mod rules;
 pub mod sorted_vec;
 
