@@ -46,6 +46,10 @@ pub struct RuleSequence {
     pub comments: UniqueSortedVec<Arc<str>>,
 }
 
+impl RuleSequence {
+    fn try_into_paving(self) {}
+}
+
 impl Display for RuleSequence {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.day_selector)?;

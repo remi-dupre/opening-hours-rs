@@ -1,6 +1,6 @@
 use std::convert::{TryFrom, TryInto};
 use std::fmt::Display;
-use std::ops::RangeInclusive;
+use std::ops::{Range, RangeInclusive};
 
 use chrono::prelude::Datelike;
 use chrono::{Duration, NaiveDate};

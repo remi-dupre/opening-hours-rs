@@ -1,30 +1,40 @@
+use std::fmt::Debug;
+use std::ops::Range;
+
+pub type Paving1D<T> = Dim<T, Cell>;
+pub type Paving2D<T, U> = Dim<T, Paving1D<U>>;
+pub type Paving3D<T, U, V> = Dim<T, Paving2D<U, V>>;
+pub type Paving4D<T, U, V, W> = Dim<T, Paving3D<U, V, W>>;
+pub type Paving5D<T, U, V, W, X> = Dim<T, Paving4D<U, V, W, X>>;
+
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) enum PavingSelector<T, U> {
     Empty,
-    Dim { min: T, max: T, tail: U },
+    // TODO: vec
+    Dim { range: Range<T>, tail: U },
 }
 
 impl PavingSelector<(), ()> {
     pub(crate) fn empty() -> PavingSelector<(), ()> {
-        PavingSelector::Empty
+        PavingSelector::<(), ()>::Empty
     }
 }
 
 impl<T, U> PavingSelector<T, U> {
-    pub(crate) fn dim<K>(self, min: K, max: K) -> PavingSelector<K, PavingSelector<T, U>> {
-        PavingSelector::Dim { min, max, tail: self }
+    pub(crate) fn dim<K>(self, range: Range<K>) -> PavingSelector<K, PavingSelector<T, U>> {
+        PavingSelector::Dim { range, tail: self }
     }
 
-    pub(crate) fn unpack(&self) -> (&T, &T, &U) {
-        let Self::Dim { min, max, tail } = &self else {
+    pub(crate) fn unpack(&self) -> (&Range<T>, &U) {
+        let Self::Dim { range, tail } = &self else {
             panic!("tried to unpack empty selector");
         };
 
-        (min, max, tail)
+        (range, tail)
     }
 }
 
-pub(crate) trait Paving: Clone {
+pub(crate) trait Paving: Clone + Default {
     type Selector;
     fn union_with(&mut self, other: Self);
     fn set(&mut self, selector: &Self::Selector, val: bool);
@@ -66,11 +76,18 @@ impl Paving for Cell {
     }
 }
 
-// Add a dimension over a lower dimension paving
+// Add a dimension over a lower dimension paving.
+// TODO: when some benchmark is implemented, check if a dequeue is better.
 #[derive(Clone, Debug)]
 pub(crate) struct Dim<T: Clone + Ord, U: Paving> {
-    cuts: Vec<T>, // ordered and at least 2 elements
-    cols: Vec<U>, // on less elements than cuts
+    cuts: Vec<T>, // ordered
+    cols: Vec<U>, // one less elements than cuts
+}
+
+impl<T: Clone + Ord, U: Paving> Default for Dim<T, U> {
+    fn default() -> Self {
+        Self { cuts: Vec::new(), cols: Vec::new() }
+    }
 }
 
 impl<T: Clone + Ord, U: Paving> Dim<T, U> {
@@ -80,13 +97,28 @@ impl<T: Clone + Ord, U: Paving> Dim<T, U> {
             return;
         };
 
-        let cut_fill = self.cols[insert_pos - 1].clone();
         self.cuts.insert(insert_pos, val);
-        self.cols.insert(insert_pos, cut_fill);
+        debug_assert!(self.cuts.is_sorted());
+
+        if self.cuts.len() == 1 {
+            // No interval created yet
+        } else if self.cuts.len() == 2 {
+            // First interval
+            self.cols.push(U::default())
+        } else if insert_pos == self.cuts.len() - 1 {
+            // Added the cut after the end
+            self.cols.push(U::default())
+        } else if insert_pos == 0 {
+            // Added the cut before the start
+            self.cols.insert(0, U::default())
+        } else {
+            let cut_fill = self.cols[insert_pos - 1].clone();
+            self.cols.insert(insert_pos, cut_fill);
+        }
     }
 }
 
-impl<T: Clone + Ord, U: Paving> Paving for Dim<T, U> {
+impl<T: Clone + Ord, U: Default + Paving> Paving for Dim<T, U> {
     type Selector = PavingSelector<T, U::Selector>;
 
     fn union_with(&mut self, mut other: Self) {
@@ -106,24 +138,27 @@ impl<T: Clone + Ord, U: Paving> Paving for Dim<T, U> {
     }
 
     fn set(&mut self, selector: &Self::Selector, val: bool) {
-        let (min, max, selector_tail) = selector.unpack();
-        self.cut_at(min.clone());
-        self.cut_at(max.clone());
+        let (range, selector_tail) = selector.unpack();
+        self.cut_at(range.start.clone());
+        self.cut_at(range.end.clone());
 
         for (col_start, col_val) in self.cuts.iter().zip(&mut self.cols) {
-            if col_start >= min && col_start < max {
+            if *col_start >= range.start && *col_start < range.end {
                 col_val.set(selector_tail, val);
             }
         }
     }
 
     fn is_val(&self, selector: &Self::Selector, val: bool) -> bool {
-        let (min, max, selector_tail) = selector.unpack();
+        let (range, selector_tail) = selector.unpack();
 
         for ((col_start, col_end), col_val) in self.cuts.iter().zip(&self.cuts[1..]).zip(&self.cols)
         {
-            // TODO: don't I miss something
-            if col_start < max && col_end > min && !col_val.is_val(selector_tail, val) {
+            // TODO: don't I miss something?
+            if *col_start < range.end
+                && *col_end > range.start
+                && !col_val.is_val(selector_tail, val)
+            {
                 return false;
             }
         }
@@ -145,8 +180,7 @@ impl<T: Clone + Ord, U: Paving> Paving for Dim<T, U> {
         }
 
         let selector = PavingSelector::Dim {
-            min: self.cuts[start_idx].clone(),
-            max: self.cuts[end_idx].clone(),
+            range: self.cuts[start_idx].clone()..self.cuts[end_idx].clone(),
             tail: selector_tail,
         };
 
@@ -155,80 +189,27 @@ impl<T: Clone + Ord, U: Paving> Paving for Dim<T, U> {
     }
 }
 
-impl<T: Clone + Ord + std::fmt::Debug, U: Paving + PartialEq + std::fmt::Debug> PartialEq
-    for Dim<T, U>
-{
+// NOTE: this is heavily unoptimized, so we ensure that it is only used for tests
+#[cfg(test)]
+impl<T: Clone + Ord + std::fmt::Debug, U: Paving + PartialEq> PartialEq for Dim<T, U> {
     fn eq(&self, other: &Self) -> bool {
-        for ((s_min, s_max), s_col) in self.cuts.iter().zip(&self.cuts[1..]).zip(&self.cols) {
-            for ((o_min, o_max), o_col) in other.cuts.iter().zip(&other.cuts[1..]).zip(&other.cols)
-            {
-                if o_min >= s_max || s_min >= o_max {
-                    // no overlap
-                    continue;
-                }
+        let mut self_cpy = self.clone();
+        let mut other_cpy = other.clone();
 
-                if s_col != o_col {
-                    return false;
-                }
+        for cut in &self_cpy.cuts {
+            other_cpy.cut_at(cut.clone());
+        }
+
+        for cut in &other_cpy.cuts {
+            self_cpy.cut_at(cut.clone());
+        }
+
+        for (col_self, col_other) in self_cpy.cols.into_iter().zip(other_cpy.cols) {
+            if col_self != col_other {
+                return false;
             }
         }
 
         true
-    }
-}
-
-#[cfg(test)]
-pub mod tests {
-    use super::*;
-
-    #[test]
-    fn test_dim2() {
-        let grid_empty = Cell::default().dim(0, 6).dim(0, 6);
-
-        //   0 1 2 3 4 5
-        // 2 ⋅ ⋅ ⋅ ⋅ ⋅ ⋅
-        // 3 ⋅ X X X X ⋅
-        // 4 ⋅ X X X X ⋅
-        // 5 ⋅ X X X X ⋅
-        // 6 ⋅ ⋅ ⋅ ⋅ ⋅ ⋅
-        let mut grid_1 = grid_empty.clone();
-        grid_1.set(&PavingSelector::empty().dim(1, 5).dim(3, 6), true);
-        assert_ne!(grid_empty, grid_1);
-
-        //   0 1 2 3 4 5
-        // 2 ⋅ ⋅ ⋅ ⋅ ⋅ ⋅
-        // 3 ⋅ A # # B ⋅
-        // 4 ⋅ C C C C ⋅
-        // 5 ⋅ C C C C ⋅
-        // 6 ⋅ ⋅ ⋅ ⋅ ⋅ ⋅
-        let mut grid_2 = grid_empty.clone();
-        grid_2.set(&PavingSelector::empty().dim(1, 4).dim(3, 4), true); // A & #
-        grid_2.set(&PavingSelector::empty().dim(2, 5).dim(3, 4), true); // B & #
-        grid_2.set(&PavingSelector::empty().dim(1, 5).dim(4, 6), true); // C
-        assert_eq!(grid_1, grid_2);
-    }
-
-    #[test]
-    fn test_pop_trivial() {
-        let grid_empty = Cell::default().dim(0, 6).dim(0, 6);
-
-        //   0 1 2 3 4 5
-        // 2 ⋅ ⋅ ⋅ ⋅ ⋅ ⋅
-        // 3 ⋅ A # # B ⋅
-        // 4 ⋅ C C C C ⋅
-        // 5 ⋅ C C C C ⋅
-        // 6 ⋅ ⋅ ⋅ ⋅ ⋅ ⋅
-        let mut grid = grid_empty.clone();
-        grid.set(&PavingSelector::empty().dim(1, 4).dim(3, 4), true); // A & #
-        grid.set(&PavingSelector::empty().dim(2, 5).dim(3, 4), true); // B & #
-        grid.set(&PavingSelector::empty().dim(1, 5).dim(4, 6), true); // C
-
-        assert_eq!(
-            grid.pop_selector().unwrap(),
-            PavingSelector::empty().dim(1, 5).dim(3, 6),
-        );
-
-        assert_eq!(grid, grid_empty);
-        assert_eq!(grid.pop_selector(), None);
     }
 }
