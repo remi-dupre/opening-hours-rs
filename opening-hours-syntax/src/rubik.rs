@@ -11,7 +11,7 @@ pub type Paving5D<T, U, V, W, X> = Dim<T, Paving4D<U, V, W, X>>;
 pub(crate) enum PavingSelector<T, U> {
     Empty,
     // TODO: vec
-    Dim { range: Range<T>, tail: U },
+    Dim { range: Vec<Range<T>>, tail: U },
 }
 
 impl PavingSelector<(), ()> {
@@ -21,11 +21,14 @@ impl PavingSelector<(), ()> {
 }
 
 impl<T, U> PavingSelector<T, U> {
-    pub(crate) fn dim<K>(self, range: Range<K>) -> PavingSelector<K, PavingSelector<T, U>> {
-        PavingSelector::Dim { range, tail: self }
+    pub(crate) fn dim<K>(
+        self,
+        range: impl Into<Vec<Range<K>>>,
+    ) -> PavingSelector<K, PavingSelector<T, U>> {
+        PavingSelector::Dim { range: range.into(), tail: self }
     }
 
-    pub(crate) fn unpack(&self) -> (&Range<T>, &U) {
+    pub(crate) fn unpack(&self) -> (&[Range<T>], &U) {
         let Self::Dim { range, tail } = &self else {
             panic!("tried to unpack empty selector");
         };
@@ -138,28 +141,41 @@ impl<T: Clone + Ord, U: Default + Paving> Paving for Dim<T, U> {
     }
 
     fn set(&mut self, selector: &Self::Selector, val: bool) {
-        let (range, selector_tail) = selector.unpack();
-        self.cut_at(range.start.clone());
-        self.cut_at(range.end.clone());
+        let (ranges, selector_tail) = selector.unpack();
 
-        for (col_start, col_val) in self.cuts.iter().zip(&mut self.cols) {
-            if *col_start >= range.start && *col_start < range.end {
-                col_val.set(selector_tail, val);
+        for range in ranges {
+            self.cut_at(range.start.clone());
+            self.cut_at(range.end.clone());
+
+            for (col_start, col_val) in self.cuts.iter().zip(&mut self.cols) {
+                if *col_start >= range.start && *col_start < range.end {
+                    col_val.set(selector_tail, val);
+                }
             }
         }
     }
 
     fn is_val(&self, selector: &Self::Selector, val: bool) -> bool {
-        let (range, selector_tail) = selector.unpack();
+        let (ranges, selector_tail) = selector.unpack();
 
-        for ((col_start, col_end), col_val) in self.cuts.iter().zip(&self.cuts[1..]).zip(&self.cols)
-        {
-            // TODO: don't I miss something?
-            if *col_start < range.end
-                && *col_end > range.start
-                && !col_val.is_val(selector_tail, val)
+        for range in ranges {
+            if range.start < range.end && self.cols.is_empty() {
+                return !val;
+            }
+
+            for ((col_start, col_end), col_val) in self
+                .cuts
+                .iter()
+                .zip(self.cuts.iter().skip(1))
+                .zip(&self.cols)
             {
-                return false;
+                // TODO: don't I miss something?
+                if *col_start < range.end
+                    && *col_end > range.start
+                    && !col_val.is_val(selector_tail, val)
+                {
+                    return false;
+                }
             }
         }
 
@@ -167,23 +183,34 @@ impl<T: Clone + Ord, U: Default + Paving> Paving for Dim<T, U> {
     }
 
     fn pop_selector(&mut self) -> Option<Self::Selector> {
-        let (start_idx, selector_tail) = self
+        let (mut start_idx, selector_tail) = self
             .cols
             .iter_mut()
             .enumerate()
             .find_map(|(idx, col)| Some((idx, col.pop_selector()?)))?;
 
         let mut end_idx = start_idx + 1;
+        let mut selector_range = Vec::new();
 
-        while end_idx < self.cols.len() && self.cols[end_idx].is_val(&selector_tail, true) {
+        while end_idx < self.cols.len() {
+            if self.cols[end_idx].is_val(&selector_tail, true) {
+                end_idx += 1;
+                continue;
+            }
+
+            if start_idx < end_idx {
+                selector_range.push(self.cuts[start_idx].clone()..self.cuts[end_idx].clone());
+            }
+
             end_idx += 1;
+            start_idx = end_idx;
         }
 
-        let selector = PavingSelector::Dim {
-            range: self.cuts[start_idx].clone()..self.cuts[end_idx].clone(),
-            tail: selector_tail,
-        };
+        if start_idx < end_idx {
+            selector_range.push(self.cuts[start_idx].clone()..self.cuts[end_idx].clone());
+        }
 
+        let selector = PavingSelector::Dim { range: selector_range, tail: selector_tail };
         self.set(&selector, false);
         Some(selector)
     }

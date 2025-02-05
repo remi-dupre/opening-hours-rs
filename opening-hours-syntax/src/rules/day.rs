@@ -292,7 +292,6 @@ impl Display for WeekDayRange {
                         .map(|(idx, _)| -(idx as isize) - 1);
 
                     let mut weeknum_iter = pos_weeknum_iter.chain(neg_weeknum_iter);
-
                     write!(f, "[{}", weeknum_iter.next().unwrap())?;
 
                     for num in weeknum_iter {

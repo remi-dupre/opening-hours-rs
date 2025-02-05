@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.0
+
+### General
+
+- Allow to simplify "canonical" expressions (expressions expressed as simple
+  intervals over each dimension).
+
 ## 1.0.3
 
 ### Python
@@ -21,7 +28,7 @@ That's not really a huge milestone, but:
 
 ### General
 
-- Add easter support
+- Add Easter support
 
 ## 0.11.1
 
