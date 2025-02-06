@@ -1,16 +1,15 @@
 use std::fmt::Debug;
 use std::ops::Range;
 
-pub type Paving1D<T> = Dim<T, Cell>;
-pub type Paving2D<T, U> = Dim<T, Paving1D<U>>;
-pub type Paving3D<T, U, V> = Dim<T, Paving2D<U, V>>;
-pub type Paving4D<T, U, V, W> = Dim<T, Paving3D<U, V, W>>;
-pub type Paving5D<T, U, V, W, X> = Dim<T, Paving4D<U, V, W, X>>;
+pub(crate) type Paving1D<T> = Dim<T, Cell>;
+pub(crate) type Paving2D<T, U> = Dim<T, Paving1D<U>>;
+pub(crate) type Paving3D<T, U, V> = Dim<T, Paving2D<U, V>>;
+pub(crate) type Paving4D<T, U, V, W> = Dim<T, Paving3D<U, V, W>>;
+pub(crate) type Paving5D<T, U, V, W, X> = Dim<T, Paving4D<U, V, W, X>>;
 
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) enum PavingSelector<T, U> {
     Empty,
-    // TODO: vec
     Dim { range: Vec<Range<T>>, tail: U },
 }
 
@@ -43,10 +42,6 @@ pub(crate) trait Paving: Clone + Default {
     fn set(&mut self, selector: &Self::Selector, val: bool);
     fn is_val(&self, selector: &Self::Selector, val: bool) -> bool;
     fn pop_selector(&mut self) -> Option<Self::Selector>;
-
-    fn dim<T: Clone + Ord>(self, min: T, max: T) -> Dim<T, Self> {
-        Dim { cuts: vec![min, max], cols: vec![self] }
-    }
 }
 
 // Just a 0-dimension cell that is either filled or empty.
