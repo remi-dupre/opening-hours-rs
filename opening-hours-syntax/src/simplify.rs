@@ -1,4 +1,5 @@
 #![allow(clippy::single_range_in_vec_init)]
+use std::iter::{Chain, Once};
 use std::ops::Range;
 use std::sync::Arc;
 
@@ -18,6 +19,42 @@ const FULL_WEEKDAY: Range<u8> = 0..7;
 const FULL_TIME: Range<ExtendedTime> =
     ExtendedTime::new(0, 0).unwrap()..ExtendedTime::new(48, 0).unwrap();
 
+enum OneOrTwo<T> {
+    One(T),
+    Two(T, T),
+}
+
+impl<T> OneOrTwo<T> {
+    fn map<U>(self, mut func: impl FnMut(T) -> U) -> OneOrTwo<U> {
+        match self {
+            OneOrTwo::One(x) => OneOrTwo::One(func(x)),
+            OneOrTwo::Two(x, y) => OneOrTwo::Two(func(x), func(y)),
+        }
+    }
+}
+
+impl<T> IntoIterator for OneOrTwo<T> {
+    type Item = T;
+    type IntoIter = Chain<Once<T>, <Option<T> as IntoIterator>::IntoIter>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        match self {
+            OneOrTwo::One(x) => std::iter::once(x).chain(None),
+            OneOrTwo::Two(x, y) => std::iter::once(x).chain(Some(y)),
+        }
+    }
+}
+
+// Ensure that input range is "increasing", otherwise it is splited into two ranges:
+// [bounds.start, range.end[ and [range.start, bounds.end[
+fn split_inverted_range<T: Ord>(range: Range<T>, bounds: Range<T>) -> OneOrTwo<Range<T>> {
+    if range.start > range.end {
+        OneOrTwo::Two(bounds.start..range.end, range.start..bounds.end)
+    } else {
+        OneOrTwo::One(range)
+    }
+}
+
 fn vec_with_default<T>(default: T, mut vec: Vec<T>) -> Vec<T> {
     if vec.is_empty() {
         vec.push(default);
@@ -34,48 +71,48 @@ pub(crate) fn seq_to_canonical(rs: &RuleSequence) -> Option<Canonical> {
         .dim(vec_with_default(
             FULL_YEARS,
             (ds.year.iter())
-                .map(|year| {
+                .flat_map(|year| {
                     if year.step != 1 {
-                        return None;
+                        return OneOrTwo::One(None);
                     }
 
                     let start = *year.range.start();
                     let end = *year.range.end() + 1;
-                    Some(start..end)
+                    split_inverted_range(start..end, FULL_YEARS).map(Some)
                 })
                 .collect::<Option<Vec<_>>>()?,
         ))
         .dim(vec_with_default(
             FULL_MONTHDAYS,
             (ds.monthday.iter())
-                .map(|monthday| match monthday {
+                .flat_map(|monthday| match monthday {
                     MonthdayRange::Month { range, year: None } => {
                         let start = *range.start() as u8;
                         let end = *range.end() as u8 + 1;
-                        Some(start..end)
+                        split_inverted_range(start..end, FULL_MONTHDAYS).map(Some)
                     }
-                    _ => None,
+                    _ => OneOrTwo::One(None),
                 })
                 .collect::<Option<Vec<_>>>()?,
         ))
         .dim(vec_with_default(
             FULL_WEEKS,
             (ds.week.iter())
-                .map(|week| {
+                .flat_map(|week| {
                     if week.step != 1 {
-                        return None;
+                        return OneOrTwo::One(None);
                     }
 
                     let start = *week.range.start();
                     let end = *week.range.end() + 1;
-                    Some(start..end)
+                    split_inverted_range(start..end, FULL_WEEKS).map(Some)
                 })
                 .collect::<Option<Vec<_>>>()?,
         ))
         .dim(vec_with_default(
             FULL_WEEKDAY,
             (ds.weekday.iter())
-                .map(|weekday| {
+                .flat_map(|weekday| {
                     match weekday {
                         WeekDayRange::Fixed {
                             range,
@@ -85,9 +122,9 @@ pub(crate) fn seq_to_canonical(rs: &RuleSequence) -> Option<Canonical> {
                         } => {
                             let start = *range.start() as u8;
                             let end = *range.end() as u8 + 1;
-                            Some(start..end)
+                            split_inverted_range(start..end, FULL_WEEKDAY).map(Some)
                         }
-                        _ => None,
+                        _ => OneOrTwo::One(None),
                     }
                 })
                 .collect::<Option<Vec<_>>>()?,
@@ -95,19 +132,19 @@ pub(crate) fn seq_to_canonical(rs: &RuleSequence) -> Option<Canonical> {
         .dim(vec_with_default(
             FULL_TIME,
             (ts.time.iter())
-                .map(|time| match time {
+                .flat_map(|time| match time {
                     TimeSpan { range, open_end: false, repeats: None } => {
                         let Time::Fixed(start) = range.start else {
-                            return None;
+                            return OneOrTwo::One(None);
                         };
 
                         let Time::Fixed(end) = range.end else {
-                            return None;
+                            return OneOrTwo::One(None);
                         };
 
-                        Some(start..end)
+                        split_inverted_range(start..end, FULL_TIME).map(Some)
                     }
-                    _ => None,
+                    _ => OneOrTwo::One(None),
                 })
                 .collect::<Option<Vec<_>>>()?,
         ));

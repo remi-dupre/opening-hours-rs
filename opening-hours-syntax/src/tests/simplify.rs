@@ -11,6 +11,16 @@ const EXAMPLES: &[[&str; 2]] = &[
         "Mo 10:00-21:00; Tu,We,Th,Fr,Sa,Su 10:00-21:00",
         "10:00-21:00 open",
     ],
+    [
+        "Nov-Mar Mo-Fr 10:00-16:00 ; Apr-Nov Mo-Fr 08:00-18:00",
+        "Apr-Oct Mo-Fr 08:00-18:00 open; Jan-Mar,Oct-Apr Mo-Fr 10:00-18:00 open",
+    ],
+    [
+        "Apr-Oct Mo-Fr 08:00-18:00 ; Mo-Fr 10:00-16:00 open",
+        "Apr-Oct Mo-Fr 08:00-18:00 open; Jan-Mar,Oct-Apr Mo-Fr 11:00-18:00 open",
+    ],
+    // TOOD: time should not be part of dimensions ; it should be part of the
+    // inside value (we filter on date and THEN compute opening hours)
 ];
 
 #[test]
