@@ -172,9 +172,9 @@ class State(Enum):
     Specify the state of an opening hours interval.
     """
 
-    Open = auto()
-    Closed = auto()
-    Unknown = auto()
+    OPEN = auto()
+    CLOSED = auto()
+    UNKNOWN = auto()
 
 def validate(oh: builtins.str) -> builtins.bool:
     r"""

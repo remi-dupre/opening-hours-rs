@@ -4,24 +4,25 @@ use pyo3_stub_gen::derive::gen_stub_pyclass_enum;
 use opening_hours_syntax::rules::RuleKind;
 
 /// Specify the state of an opening hours interval.
+#[allow(clippy::upper_case_acronyms)]
 #[gen_stub_pyclass_enum]
-#[pyclass(ord, eq, frozen, hash, str, rename_all = "UPPERCASE")]
+#[pyclass(ord, eq, frozen, hash, str)]
 #[derive(Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub enum State {
     /// Currently open
-    Open,
+    OPEN,
     /// Currently closed
-    Closed,
+    CLOSED,
     /// May be open depending on context
-    Unknown,
+    UNKNOWN,
 }
 
 impl From<RuleKind> for State {
     fn from(kind: RuleKind) -> Self {
         match kind {
-            RuleKind::Open => Self::Open,
-            RuleKind::Closed => Self::Closed,
-            RuleKind::Unknown => Self::Unknown,
+            RuleKind::Open => Self::OPEN,
+            RuleKind::Closed => Self::CLOSED,
+            RuleKind::Unknown => Self::UNKNOWN,
         }
     }
 }
@@ -29,9 +30,9 @@ impl From<RuleKind> for State {
 impl std::fmt::Display for State {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            State::Open => write!(f, "open"),
-            State::Closed => write!(f, "closed"),
-            State::Unknown => write!(f, "unknown"),
+            State::OPEN => write!(f, "open"),
+            State::CLOSED => write!(f, "closed"),
+            State::UNKNOWN => write!(f, "unknown"),
         }
     }
 }
