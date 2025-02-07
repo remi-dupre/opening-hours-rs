@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.3
+
+### Python
+
+- stub: fix variants casing for `State`
+
 ## 1.0.2
 
 ### Python
