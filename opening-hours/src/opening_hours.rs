@@ -32,7 +32,7 @@ pub const DATE_LIMIT: NaiveDateTime = {
 /// Note that all big inner structures are immutable and wrapped by an `Arc`
 /// so this is safe and fast to clone.
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
-pub struct OpeningHours<L: Localize = NoLocation> {
+pub struct OpeningHours<L: Localize = NoLocationtoi> {
     /// Rules describing opening hours
     expr: Arc<OpeningHoursExpression>,
     /// Evalutation context

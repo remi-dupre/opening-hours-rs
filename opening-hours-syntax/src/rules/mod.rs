@@ -5,9 +5,8 @@ use std::fmt::Display;
 use std::sync::Arc;
 
 use crate::rubik::{Paving, Paving5D};
-use crate::simplify::{canonical_to_seq, seq_to_canonical, seq_to_canonical_day_selector};
+use crate::simplify::{canonical_to_seq, ruleseq_to_selector, FULL_TIME};
 use crate::sorted_vec::UniqueSortedVec;
-use crate::ExtendedTime;
 
 // OpeningHoursExpression
 
@@ -28,43 +27,36 @@ impl OpeningHoursExpression {
                 continue;
             }
 
-            let Some(canonical) = seq_to_canonical(&head) else {
+            let Some(selector) = ruleseq_to_selector(&head) else {
                 simplified.push(head);
                 continue;
             };
 
-            let mut selector_seq = vec![seq_to_canonical_day_selector(&head).unwrap()];
-            let mut canonical_seq = vec![canonical];
+            let mut selector_seq = vec![selector];
 
-            while let Some((selector, canonical)) = rules_queue
+            while let Some(selector) = rules_queue
                 .peek()
                 .filter(|r| r.operator == head.operator)
                 .filter(|r| r.kind == head.kind)
                 .filter(|r| r.comments == head.comments)
-                .and_then(|r| Some((seq_to_canonical_day_selector(r)?, seq_to_canonical(r)?)))
+                .and_then(ruleseq_to_selector)
             {
                 rules_queue.next();
                 selector_seq.push(selector);
-                canonical_seq.push(canonical);
             }
 
-            let mut union = Paving5D::default();
-
-            while let Some(canonical) = canonical_seq.pop() {
-                if let Some(prev_selector) = selector_seq.pop() {
-                    union.set(
-                        &prev_selector.dim([
-                            ExtendedTime::new(0, 0).unwrap()..ExtendedTime::new(48, 0).unwrap()
-                        ]),
-                        false,
-                    );
-                }
-
-                union.union_with(canonical);
-            }
+            let paving = (selector_seq.into_iter().rev()).fold(
+                Paving5D::default(),
+                |mut union, selector| {
+                    let full_day_selector = selector.unpack().1.clone().dim([FULL_TIME]);
+                    union.set(&full_day_selector, false);
+                    union.set(&selector, true);
+                    union
+                },
+            );
 
             simplified.extend(canonical_to_seq(
-                union,
+                paving,
                 head.operator,
                 head.kind,
                 head.comments,

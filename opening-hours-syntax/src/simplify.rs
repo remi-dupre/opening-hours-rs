@@ -3,7 +3,7 @@ use std::iter::{Chain, Once};
 use std::ops::Range;
 use std::sync::Arc;
 
-use crate::rubik::{Paving, Paving5D, PavingSelector, Selector4D};
+use crate::rubik::{Paving, Paving5D, PavingSelector, Selector4D, Selector5D};
 use crate::rules::day::{DaySelector, MonthdayRange, WeekDayRange, WeekRange, YearRange};
 use crate::rules::time::{Time, TimeSelector, TimeSpan};
 use crate::rules::{RuleOperator, RuleSequence};
@@ -12,11 +12,11 @@ use crate::{ExtendedTime, RuleKind};
 
 pub(crate) type Canonical = Paving5D<ExtendedTime, u8, u8, u8, u16>;
 
-const FULL_YEARS: Range<u16> = u16::MIN..u16::MAX;
-const FULL_MONTHDAYS: Range<u8> = 1..13;
-const FULL_WEEKS: Range<u8> = 1..6;
-const FULL_WEEKDAY: Range<u8> = 0..7;
-const FULL_TIME: Range<ExtendedTime> =
+pub(crate) const FULL_YEARS: Range<u16> = u16::MIN..u16::MAX;
+pub(crate) const FULL_MONTHDAYS: Range<u8> = 1..13;
+pub(crate) const FULL_WEEKS: Range<u8> = 1..6;
+pub(crate) const FULL_WEEKDAY: Range<u8> = 0..7;
+pub(crate) const FULL_TIME: Range<ExtendedTime> =
     ExtendedTime::new(0, 0).unwrap()..ExtendedTime::new(48, 0).unwrap();
 
 enum OneOrTwo<T> {
@@ -63,9 +63,7 @@ fn vec_with_default<T>(default: T, mut vec: Vec<T>) -> Vec<T> {
     vec
 }
 
-pub(crate) fn seq_to_canonical_day_selector(
-    rs: &RuleSequence,
-) -> Option<Selector4D<u8, u8, u8, u16>> {
+pub(crate) fn ruleseq_to_day_selector(rs: &RuleSequence) -> Option<Selector4D<u8, u8, u8, u16>> {
     let ds = &rs.day_selector;
 
     let selector = PavingSelector::empty()
@@ -134,30 +132,30 @@ pub(crate) fn seq_to_canonical_day_selector(
     Some(selector)
 }
 
-pub(crate) fn seq_to_canonical(rs: &RuleSequence) -> Option<Canonical> {
-    let selector = seq_to_canonical_day_selector(rs)?.dim(vec_with_default(
-        FULL_TIME,
-        (rs.time_selector.time.iter())
-            .flat_map(|time| match time {
-                TimeSpan { range, open_end: false, repeats: None } => {
-                    let Time::Fixed(start) = range.start else {
-                        return OneOrTwo::One(None);
-                    };
+pub(crate) fn ruleseq_to_selector(
+    rs: &RuleSequence,
+) -> Option<Selector5D<ExtendedTime, u8, u8, u8, u16>> {
+    Some(
+        ruleseq_to_day_selector(rs)?.dim(vec_with_default(
+            FULL_TIME,
+            (rs.time_selector.time.iter())
+                .flat_map(|time| match time {
+                    TimeSpan { range, open_end: false, repeats: None } => {
+                        let Time::Fixed(start) = range.start else {
+                            return OneOrTwo::One(None);
+                        };
 
-                    let Time::Fixed(end) = range.end else {
-                        return OneOrTwo::One(None);
-                    };
+                        let Time::Fixed(end) = range.end else {
+                            return OneOrTwo::One(None);
+                        };
 
-                    split_inverted_range(start..end, FULL_TIME).map(Some)
-                }
-                _ => OneOrTwo::One(None),
-            })
-            .collect::<Option<Vec<_>>>()?,
-    ));
-
-    let mut result = Paving5D::default();
-    result.set(&selector, true);
-    Some(result)
+                        split_inverted_range(start..end, FULL_TIME).map(Some)
+                    }
+                    _ => OneOrTwo::One(None),
+                })
+                .collect::<Option<Vec<_>>>()?,
+        )),
+    )
 }
 
 pub(crate) fn canonical_to_seq(
