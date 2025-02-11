@@ -3,7 +3,7 @@ use std::iter::{Chain, Once};
 use std::ops::Range;
 use std::sync::Arc;
 
-use crate::rubik::{Paving, Paving5D, PavingSelector};
+use crate::rubik::{Paving, Paving5D, PavingSelector, Selector4D};
 use crate::rules::day::{DaySelector, MonthdayRange, WeekDayRange, WeekRange, YearRange};
 use crate::rules::time::{Time, TimeSelector, TimeSpan};
 use crate::rules::{RuleOperator, RuleSequence};
@@ -63,9 +63,10 @@ fn vec_with_default<T>(default: T, mut vec: Vec<T>) -> Vec<T> {
     vec
 }
 
-pub(crate) fn seq_to_canonical(rs: &RuleSequence) -> Option<Canonical> {
+pub(crate) fn seq_to_canonical_day_selector(
+    rs: &RuleSequence,
+) -> Option<Selector4D<u8, u8, u8, u16>> {
     let ds = &rs.day_selector;
-    let ts = &rs.time_selector;
 
     let selector = PavingSelector::empty()
         .dim(vec_with_default(
@@ -128,30 +129,35 @@ pub(crate) fn seq_to_canonical(rs: &RuleSequence) -> Option<Canonical> {
                     }
                 })
                 .collect::<Option<Vec<_>>>()?,
-        ))
-        .dim(vec_with_default(
-            FULL_TIME,
-            (ts.time.iter())
-                .flat_map(|time| match time {
-                    TimeSpan { range, open_end: false, repeats: None } => {
-                        let Time::Fixed(start) = range.start else {
-                            return OneOrTwo::One(None);
-                        };
-
-                        let Time::Fixed(end) = range.end else {
-                            return OneOrTwo::One(None);
-                        };
-
-                        split_inverted_range(start..end, FULL_TIME).map(Some)
-                    }
-                    _ => OneOrTwo::One(None),
-                })
-                .collect::<Option<Vec<_>>>()?,
         ));
 
+    Some(selector)
+}
+
+pub(crate) fn seq_to_canonical(rs: &RuleSequence) -> Option<Canonical> {
+    let selector = seq_to_canonical_day_selector(rs)?.dim(vec_with_default(
+        FULL_TIME,
+        (rs.time_selector.time.iter())
+            .flat_map(|time| match time {
+                TimeSpan { range, open_end: false, repeats: None } => {
+                    let Time::Fixed(start) = range.start else {
+                        return OneOrTwo::One(None);
+                    };
+
+                    let Time::Fixed(end) = range.end else {
+                        return OneOrTwo::One(None);
+                    };
+
+                    split_inverted_range(start..end, FULL_TIME).map(Some)
+                }
+                _ => OneOrTwo::One(None),
+            })
+            .collect::<Option<Vec<_>>>()?,
+    ));
+
     let mut result = Paving5D::default();
-    result.set(&dbg!(selector), true);
-    Some(dbg!(result))
+    result.set(&selector, true);
+    Some(result)
 }
 
 pub(crate) fn canonical_to_seq(
@@ -161,7 +167,7 @@ pub(crate) fn canonical_to_seq(
     comments: UniqueSortedVec<Arc<str>>,
 ) -> impl Iterator<Item = RuleSequence> {
     std::iter::from_fn(move || {
-        let selector = dbg!(canonical.pop_selector())?;
+        let selector = canonical.pop_selector()?;
         let (rgs_time, selector) = selector.unpack();
         let (rgs_weekday, selector) = selector.unpack();
         let (rgs_week, selector) = selector.unpack();

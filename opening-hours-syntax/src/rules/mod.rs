@@ -4,9 +4,10 @@ pub mod time;
 use std::fmt::Display;
 use std::sync::Arc;
 
-use crate::rubik::Paving;
-use crate::simplify::{canonical_to_seq, seq_to_canonical};
+use crate::rubik::{Paving, Paving5D};
+use crate::simplify::{canonical_to_seq, seq_to_canonical, seq_to_canonical_day_selector};
 use crate::sorted_vec::UniqueSortedVec;
+use crate::ExtendedTime;
 
 // OpeningHoursExpression
 
@@ -21,34 +22,53 @@ impl OpeningHoursExpression {
         let mut simplified = Vec::new();
 
         while let Some(head) = rules_queue.next() {
-            if head.operator != RuleOperator::Normal && head.operator != RuleOperator::Additional {
+            // TODO: implement addition and fallback
+            if head.operator != RuleOperator::Normal {
                 simplified.push(head);
-                break;
+                continue;
             }
 
-            let Some(mut canonical) = seq_to_canonical(&head) else {
+            let Some(canonical) = seq_to_canonical(&head) else {
                 simplified.push(head);
-                break;
+                continue;
             };
 
-            while rules_queue.peek().is_some()
-                && rules_queue.peek().unwrap().operator == head.operator
-                && rules_queue.peek().unwrap().kind == head.kind
-                && rules_queue.peek().unwrap().comments == head.comments
-                && seq_to_canonical(rules_queue.peek().unwrap()).is_some()
+            let mut selector_seq = vec![seq_to_canonical_day_selector(&head).unwrap()];
+            let mut canonical_seq = vec![canonical];
+
+            while let Some((selector, canonical)) = rules_queue
+                .peek()
+                .filter(|r| r.operator == head.operator)
+                .filter(|r| r.kind == head.kind)
+                .filter(|r| r.comments == head.comments)
+                .and_then(|r| Some((seq_to_canonical_day_selector(r)?, seq_to_canonical(r)?)))
             {
-                canonical.union_with(
-                    // TODO: computed twice
-                    seq_to_canonical(&rules_queue.next().unwrap()).unwrap(),
-                );
+                rules_queue.next();
+                selector_seq.push(selector);
+                canonical_seq.push(canonical);
+            }
+
+            let mut union = Paving5D::default();
+
+            while let Some(canonical) = canonical_seq.pop() {
+                if let Some(prev_selector) = selector_seq.pop() {
+                    union.set(
+                        &prev_selector.dim([
+                            ExtendedTime::new(0, 0).unwrap()..ExtendedTime::new(48, 0).unwrap()
+                        ]),
+                        false,
+                    );
+                }
+
+                union.union_with(canonical);
             }
 
             simplified.extend(canonical_to_seq(
-                canonical,
+                union,
                 head.operator,
                 head.kind,
                 head.comments,
-            ))
+            ));
         }
 
         Self { rules: simplified }

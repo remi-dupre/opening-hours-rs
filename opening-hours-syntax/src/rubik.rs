@@ -7,7 +7,13 @@ pub(crate) type Paving3D<T, U, V> = Dim<T, Paving2D<U, V>>;
 pub(crate) type Paving4D<T, U, V, W> = Dim<T, Paving3D<U, V, W>>;
 pub(crate) type Paving5D<T, U, V, W, X> = Dim<T, Paving4D<U, V, W, X>>;
 
-#[derive(Debug, PartialEq, Eq)]
+pub(crate) type SelectorEmpty = PavingSelector<(), ()>;
+pub(crate) type Selector1D<T> = PavingSelector<T, SelectorEmpty>;
+pub(crate) type Selector2D<T, U> = PavingSelector<T, Selector1D<U>>;
+pub(crate) type Selector3D<T, U, V> = PavingSelector<T, Selector2D<U, V>>;
+pub(crate) type Selector4D<T, U, V, W> = PavingSelector<T, Selector3D<U, V, W>>;
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum PavingSelector<T, U> {
     Empty,
     Dim { range: Vec<Range<T>>, tail: U },
