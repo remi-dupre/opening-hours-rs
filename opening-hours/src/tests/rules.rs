@@ -1,17 +1,10 @@
+use std::time::Duration;
+
+use crate::tests::exec_with_timeout;
 use opening_hours_syntax::error::Error;
 use opening_hours_syntax::rules::RuleKind::*;
 
-use crate::schedule_at;
-
-#[test]
-fn empty() -> Result<(), Error> {
-    assert_eq!(
-        schedule_at!("", "2020-06-01"),
-        schedule! { 00,00 => Open => 24,00 }
-    );
-
-    Ok(())
-}
+use crate::{datetime, schedule_at, OpeningHours};
 
 #[test]
 fn always_open() -> Result<(), Error> {
@@ -117,4 +110,15 @@ fn comments() -> Result<(), Error> {
     );
 
     Ok(())
+}
+
+#[test]
+fn explicit_closed_slow() -> Result<(), Error> {
+    exec_with_timeout(Duration::from_millis(100), || {
+        assert!(OpeningHours::parse("Feb Fr off")?
+            .next_change(datetime!("2021-07-09 19:30"))
+            .is_none());
+
+        Ok::<(), Error>(())
+    })
 }

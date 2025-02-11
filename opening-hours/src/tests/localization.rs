@@ -5,6 +5,13 @@ use crate::{datetime, Context, OpeningHours};
 const COORDS_PARIS: Coordinates = Coordinates::new(48.8535, 2.34839).unwrap();
 
 #[test]
+fn coords_cannot_be_nan() {
+    assert_eq!(Coordinates::new(f64::NAN, 1.0), None);
+    assert_eq!(Coordinates::new(1.0, f64::NAN), None);
+    assert_eq!(Coordinates::new(f64::NAN, f64::NAN), None);
+}
+
+#[test]
 fn ctx_with_tz() {
     let tz = chrono_tz::Europe::Paris;
     let ctx = Context::default().with_locale(TzLocation::new(tz));

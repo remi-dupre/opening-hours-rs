@@ -54,7 +54,15 @@ impl Display for DaySelector {
         if !(self.year.is_empty() && self.monthday.is_empty() && self.week.is_empty()) {
             write_selector(f, &self.year)?;
             write_selector(f, &self.monthday)?;
-            write_selector(f, &self.week)?;
+
+            if !self.week.is_empty() {
+                if !self.year.is_empty() || !self.monthday.is_empty() {
+                    write!(f, " ")?;
+                }
+
+                write!(f, "week ")?;
+                write_selector(f, &self.week)?;
+            }
 
             if !self.weekday.is_empty() {
                 write!(f, " ")?;
@@ -343,7 +351,7 @@ pub struct WeekRange {
 
 impl Display for WeekRange {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "week {}", self.range.start())?;
+        write!(f, "{}", self.range.start())?;
 
         if self.range.start() != self.range.end() {
             write!(f, "-{}", self.range.end())?;

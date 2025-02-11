@@ -16,6 +16,24 @@ pub struct OpeningHoursExpression {
 }
 
 impl OpeningHoursExpression {
+    // TODO: doc
+    pub fn is_24_7(&self) -> bool {
+        let Some(kind) = self.rules.last().map(|rs| rs.kind) else {
+            return true;
+        };
+
+        // TODO: are all kind of suffix OK ?
+        // TODO: maybe base on normalize && ensure this is cached
+        let Some(tail) = (self.rules.iter().rev()).find(|rs| {
+            rs.day_selector.is_empty() || !rs.time_selector.is_00_24() || rs.kind != kind
+        }) else {
+            return kind == RuleKind::Closed;
+        };
+
+        tail.kind == kind && tail.is_24_7()
+    }
+
+    // TODO: doc
     pub fn simplify(self) -> Self {
         let mut rules_queue = self.rules.into_iter().peekable();
         let mut simplified = Vec::new();
@@ -45,15 +63,13 @@ impl OpeningHoursExpression {
                 selector_seq.push(selector);
             }
 
-            let paving = (selector_seq.into_iter().rev()).fold(
-                Paving5D::default(),
-                |mut union, selector| {
+            let paving =
+                (selector_seq.into_iter()).fold(Paving5D::default(), |mut union, selector| {
                     let full_day_selector = selector.unpack().1.clone().dim([FULL_TIME]);
                     union.set(&full_day_selector, false);
                     union.set(&selector, true);
                     union
-                },
-            );
+                });
 
             simplified.extend(canonical_to_seq(
                 paving,
@@ -77,7 +93,7 @@ impl Display for OpeningHoursExpression {
 
         for rule in &self.rules[1..] {
             let separator = match rule.operator {
-                RuleOperator::Normal => "; ",
+                RuleOperator::Normal => " ; ",
                 RuleOperator::Additional => ", ",
                 RuleOperator::Fallback => " || ",
             };
@@ -101,32 +117,45 @@ pub struct RuleSequence {
 }
 
 impl RuleSequence {
+    /// TODO: more docs & examples
+    ///
     /// If this returns `true`, then this expression is always open, but it
     /// can't detect all cases.
-    pub(crate) fn is_24_7(&self) -> bool {
-        self.day_selector.is_empty()
-            && self.time_selector.is_00_24()
-            && self.operator == RuleOperator::Normal
+    pub fn is_24_7(&self) -> bool {
+        self.day_selector.is_empty() && self.time_selector.is_00_24()
     }
 }
 
 impl Display for RuleSequence {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut is_empty = true;
+
         if self.is_24_7() {
-            return write!(f, "24/7 {}", self.kind);
+            is_empty = false;
+            write!(f, "24/7")?;
+        } else {
+            is_empty = is_empty && self.day_selector.is_empty();
+            write!(f, "{}", self.day_selector)?;
+
+            if !self.time_selector.is_00_24() {
+                if !is_empty {
+                    write!(f, " ")?;
+                }
+
+                is_empty = is_empty && self.time_selector.is_00_24();
+                write!(f, "{}", self.time_selector)?;
+            }
         }
 
-        write!(f, "{}", self.day_selector)?;
+        if self.kind != RuleKind::Open {
+            if !is_empty {
+                write!(f, " ")?;
+            }
 
-        if !self.day_selector.is_empty() && !self.time_selector.time.is_empty() {
-            write!(f, " ")?;
+            write!(f, "{}", self.kind)?;
         }
 
-        if !self.time_selector.is_00_24() {
-            write!(f, "{} ", self.time_selector)?;
-        }
-
-        write!(f, "{}", self.kind)
+        Ok(())
     }
 }
 

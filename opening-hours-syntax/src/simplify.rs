@@ -12,9 +12,9 @@ use crate::{ExtendedTime, RuleKind};
 
 pub(crate) type Canonical = Paving5D<ExtendedTime, u8, u8, u8, u16>;
 
-pub(crate) const FULL_YEARS: Range<u16> = u16::MIN..u16::MAX;
+pub(crate) const FULL_YEARS: Range<u16> = 1900..10_000;
 pub(crate) const FULL_MONTHDAYS: Range<u8> = 1..13;
-pub(crate) const FULL_WEEKS: Range<u8> = 1..6;
+pub(crate) const FULL_WEEKS: Range<u8> = 1..54;
 pub(crate) const FULL_WEEKDAY: Range<u8> = 0..7;
 pub(crate) const FULL_TIME: Range<ExtendedTime> =
     ExtendedTime::new(0, 0).unwrap()..ExtendedTime::new(48, 0).unwrap();

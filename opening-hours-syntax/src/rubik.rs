@@ -45,7 +45,6 @@ impl<T, U> PavingSelector<T, U> {
 
 pub(crate) trait Paving: Clone + Default {
     type Selector;
-    fn union_with(&mut self, other: Self);
     fn set(&mut self, selector: &Self::Selector, val: bool);
     fn is_val(&self, selector: &Self::Selector, val: bool) -> bool;
     fn pop_selector(&mut self) -> Option<Self::Selector>;
@@ -59,10 +58,6 @@ pub(crate) struct Cell {
 
 impl Paving for Cell {
     type Selector = PavingSelector<(), ()>;
-
-    fn union_with(&mut self, other: Self) {
-        self.filled |= other.filled;
-    }
 
     fn set(&mut self, _selector: &Self::Selector, val: bool) {
         self.filled = val;
@@ -83,7 +78,7 @@ impl Paving for Cell {
 
 // Add a dimension over a lower dimension paving.
 // TODO: when some benchmark is implemented, check if a dequeue is better.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub(crate) struct Dim<T: Clone + Ord, U: Paving> {
     cuts: Vec<T>, // ordered
     cols: Vec<U>, // one less elements than cuts
@@ -92,6 +87,25 @@ pub(crate) struct Dim<T: Clone + Ord, U: Paving> {
 impl<T: Clone + Ord, U: Paving> Default for Dim<T, U> {
     fn default() -> Self {
         Self { cuts: Vec::new(), cols: Vec::new() }
+    }
+}
+
+impl<T: Clone + Ord + std::fmt::Debug, U: Paving + std::fmt::Debug> std::fmt::Debug for Dim<T, U> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.cols.is_empty() {
+            f.debug_tuple("Dim::Empty").field(&self.cols).finish()?;
+        }
+
+        let mut fmt = f.debug_struct("Dim");
+
+        for ((start, end), value) in (self.cuts.iter())
+            .zip(self.cuts.iter().skip(1))
+            .zip(&self.cols)
+        {
+            fmt.field(&format!("[{start:?}, {end:?}["), value);
+        }
+
+        fmt.finish()
     }
 }
 
@@ -126,22 +140,6 @@ impl<T: Clone + Ord, U: Paving> Dim<T, U> {
 impl<T: Clone + Ord, U: Default + Paving> Paving for Dim<T, U> {
     type Selector = PavingSelector<T, U::Selector>;
 
-    fn union_with(&mut self, mut other: Self) {
-        // First, ensure both parts have the same cuts
-        for cut in &self.cuts {
-            other.cut_at(cut.clone());
-        }
-
-        for cut in other.cuts {
-            self.cut_at(cut);
-        }
-
-        // Now that the dimensions are the same, merge all "columns"
-        for (col_self, col_other) in self.cols.iter_mut().zip(other.cols.into_iter()) {
-            col_self.union_with(col_other);
-        }
-    }
-
     fn set(&mut self, selector: &Self::Selector, val: bool) {
         let (ranges, selector_tail) = selector.unpack();
 
@@ -161,7 +159,14 @@ impl<T: Clone + Ord, U: Default + Paving> Paving for Dim<T, U> {
         let (ranges, selector_tail) = selector.unpack();
 
         for range in ranges {
-            if range.start < range.end && self.cols.is_empty() {
+            if range.start >= range.end {
+                continue;
+            }
+
+            if self.cols.is_empty()
+                || range.start < *self.cuts.first().unwrap()
+                || range.end > *self.cuts.last().unwrap()
+            {
                 return !val;
             }
 

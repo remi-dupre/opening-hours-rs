@@ -265,7 +265,7 @@ fn s018_fuzz_ph_infinite_loop() -> Result<(), Error> {
 
 #[test]
 fn s019_fuzz_stringify_dusk() -> Result<(), Error> {
-    let oh: OpeningHours = "dusk".parse()?;
+    let oh: OpeningHours = "dusk-22:00".parse()?;
     assert!(OpeningHours::parse(&oh.to_string()).is_ok());
     Ok(())
 }

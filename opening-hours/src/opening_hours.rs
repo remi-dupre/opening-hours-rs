@@ -32,7 +32,7 @@ pub const DATE_LIMIT: NaiveDateTime = {
 /// Note that all big inner structures are immutable and wrapped by an `Arc`
 /// so this is safe and fast to clone.
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
-pub struct OpeningHours<L: Localize = NoLocationtoi> {
+pub struct OpeningHours<L: Localize = NoLocation> {
     /// Rules describing opening hours
     expr: Arc<OpeningHoursExpression>,
     /// Evalutation context
@@ -72,6 +72,14 @@ impl<L: Localize> OpeningHours<L> {
         OpeningHours { expr: self.expr, ctx }
     }
 
+    /// TODO: doc
+    pub fn normalize(self) -> Self {
+        Self {
+            expr: Arc::new(self.expr.as_ref().clone().simplify()),
+            ctx: self.ctx,
+        }
+    }
+
     // --
     // -- Low level implementations.
     // --
@@ -85,6 +93,10 @@ impl<L: Localize> OpeningHours<L> {
     /// Provide a lower bound to the next date when a different set of rules
     /// could match.
     fn next_change_hint(&self, date: NaiveDate) -> Option<NaiveDate> {
+        if self.expr.is_24_7() {
+            return Some(DATE_LIMIT.date());
+        }
+
         (self.expr.rules)
             .iter()
             .map(|rule| {

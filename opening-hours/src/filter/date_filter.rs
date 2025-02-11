@@ -95,7 +95,12 @@ impl DateFilter for ds::YearRange {
             return false;
         };
 
-        self.range.contains(&year) && (year - self.range.start()) % self.step == 0
+        self.range.wrapping_contains(&year)
+            && (year.checked_sub(*self.range.start()))
+                .or_else(|| self.range.start().checked_sub(year))
+                .unwrap_or(0)
+                % self.step
+                == 0
     }
 
     fn next_change_hint<L>(&self, date: NaiveDate, _ctx: &Context<L>) -> Option<NaiveDate>
@@ -105,6 +110,10 @@ impl DateFilter for ds::YearRange {
         let Ok(curr_year) = date.year().try_into() else {
             return Some(DATE_LIMIT.date());
         };
+
+        if self.range.start() > self.range.end() {
+            return None; // TODO
+        }
 
         let next_year = {
             if *self.range.end() < curr_year {
@@ -202,7 +211,7 @@ impl DateFilter for ds::MonthdayRange {
                     if range.wrapping_contains(&month) {
                         NaiveDate::from_ymd_opt(date.year(), range.end().next() as _, 1)?
                     } else {
-                        NaiveDate::from_ymd_opt(date.year(), range.start().next() as _, 1)?
+                        NaiveDate::from_ymd_opt(date.year(), *range.start() as _, 1)?
                     }
                 };
 

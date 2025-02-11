@@ -60,3 +60,10 @@ fn parse_reformated() {
 
     assert!(format_and_parse("Oct").is_ok());
 }
+
+#[test]
+fn monthday_00_invalid() {
+    assert!(OpeningHours::parse("Jan 0").is_err());
+    assert!(OpeningHours::parse("Jan 00").is_err());
+    assert!(OpeningHours::parse("Jan 00-15").is_err());
+}
