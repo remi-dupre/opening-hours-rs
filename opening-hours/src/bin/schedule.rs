@@ -11,7 +11,6 @@ fn main() {
     let expression = env::args().nth(1).expect("Usage: ./schedule <EXPRESSION>");
     let start_datetime = Local::now().naive_local();
     let start_date = start_datetime.date();
-    println!(" - expression: {expression}");
 
     let oh = match expression.parse::<OpeningHours>() {
         Ok(val) => val.with_context(Context::default().with_holidays(COUNTRY.holidays())),
@@ -20,7 +19,8 @@ fn main() {
         }
     };
 
-    println!(" - formatted: {oh}");
+    println!(" - expression: {oh}");
+    println!(" - normalized: {}", oh.normalize());
     println!(" - date: {start_date:?}");
     println!(" - current status: {:?}", oh.state(start_datetime));
 

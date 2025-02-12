@@ -423,27 +423,18 @@ impl DateFilter for ds::WeekRange {
                 }
             };
 
-            Some(
-                NaiveDate::from_isoywd_opt(end_year, end_week.into(), ds::Weekday::Mon)
-                    .unwrap_or(DATE_LIMIT.date()),
-            )
+            NaiveDate::from_isoywd_opt(end_year, end_week.into(), ds::Weekday::Mon)
         } else if week < *self.range.start() {
-            Some(
-                NaiveDate::from_isoywd_opt(
-                    date.iso_week().year(),
-                    (*self.range.start()).into(),
-                    ds::Weekday::Mon,
-                )
-                .unwrap_or(DATE_LIMIT.date()),
+            NaiveDate::from_isoywd_opt(
+                date.iso_week().year(),
+                (*self.range.start()).into(),
+                ds::Weekday::Mon,
             )
         } else {
-            Some(
-                NaiveDate::from_isoywd_opt(
-                    date.year() + 1,
-                    (*self.range.start()).into(),
-                    ds::Weekday::Mon,
-                )
-                .unwrap_or(DATE_LIMIT.date()),
+            NaiveDate::from_isoywd_opt(
+                date.year() + 1,
+                (*self.range.start()).into(),
+                ds::Weekday::Mon,
             )
         }
     }
