@@ -404,38 +404,28 @@ impl DateFilter for ds::WeekRange {
     {
         let week = date.iso_week().week() as u8;
 
-        if self.range.wrapping_contains(&week) {
-            let end_week = {
+        // TODO: wrapping implemented well?
+        let weeknum = u32::from({
+            if self.range.wrapping_contains(&week) {
                 if self.step == 1 {
-                    *self.range.end() % 53 + 1
+                    *self.range.end() % 54 + 1
                 } else if (week - self.range.start()) % self.step == 0 {
-                    (date.iso_week().week() as u8 % 53) + 1
+                    (date.iso_week().week() as u8 % 54) + 1
                 } else {
                     return None;
                 }
-            };
+            } else {
+                *self.range.start()
+            }
+        });
 
-            let end_year = {
-                if date.iso_week().week() <= u32::from(end_week) {
-                    date.iso_week().year()
-                } else {
-                    date.iso_week().year() + 1
-                }
-            };
+        let mut res =
+            NaiveDate::from_isoywd_opt(date.iso_week().year(), weeknum, ds::Weekday::Mon)?;
 
-            NaiveDate::from_isoywd_opt(end_year, end_week.into(), ds::Weekday::Mon)
-        } else if week < *self.range.start() {
-            NaiveDate::from_isoywd_opt(
-                date.iso_week().year(),
-                (*self.range.start()).into(),
-                ds::Weekday::Mon,
-            )
-        } else {
-            NaiveDate::from_isoywd_opt(
-                date.year() + 1,
-                (*self.range.start()).into(),
-                ds::Weekday::Mon,
-            )
+        while res <= date {
+            res = NaiveDate::from_isoywd_opt(res.iso_week().year() + 1, weeknum, ds::Weekday::Mon)?;
         }
+
+        Some(res)
     }
 }

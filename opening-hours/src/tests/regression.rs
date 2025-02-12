@@ -215,14 +215,11 @@ fn s016_fuzz_week01_sh() -> Result<(), Error> {
     let dt = datetime!("2010-01-03 00:55"); // still week 53 of 2009
 
     assert_eq!(
-        "week01".parse::<OpeningHours>()?.next_change(dt).unwrap(),
-        datetime!("2011-01-03 00:00"),
+        OpeningHours::parse("week01")?.next_change(dt).unwrap(),
+        datetime!("2010-01-04 00:00"),
     );
 
-    assert!("week01SH"
-        .parse::<OpeningHours>()?
-        .next_change(dt)
-        .is_none());
+    assert!(OpeningHours::parse("week01SH")?.next_change(dt).is_none());
     Ok(())
 }
 
@@ -267,5 +264,19 @@ fn s018_fuzz_ph_infinite_loop() -> Result<(), Error> {
 fn s019_fuzz_stringify_dusk() -> Result<(), Error> {
     let oh: OpeningHours = "dusk-22:00".parse()?;
     assert!(OpeningHours::parse(&oh.to_string()).is_ok());
+    Ok(())
+}
+
+#[test]
+fn s20_year_starts_at_weeknum_53() -> Result<(), Error> {
+    // 1st of January 7583 is in week 53 of previous year which could result
+    // on jumping on year 7584 with a failing implementation.
+    assert_eq!(
+        OpeningHours::parse("week 13")?
+            .next_change(datetime!("7583-01-01 12:00"))
+            .unwrap(),
+        datetime!("7583-03-28 00:00"),
+    );
+
     Ok(())
 }

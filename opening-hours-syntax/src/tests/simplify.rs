@@ -64,7 +64,7 @@ const EXAMPLES: &[(&str, u32, &str, &str)] = &[
     ),
     ex!(
         "week2Mo;Jun;Fr",
-        "Jun ; Jan-May,Jul-Dec week 2 Mo,Fr ; Jan-May,Jul-Dec week 1,3-53 Fr",
+        "Jun ; Jan-May,Jul-Dec week02 Mo,Fr ; Jan-May,Jul-Dec week01,03-53 Fr",
     ),
 ];
 
