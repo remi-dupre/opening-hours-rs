@@ -23,12 +23,16 @@ jobs:
           - { crate: ".", features: "log,auto-country" }
           - { crate: ".", features: "log,auto-country,auto-timezone" }
           - { crate: ".", features: "log,auto-timezone" }
+          - { crate: ".", features: "fuzzing" }
           - { crate: "opening-hours-syntax", features: "log" }
     defaults:
       run:
         working-directory: ${{ matrix.crate }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
+          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
@@ -102,8 +106,10 @@ jobs:
       image: xd009642/tarpaulin:develop-nightly
       options: --security-opt seccomp=unconfined
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Install Python library
         run: apt-get update && apt-get install -yy python3-dev && apt-get clean
       - name: Generate code coverage

@@ -413,7 +413,9 @@ impl DateFilter for ds::WeekRange {
         L: Localize,
     {
         let week = date.iso_week().week() as u8;
-        self.range.wrapping_contains(&week) && (week - self.range.start()) % self.step == 0
+        self.range.wrapping_contains(&week)
+            // TODO: what happens when week < range.start ?
+            && week.saturating_sub(*self.range.start()) % self.step == 0
     }
 
     fn next_change_hint<L>(&self, date: NaiveDate, _ctx: &Context<L>) -> Option<NaiveDate>

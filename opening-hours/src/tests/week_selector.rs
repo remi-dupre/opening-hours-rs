@@ -89,3 +89,11 @@ fn last_year_week() -> Result<(), Error> {
     );
     Ok(())
 }
+
+#[test]
+fn outside_wrapping_range() -> Result<(), Error> {
+    let oh = OpeningHours::parse("2030 week52-01")?;
+    assert!(oh.next_change(datetime!("2024-06-01 12:00")).is_some());
+    assert!(oh.is_closed(datetime!("2024-06-01 12:00")));
+    Ok(())
+}

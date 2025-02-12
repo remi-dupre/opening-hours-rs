@@ -8,6 +8,9 @@
 pub mod schedule;
 pub mod localization;
 
+#[cfg(feature = "fuzzing")]
+pub mod fuzzing;
+
 mod context;
 mod filter;
 mod opening_hours;

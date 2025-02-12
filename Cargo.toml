@@ -26,6 +26,7 @@ default = ["log"]
 auto-country = ["dep:country-boundaries"]
 auto-timezone = ["dep:chrono-tz", "dep:tzf-rs"]
 log = ["opening-hours-syntax/log", "dep:log"]
+fuzzing = ["auto-country", "auto-timezone", "dep:arbitrary"]
 
 # Disable timeout behavior for performance tests. This is useful when tests
 # need to be in slow environments or with high overhead, for example when
@@ -48,6 +49,9 @@ country-boundaries = { version = "1.2", optional = true }
 # Feature: auto-timezone
 chrono-tz = { version = "0.10", optional = true }
 tzf-rs = { version = "0.4", default-features = false, optional = true }
+
+# Feature: fuzzing
+arbitrary = { version = "1", features = ["derive"], optional = true }
 
 [build-dependencies]
 chrono = "0.4"
