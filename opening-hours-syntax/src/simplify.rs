@@ -48,7 +48,8 @@ impl<T> IntoIterator for OneOrTwo<T> {
 // Ensure that input range is "increasing", otherwise it is splited into two ranges:
 // [bounds.start, range.end[ and [range.start, bounds.end[
 fn split_inverted_range<T: Ord>(range: Range<T>, bounds: Range<T>) -> OneOrTwo<Range<T>> {
-    if range.start > range.end {
+    if range.start >= range.end {
+        // start == end when a wrapping range gets expanded from exclusive to inclusive range
         OneOrTwo::Two(bounds.start..range.end, range.start..bounds.end)
     } else {
         OneOrTwo::One(range)

@@ -17,6 +17,10 @@ const EXAMPLES: &[(&str, u32, &str, &str)] = &[
         "24/7",
     ),
     ex!(
+        "Tu-Mo",
+        "24/7",
+    ),
+    ex!(
         // TODO: Actualy bound dates to 1900-9999 ???
         "2022;Fr",
         "2022 ; 1900-2021,2023-9999 Fr",

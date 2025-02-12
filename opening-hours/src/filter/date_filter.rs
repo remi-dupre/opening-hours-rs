@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 use std::convert::TryInto;
 
 use chrono::prelude::Datelike;
-use chrono::{Duration, NaiveDate};
+use chrono::{Duration, NaiveDate, Weekday};
 
 use opening_hours_syntax::rules::day::{self as ds, Month};
 
@@ -336,6 +336,24 @@ impl DateFilter for ds::WeekDayRange {
     {
         match self {
             ds::WeekDayRange::Fixed { range, offset, nth_from_start, nth_from_end } => {
+                if *range.start() as u8 > *range.end() as u8 {
+                    // Handle wrapping ranges
+                    return ds::WeekDayRange::Fixed {
+                        range: *range.start()..=Weekday::Sun,
+                        offset: *offset,
+                        nth_from_start: *nth_from_start,
+                        nth_from_end: *nth_from_end,
+                    }
+                    .filter(date, ctx)
+                        || ds::WeekDayRange::Fixed {
+                            range: Weekday::Mon..=*range.end(),
+                            offset: *offset,
+                            nth_from_start: *nth_from_start,
+                            nth_from_end: *nth_from_end,
+                        }
+                        .filter(date, ctx);
+                }
+
                 let date = date - Duration::days(*offset);
                 let pos_from_start = (date.day() as u8 - 1) / 7;
                 let pos_from_end = (count_days_in_month(date) - date.day() as u8) / 7;

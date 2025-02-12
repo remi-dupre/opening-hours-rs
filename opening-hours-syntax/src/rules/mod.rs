@@ -87,7 +87,7 @@ impl OpeningHoursExpression {
 impl Display for OpeningHoursExpression {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let Some(first) = self.rules.first() else {
-            return Ok(());
+            return write!(f, "closed");
         };
 
         write!(f, "{first}")?;

@@ -98,6 +98,7 @@ fuzz_target!(|data: Data| -> Corpus {
                 let date = ctx.locale.datetime(date);
                 let oh_1 = oh_1.with_context(ctx.clone());
                 let oh_2 = oh_2.with_context(ctx.clone());
+
                 assert_eq!(oh_1.state(date), oh_2.state(date));
                 assert_eq!(oh_1.next_change(date), oh_2.next_change(date));
             } else {
