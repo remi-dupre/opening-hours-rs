@@ -1,0 +1,3 @@
+[submodule "fuzz/corpus"]
+	path = fuzz/corpus
+	url = git@github.com:remi-dupre/opening-hours-rs-fuzz-corpus.git
