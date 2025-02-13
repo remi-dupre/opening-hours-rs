@@ -67,3 +67,10 @@ fn monthday_00_invalid() {
     assert!(OpeningHours::parse("Jan 00").is_err());
     assert!(OpeningHours::parse("Jan 00-15").is_err());
 }
+
+#[test]
+fn copy_start_offset() {
+    let raw_oh = "Jun 7+Tu";
+    let oh = OpeningHours::parse(raw_oh).unwrap();
+    assert_eq!(raw_oh, &oh.to_string());
+}

@@ -197,7 +197,7 @@ impl Display for Date {
 
 // DateOffset
 
-#[derive(Clone, Debug, Default, Hash, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, Hash, PartialEq, Eq)]
 pub struct DateOffset {
     pub wday_offset: WeekDayOffset,
     pub day_offset: i64,
