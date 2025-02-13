@@ -4,7 +4,61 @@ use std::path::Path;
 
 use arbitrary::{Arbitrary, Unstructured};
 
-use crate::fuzzing::{run_fuzz_oh, Data};
+use crate::datetime;
+use crate::fuzzing::{run_fuzz_oh, CompareWith, Data, Operation};
+
+#[test]
+fn no_fuzz_before_1900() {
+    let date_secs = datetime!("1899-12-31 12:00").and_utc().timestamp();
+
+    let data = Data {
+        date_secs,
+        oh: "24/7".to_string(),
+        coords: None,
+        operation: Operation::Compare(CompareWith::Normalized),
+    };
+
+    assert!(!run_fuzz_oh(data));
+}
+
+// // TODO: should be enforced
+// #[test]
+// fn no_fuzz_after_9999() {
+//     let date_secs = datetime!("10000-01-01 12:00").and_utc().timestamp();
+//
+//     let data = Data {
+//         date_secs,
+//         oh: "24/7".to_string(),
+//         coords: None,
+//         operation: Operation::Compare(CompareWith::Normalized),
+//     };
+//
+//     assert!(!run_fuzz_oh(data));
+// }
+
+#[test]
+fn no_fuzz_with_comments() {
+    let data = Data {
+        date_secs: 0,
+        oh: "24/7 = Some comment".to_string(),
+        coords: None,
+        operation: Operation::Compare(CompareWith::Normalized),
+    };
+
+    assert!(!run_fuzz_oh(data));
+}
+
+#[test]
+fn no_fuzz_invalid_expression() {
+    let data = Data {
+        date_secs: 0,
+        oh: "[invalid expression]".to_string(),
+        coords: None,
+        operation: Operation::Compare(CompareWith::Normalized),
+    };
+
+    assert!(!run_fuzz_oh(data));
+}
 
 fn run_fuzz_corpus(prefix: &str) {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -31,23 +85,23 @@ fn run_fuzz_corpus(prefix: &str) {
         file.read_to_end(&mut bytes).expect("failed to read file");
         let data = Data::arbitrary(&mut Unstructured::new(&bytes)).expect("could not parse corpus");
         eprintln!("Input: {data:?}");
-        let output = run_fuzz_oh(data);
-        eprintln!("Output: {output:?}");
+        let should_be_in_corpus = run_fuzz_oh(data);
+        eprintln!("Output: {should_be_in_corpus:?}");
     }
 }
 
-macro_rules! testcases {
+macro_rules! gen_testcases {
     ( $( $prefix: tt ),* $( , )? ) => {
         $(
             #[test]
             fn $prefix() {
-                run_fuzz_corpus(stringify!($prefix));
+                run_fuzz_corpus(stringify!($prefix))
             }
         )*
     };
 }
 
-testcases!(
+gen_testcases!(
     _00, _01, _02, _03, _04, _05, _06, _07, _08, _09, _0a, _0b, _0c, _0d, _0e, _0f, //
     _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, _1a, _1b, _1c, _1d, _1e, _1f, //
     _20, _21, _22, _23, _24, _25, _26, _27, _28, _29, _2a, _2b, _2c, _2d, _2e, _2f, //

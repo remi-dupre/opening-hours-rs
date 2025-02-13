@@ -20,10 +20,10 @@ pub enum Operation {
 
 #[derive(Arbitrary, Clone)]
 pub struct Data {
-    date_secs: i64,
-    oh: String,
-    coords: Option<[i16; 2]>,
-    operation: Operation,
+    pub date_secs: i64,
+    pub oh: String,
+    pub coords: Option<[i16; 2]>,
+    pub operation: Operation,
 }
 
 impl Data {
