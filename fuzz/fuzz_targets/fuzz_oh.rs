@@ -1,6 +1,6 @@
 #![no_main]
+use fuzz::{run_fuzz_oh, Data};
 use libfuzzer_sys::{fuzz_target, Corpus};
-use opening_hours::fuzzing::{run_fuzz_oh, Data};
 
 fuzz_target!(|data: Data| -> Corpus {
     if run_fuzz_oh(data) {

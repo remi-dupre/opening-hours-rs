@@ -119,9 +119,9 @@ jobs:
         run: >-
           cargo +nightly tarpaulin --out xml
           --ignore-panics --ignore-tests
+          --workspace
           --all-features
           --run-types Tests --run-types Doctests
-          -p opening-hours -p opening-hours-syntax -p compact-calendar -p opening-hours-py
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v2
         with:

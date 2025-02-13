@@ -124,6 +124,9 @@ impl<L: Localize> OpeningHours<L> {
 
     /// Get the schedule at a given day.
     pub fn schedule_at(&self, date: NaiveDate) -> Schedule {
+        #[cfg(test)]
+        crate::tests::stats::notify::generated_schedule();
+
         if !(DATE_START.date()..DATE_END.date()).contains(&date) {
             return Schedule::default();
         }

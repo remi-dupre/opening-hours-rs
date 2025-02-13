@@ -1,6 +1,4 @@
-use std::time::Duration;
-
-use crate::tests::exec_with_timeout;
+use crate::tests::stats::TestStats;
 use opening_hours_syntax::error::Error;
 use opening_hours_syntax::rules::RuleKind::*;
 
@@ -113,12 +111,13 @@ fn comments() -> Result<(), Error> {
 }
 
 #[test]
-fn explicit_closed_slow() -> Result<(), Error> {
-    exec_with_timeout(Duration::from_millis(100), || {
-        assert!(OpeningHours::parse("Feb Fr off")?
+fn explicit_closed_slow() {
+    let stats = TestStats::watch(|| {
+        assert!(OpeningHours::parse("Feb Fr off")
+            .unwrap()
             .next_change(datetime!("2021-07-09 19:30"))
             .is_none());
+    });
 
-        Ok::<(), Error>(())
-    })
+    assert!(stats.count_generated_schedules < 10);
 }
