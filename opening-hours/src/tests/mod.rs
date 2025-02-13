@@ -13,9 +13,6 @@ mod week_selector;
 mod weekday_selector;
 mod year_selector;
 
-#[cfg(feature = "fuzzing")]
-mod fuzzing;
-
 use criterion::black_box;
 use std::sync::{Arc, Condvar, Mutex};
 use std::thread;

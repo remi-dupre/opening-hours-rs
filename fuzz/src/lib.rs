@@ -1,14 +1,15 @@
 //! Development module that shares the fuzzing logic between unit tests and
-//! the actual fuzzing package.
-// TODO: shouldn't it be in the "fuzzing" package?
+//! the actual fuzzing.
+#[cfg(test)]
+mod tests;
 
 use arbitrary::Arbitrary;
 use chrono::{DateTime, Datelike};
 
 use std::fmt::Debug;
 
-use crate::localization::{Coordinates, Localize};
-use crate::{Context, OpeningHours};
+use opening_hours::localization::{Coordinates, Localize};
+use opening_hours::{Context, OpeningHours};
 
 /// A fuzzing example
 #[derive(Arbitrary, Clone)]

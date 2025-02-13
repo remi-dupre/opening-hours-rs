@@ -16,14 +16,17 @@ jobs:
     strategy:
       matrix:
         crate:
-          [".", "compact-calendar", "opening-hours-py", "opening-hours-syntax"]
+          - .
+          - compact-calendar
+          - opening-hours-py
+          - opening-hours-syntax
+          - fuzz
         features: [""]
         include:
           - { crate: ".", features: "log" }
           - { crate: ".", features: "log,auto-country" }
           - { crate: ".", features: "log,auto-country,auto-timezone" }
           - { crate: ".", features: "log,auto-timezone" }
-          - { crate: ".", features: "fuzzing" }
           - { crate: "opening-hours-syntax", features: "log" }
     defaults:
       run:

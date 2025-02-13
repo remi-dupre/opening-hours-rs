@@ -3,13 +3,20 @@ use std::io::Read;
 use std::path::Path;
 
 use arbitrary::{Arbitrary, Unstructured};
+use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 
-use crate::datetime;
-use crate::fuzzing::{run_fuzz_oh, CompareWith, Data, Operation};
+use crate::{run_fuzz_oh, CompareWith, Data, Operation};
 
 #[test]
 fn no_fuzz_before_1900() {
-    let date_secs = datetime!("1899-12-31 12:00").and_utc().timestamp();
+    let date_secs = {
+        NaiveDateTime::new(
+            NaiveDate::from_ymd_opt(1899, 1, 1).unwrap(),
+            NaiveTime::from_hms_opt(12, 0, 0).unwrap(),
+        )
+        .and_utc()
+        .timestamp()
+    };
 
     let data = Data {
         date_secs,
@@ -23,7 +30,14 @@ fn no_fuzz_before_1900() {
 
 #[test]
 fn no_fuzz_after_9999() {
-    let date_secs = datetime!("10000-01-01 12:00").and_utc().timestamp();
+    let date_secs = {
+        NaiveDateTime::new(
+            NaiveDate::from_ymd_opt(10_000, 1, 1).unwrap(),
+            NaiveTime::from_hms_opt(12, 0, 0).unwrap(),
+        )
+        .and_utc()
+        .timestamp()
+    };
 
     let data = Data {
         date_secs,
@@ -61,7 +75,6 @@ fn no_fuzz_invalid_expression() {
 
 fn run_fuzz_corpus(prefix: &str) {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("fuzz")
         .join("corpus")
         .join("fuzz_oh");
 
