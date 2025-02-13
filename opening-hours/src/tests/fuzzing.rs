@@ -21,20 +21,19 @@ fn no_fuzz_before_1900() {
     assert!(!run_fuzz_oh(data));
 }
 
-// // TODO: should be enforced
-// #[test]
-// fn no_fuzz_after_9999() {
-//     let date_secs = datetime!("10000-01-01 12:00").and_utc().timestamp();
-//
-//     let data = Data {
-//         date_secs,
-//         oh: "24/7".to_string(),
-//         coords: None,
-//         operation: Operation::Compare(CompareWith::Normalized),
-//     };
-//
-//     assert!(!run_fuzz_oh(data));
-// }
+#[test]
+fn no_fuzz_after_9999() {
+    let date_secs = datetime!("10000-01-01 12:00").and_utc().timestamp();
+
+    let data = Data {
+        date_secs,
+        oh: "24/7".to_string(),
+        coords: None,
+        operation: Operation::Compare(CompareWith::Normalized),
+    };
+
+    assert!(!run_fuzz_oh(data));
+}
 
 #[test]
 fn no_fuzz_with_comments() {

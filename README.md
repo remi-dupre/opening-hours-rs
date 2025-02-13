@@ -48,6 +48,14 @@ fn main() {
 
 ## Supported features
 
+- 📝 Parsing for [OSM opening hours][grammar]
+- 🧮 Evaluation of state and next change
+- ⏳ Lazy infinite iterator
+- 🌅 Accurate sun events
+- 📅 Embedded public holidays database for many countries (from [nager])
+- 🌍 Timezone support
+- 🔥 Fast and memory-safe implementation using Rust
+
 ### Holidays
 
 A public holiday database is loaded using [nager]. You can refer to their
@@ -71,6 +79,14 @@ also automatically infer the timezone from coordinates.
 ### Logging
 
 The **log** feature can be enabled to emit warnings the [crate-log] crate.
+
+## Limitations
+
+Expressions will always be considered closed **before 1900 and after 9999**.
+This comes from the specification not supporting date outside of this grammar
+and makes the implementation slightly more convenient.
+
+Feel free to open an issue if you have a use case for extreme dates!
 
 ## Contributing
 

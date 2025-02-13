@@ -18,8 +18,15 @@ use crate::schedule::Schedule;
 use crate::Context;
 use crate::DateTimeRange;
 
+/// The lower bound of dates handled by specification
+pub const DATE_START: NaiveDateTime = {
+    let date = NaiveDate::from_ymd_opt(1900, 1, 1).unwrap();
+    let time = NaiveTime::from_hms_opt(0, 0, 0).unwrap();
+    NaiveDateTime::new(date, time)
+};
+
 /// The upper bound of dates handled by specification
-pub const DATE_LIMIT: NaiveDateTime = {
+pub const DATE_END: NaiveDateTime = {
     let date = NaiveDate::from_ymd_opt(10_000, 1, 1).unwrap();
     let time = NaiveTime::from_hms_opt(0, 0, 0).unwrap();
     NaiveDateTime::new(date, time)
@@ -93,15 +100,20 @@ impl<L: Localize> OpeningHours<L> {
     /// Provide a lower bound to the next date when a different set of rules
     /// could match.
     fn next_change_hint(&self, date: NaiveDate) -> Option<NaiveDate> {
+        if date < DATE_START.date() {
+            return Some(DATE_START.date());
+        }
+
+        // TODO: cache a normalized expression?
         if self.expr.is_24_7() {
-            return Some(DATE_LIMIT.date());
+            return Some(DATE_END.date());
         }
 
         (self.expr.rules)
             .iter()
             .map(|rule| {
                 if rule.time_selector.is_immutable_full_day() && rule.day_selector.is_empty() {
-                    Some(DATE_LIMIT.date())
+                    Some(DATE_END.date())
                 } else {
                     rule.day_selector.next_change_hint(date, &self.ctx)
                 }
@@ -112,6 +124,10 @@ impl<L: Localize> OpeningHours<L> {
 
     /// Get the schedule at a given day.
     pub fn schedule_at(&self, date: NaiveDate) -> Schedule {
+        if !(DATE_START.date()..DATE_END.date()).contains(&date) {
+            return Schedule::default();
+        }
+
         let mut prev_match = false;
         let mut prev_eval = None;
 
@@ -157,8 +173,8 @@ impl<L: Localize> OpeningHours<L> {
         from: NaiveDateTime,
         to: NaiveDateTime,
     ) -> impl Iterator<Item = DateTimeRange> + Send + Sync {
-        let from = std::cmp::min(DATE_LIMIT, from);
-        let to = std::cmp::min(DATE_LIMIT, to);
+        let from = std::cmp::min(DATE_END, from);
+        let to = std::cmp::min(DATE_END, to);
 
         TimeDomainIterator::new(self, from, to)
             .take_while(move |dtr| dtr.range.start < to)
@@ -181,8 +197,8 @@ impl<L: Localize> OpeningHours<L> {
         to: L::DateTime,
     ) -> impl Iterator<Item = DateTimeRange<L::DateTime>> + Send + Sync {
         let locale = self.ctx.locale.clone();
-        let naive_from = std::cmp::min(DATE_LIMIT, locale.naive(from));
-        let naive_to = std::cmp::min(DATE_LIMIT, locale.naive(to));
+        let naive_from = std::cmp::min(DATE_END, locale.naive(from));
+        let naive_to = std::cmp::min(DATE_END, locale.naive(to));
 
         self.iter_range_naive(naive_from, naive_to).map(move |dtr| {
             DateTimeRange::new_with_sorted_comments(
@@ -198,7 +214,7 @@ impl<L: Localize> OpeningHours<L> {
         &self,
         from: L::DateTime,
     ) -> impl Iterator<Item = DateTimeRange<L::DateTime>> + Send + Sync {
-        self.iter_range(from, self.ctx.locale.datetime(DATE_LIMIT))
+        self.iter_range(from, self.ctx.locale.datetime(DATE_END))
     }
 
     /// Get the next time where the state will change.
@@ -216,7 +232,7 @@ impl<L: Localize> OpeningHours<L> {
     pub fn next_change(&self, current_time: L::DateTime) -> Option<L::DateTime> {
         let interval = self.iter_from(current_time).next()?;
 
-        if self.ctx.locale.naive(interval.range.end.clone()) >= DATE_LIMIT {
+        if self.ctx.locale.naive(interval.range.end.clone()) >= DATE_END {
             None
         } else {
             Some(interval.range.end)
@@ -240,7 +256,7 @@ impl<L: Localize> OpeningHours<L> {
         self.iter_range(current_time.clone(), current_time + Duration::minutes(1))
             .next()
             .map(|dtr| dtr.kind)
-            .unwrap_or(RuleKind::Unknown)
+            .unwrap_or(RuleKind::Closed)
     }
 
     /// Check if this is open at a given time.
@@ -380,8 +396,7 @@ impl<L: Localize> TimeDomainIterator<L> {
                 assert!(next_change_hint > self.curr_date, "infinite loop detected");
                 self.curr_date = next_change_hint;
 
-                if self.curr_date <= self.end_datetime.date() && self.curr_date < DATE_LIMIT.date()
-                {
+                if self.curr_date <= self.end_datetime.date() && self.curr_date < DATE_END.date() {
                     self.curr_schedule = self
                         .opening_hours
                         .schedule_at(self.curr_date)

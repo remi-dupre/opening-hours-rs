@@ -17,7 +17,6 @@ pub struct OpeningHoursExpression {
 
 impl OpeningHoursExpression {
     // TODO: doc
-    // TODO: rename as normalize?
     pub fn is_24_7(&self) -> bool {
         let Some(kind) = self.rules.last().map(|rs| rs.kind) else {
             return true;
@@ -35,6 +34,7 @@ impl OpeningHoursExpression {
     }
 
     // TODO: doc
+    // TODO: rename as normalize?
     pub fn simplify(self) -> Self {
         let mut rules_queue = self.rules.into_iter().peekable();
         let mut simplified = Vec::new();

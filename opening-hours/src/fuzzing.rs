@@ -1,3 +1,7 @@
+//! Development module that shares the fuzzing logic between unit tests and
+//! the actual fuzzing package.
+// TODO: shouldn't it be in the "fuzzing" package?
+
 use arbitrary::Arbitrary;
 use chrono::{DateTime, Datelike};
 
@@ -6,24 +10,27 @@ use std::fmt::Debug;
 use crate::localization::{Coordinates, Localize};
 use crate::{Context, OpeningHours};
 
-#[derive(Arbitrary, Clone, Debug)]
-pub enum CompareWith {
-    Stringified,
-    Normalized,
-}
-
-#[derive(Arbitrary, Clone, Debug)]
-pub enum Operation {
-    DoubleNormalize,
-    Compare(CompareWith),
-}
-
+/// A fuzzing example
 #[derive(Arbitrary, Clone)]
 pub struct Data {
     pub date_secs: i64,
     pub oh: String,
     pub coords: Option<[i16; 2]>,
     pub operation: Operation,
+}
+
+/// What operation to perform on the input
+#[derive(Arbitrary, Clone, Debug)]
+pub enum Operation {
+    DoubleNormalize,
+    Compare(CompareWith),
+}
+
+/// What transformation to apply on the input before comparing
+#[derive(Arbitrary, Clone, Debug)]
+pub enum CompareWith {
+    Stringified,
+    Normalized,
 }
 
 impl Data {
@@ -56,6 +63,8 @@ impl Debug for Data {
     }
 }
 
+/// Run a fuzzing test and return `true` if the example should be kept in
+/// corpus.
 pub fn run_fuzz_oh(data: Data) -> bool {
     if data.oh.contains('=') {
         // The fuzzer spends way too much time building comments.

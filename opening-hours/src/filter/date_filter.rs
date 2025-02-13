@@ -7,7 +7,7 @@ use chrono::{Duration, NaiveDate, Weekday};
 use opening_hours_syntax::rules::day::{self as ds, Month};
 
 use crate::localization::Localize;
-use crate::opening_hours::DATE_LIMIT;
+use crate::opening_hours::DATE_END;
 use crate::utils::dates::{count_days_in_month, easter};
 use crate::utils::range::{RangeExt, WrappingRange};
 use crate::Context;
@@ -20,7 +20,7 @@ fn first_valid_ymd(year: i32, month: u32, day: u32) -> NaiveDate {
         .rev()
         .filter_map(|day| NaiveDate::from_ymd_opt(year, month, day))
         .next()
-        .unwrap_or(DATE_LIMIT.date())
+        .unwrap_or(DATE_END.date())
 }
 
 /// Generic trait to specify the behavior of a selector over dates.
@@ -50,7 +50,7 @@ impl<T: DateFilter> DateFilter for [T] {
         self.iter()
             .map(|selector| selector.next_change_hint(date, ctx))
             .min()
-            .unwrap_or_else(|| Some(DATE_LIMIT.date()))
+            .unwrap_or_else(|| Some(DATE_END.date()))
     }
 }
 
@@ -108,7 +108,7 @@ impl DateFilter for ds::YearRange {
         L: Localize,
     {
         let Ok(curr_year) = date.year().try_into() else {
-            return Some(DATE_LIMIT.date());
+            return Some(DATE_END.date());
         };
 
         if self.range.start() > self.range.end() {
@@ -118,7 +118,7 @@ impl DateFilter for ds::YearRange {
         let next_year = {
             if *self.range.end() < curr_year {
                 // 1. time exceeded the range, the state won't ever change
-                return Some(DATE_LIMIT.date());
+                return Some(DATE_END.date());
             } else if curr_year < *self.range.start() {
                 // 2. time didn't reach the range yet
                 *self.range.start()
@@ -135,7 +135,7 @@ impl DateFilter for ds::YearRange {
             }
         };
 
-        Some(NaiveDate::from_ymd_opt(next_year.into(), 1, 1).unwrap_or(DATE_LIMIT.date()))
+        Some(NaiveDate::from_ymd_opt(next_year.into(), 1, 1).unwrap_or(DATE_END.date()))
     }
 }
 
@@ -204,7 +204,7 @@ impl DateFilter for ds::MonthdayRange {
                 let month = Month::from_date(date);
 
                 if range.end().next() == *range.start() {
-                    return Some(DATE_LIMIT.date());
+                    return Some(DATE_END.date());
                 }
 
                 let naive = {
@@ -238,7 +238,7 @@ impl DateFilter for ds::MonthdayRange {
                 Some(match (start..end).compare(&date) {
                     Ordering::Less => start,
                     Ordering::Equal => end,
-                    Ordering::Greater => DATE_LIMIT.date(),
+                    Ordering::Greater => DATE_END.date(),
                 })
             }
             ds::MonthdayRange::Date {
@@ -277,7 +277,7 @@ impl DateFilter for ds::MonthdayRange {
                 Some(match (start..end).compare(&date) {
                     Ordering::Less => start,
                     Ordering::Equal => end + Duration::days(1),
-                    Ordering::Greater => DATE_LIMIT.date(),
+                    Ordering::Greater => DATE_END.date(),
                 })
             }
             ds::MonthdayRange::Date {
@@ -394,7 +394,7 @@ impl DateFilter for ds::WeekDayRange {
                     calendar
                         .first_after(date_with_offset)
                         .map(|following| following + Duration::days(*offset))
-                        .unwrap_or_else(|| DATE_LIMIT.date())
+                        .unwrap_or_else(|| DATE_END.date())
                 }
             }),
             ds::WeekDayRange::Fixed {
