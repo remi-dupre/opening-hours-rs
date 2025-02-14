@@ -5,7 +5,7 @@ use pyo3::prelude::*;
 use pyo3_stub_gen::{PyStubType, TypeInfo};
 
 use opening_hours_rs::localization::{Localize, TzLocation};
-use opening_hours_rs::DATE_LIMIT;
+use opening_hours_rs::DATE_END;
 
 #[derive(Clone, Copy, FromPyObject, IntoPyObject)]
 pub(crate) enum DateTimeMaybeAware {
@@ -24,7 +24,7 @@ impl DateTimeMaybeAware {
 
     /// Just ensures that *DATE_LIMIT* is mapped to `None`.
     pub(crate) fn map_date_limit(self) -> Option<Self> {
-        if self.as_naive_local() == DATE_LIMIT {
+        if self.as_naive_local() == DATE_END {
             None
         } else {
             Some(self)

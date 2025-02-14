@@ -56,3 +56,23 @@ fn range() -> Result<(), Error> {
 
     Ok(())
 }
+
+#[test]
+fn wrapping_range() -> Result<(), Error> {
+    assert_eq!(
+        schedule_at!(r#"2030-2010 10:00-12:00"#, "2020-01-01"),
+        schedule! {}
+    );
+
+    assert_eq!(
+        schedule_at!(r#"2030-2010 10:00-12:00"#, "2040-01-01"),
+        schedule! { 10,00 => Open => 12,00 }
+    );
+
+    assert_eq!(
+        schedule_at!(r#"2030-2010 10:00-12:00"#, "2000-01-01"),
+        schedule! { 10,00 => Open => 12,00 }
+    );
+
+    Ok(())
+}

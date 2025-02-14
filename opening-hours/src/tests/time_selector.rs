@@ -103,3 +103,16 @@ fn overlap() -> Result<(), Error> {
 
     Ok(())
 }
+
+#[test]
+fn wrapping() -> Result<(), Error> {
+    assert_eq!(
+        schedule_at!("23:00-01:00", "2020-06-01"),
+        schedule! {
+            00,00 => Open =>  1,00;
+            23,00 => Open => 24,00;
+        }
+    );
+
+    Ok(())
+}

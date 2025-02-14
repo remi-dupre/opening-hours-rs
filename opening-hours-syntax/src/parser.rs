@@ -530,7 +530,12 @@ fn build_monthday_range(pair: Pair<Rule>) -> Result<ds::MonthdayRange> {
                         ds::Date::md(31, ds::Month::December)
                     }
                 }
-                None => start,
+                None => {
+                    return Ok(ds::MonthdayRange::Date {
+                        start: (start, start_offset),
+                        end: (start, start_offset),
+                    })
+                }
                 Some(other) => unexpected_token(other, Rule::monthday_range),
             };
 

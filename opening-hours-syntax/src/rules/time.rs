@@ -15,6 +15,19 @@ pub struct TimeSelector {
 }
 
 impl TimeSelector {
+    /// Note that not all cases can be covered
+    pub(crate) fn is_00_24(&self) -> bool {
+        self.time.len() == 1
+            && matches!(
+                self.time.first(),
+                Some(TimeSpan { range, open_end: false, repeats: None })
+                if range.start == Time::Fixed(ExtendedTime::new(0,0).unwrap())
+                    && range.end == Time::Fixed( ExtendedTime::new(24,0).unwrap())
+            )
+    }
+}
+
+impl TimeSelector {
     #[inline]
     pub fn new(time: Vec<TimeSpan>) -> Self {
         if time.is_empty() {

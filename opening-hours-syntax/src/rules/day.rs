@@ -54,7 +54,15 @@ impl Display for DaySelector {
         if !(self.year.is_empty() && self.monthday.is_empty() && self.week.is_empty()) {
             write_selector(f, &self.year)?;
             write_selector(f, &self.monthday)?;
-            write_selector(f, &self.week)?;
+
+            if !self.week.is_empty() {
+                if !self.year.is_empty() || !self.monthday.is_empty() {
+                    write!(f, " ")?;
+                }
+
+                write!(f, "week")?;
+                write_selector(f, &self.week)?;
+            }
 
             if !self.weekday.is_empty() {
                 write!(f, " ")?;
@@ -189,7 +197,7 @@ impl Display for Date {
 
 // DateOffset
 
-#[derive(Clone, Debug, Default, Hash, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, Hash, PartialEq, Eq)]
 pub struct DateOffset {
     pub wday_offset: WeekDayOffset,
     pub day_offset: i64,
@@ -292,7 +300,6 @@ impl Display for WeekDayRange {
                         .map(|(idx, _)| -(idx as isize) - 1);
 
                     let mut weeknum_iter = pos_weeknum_iter.chain(neg_weeknum_iter);
-
                     write!(f, "[{}", weeknum_iter.next().unwrap())?;
 
                     for num in weeknum_iter {
@@ -344,10 +351,10 @@ pub struct WeekRange {
 
 impl Display for WeekRange {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "week {}", self.range.start())?;
+        write!(f, "{:02}", self.range.start())?;
 
         if self.range.start() != self.range.end() {
-            write!(f, "-{}", self.range.end())?;
+            write!(f, "-{:02}", self.range.end())?;
         }
 
         if self.step != 1 {

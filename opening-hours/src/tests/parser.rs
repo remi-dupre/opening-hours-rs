@@ -60,3 +60,27 @@ fn parse_reformated() {
 
     assert!(format_and_parse("Oct").is_ok());
 }
+
+#[test]
+fn monthday_00_invalid() {
+    assert!(OpeningHours::parse("Jan 0").is_err());
+    assert!(OpeningHours::parse("Jan 00").is_err());
+    assert!(OpeningHours::parse("Jan 00-15").is_err());
+}
+
+#[test]
+fn copy_start_offset() {
+    let raw_oh = "Jun 7+Tu";
+    let oh = OpeningHours::parse(raw_oh).unwrap();
+    assert_eq!(raw_oh, &oh.to_string());
+}
+
+#[test]
+fn no_extended_time_as_begining() {
+    assert!(OpeningHours::parse("27:43").is_err());
+    assert!(OpeningHours::parse("24:11").is_err());
+    assert!(OpeningHours::parse("27:43+").is_err());
+    assert!(OpeningHours::parse("24:11+").is_err());
+    assert!(OpeningHours::parse("27:43-28:00").is_err());
+    assert!(OpeningHours::parse("24:11-28:00").is_err());
+}

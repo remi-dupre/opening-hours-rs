@@ -8,10 +8,15 @@ mod parser;
 
 pub mod error;
 pub mod extended_time;
+pub mod rubik;
 pub mod rules;
+pub mod simplify;
 pub mod sorted_vec;
 
 pub use error::{Error, Result};
 pub use extended_time::ExtendedTime;
 pub use parser::parse;
 pub use rules::RuleKind;
+
+#[cfg(test)]
+pub mod tests;
