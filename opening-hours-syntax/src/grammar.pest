@@ -215,7 +215,7 @@ minus = @{ "-" }
 // Relaxed: single digits are normaly not allowed
 hour = @{
       '0'..'1' ~ '0'..'9'     // 00 -> 19
-    |      "2" ~ '0'..'4'     // 20 -> 24
+    |      "2" ~ '0'..'3'     // 20 -> 23
     | '0'..'9' ~ !('0'..'9')  // 0 -> 9 (relaxed)
 }
 
@@ -228,7 +228,7 @@ extended_hour = @{
 
 minute = @{ '0'..'5' ~ '0'..'9' }
 
-hour_minutes = { hour ~ ":" ~ minute }
+hour_minutes = { hour ~ ":" ~ minute | "24:00" }
 
 extended_hour_minutes = { extended_hour ~ ":" ~ minute }
 
