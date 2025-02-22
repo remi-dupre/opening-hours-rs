@@ -47,10 +47,10 @@ const EXAMPLES: &[(&str, u32, &str, &str)] = &[
 ];
 
 #[test]
-fn simplify_already_minimal() -> Result<()> {
+fn normalize_already_minimal() -> Result<()> {
     for (file, line, _, example) in EXAMPLES {
         assert_eq!(
-            parse(example)?.simplify().to_string(),
+            parse(example)?.normalize().to_string(),
             *example,
             "error with example from {file}:{line}",
         );
@@ -60,10 +60,10 @@ fn simplify_already_minimal() -> Result<()> {
 }
 
 #[test]
-fn simplify() -> Result<()> {
+fn normalize() -> Result<()> {
     for (file, line, expr, simplified) in EXAMPLES {
         assert_eq!(
-            parse(expr)?.simplify().to_string(),
+            parse(expr)?.normalize().to_string(),
             *simplified,
             "error with example from {file}:{line}",
         );

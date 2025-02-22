@@ -4,8 +4,8 @@ pub mod time;
 use std::fmt::Display;
 use std::sync::Arc;
 
+use crate::normalize::{FULL_TIME, canonical_to_seq, ruleseq_to_selector};
 use crate::rubik::{Paving, Paving5D};
-use crate::simplify::{FULL_TIME, canonical_to_seq, ruleseq_to_selector};
 use crate::sorted_vec::UniqueSortedVec;
 
 // OpeningHoursExpression
@@ -34,20 +34,19 @@ impl OpeningHoursExpression {
     }
 
     // TODO: doc
-    // TODO: rename as normalize?
-    pub fn simplify(self) -> Self {
+    pub fn normalize(self) -> Self {
         let mut rules_queue = self.rules.into_iter().peekable();
-        let mut simplified = Vec::new();
+        let mut normalized = Vec::new();
 
         while let Some(head) = rules_queue.next() {
             // TODO: implement addition and fallback
             if head.operator != RuleOperator::Normal {
-                simplified.push(head);
+                normalized.push(head);
                 continue;
             }
 
             let Some(selector) = ruleseq_to_selector(&head) else {
-                simplified.push(head);
+                normalized.push(head);
                 continue;
             };
 
@@ -72,7 +71,7 @@ impl OpeningHoursExpression {
                     union
                 });
 
-            simplified.extend(canonical_to_seq(
+            normalized.extend(canonical_to_seq(
                 paving,
                 head.operator,
                 head.kind,
@@ -80,7 +79,7 @@ impl OpeningHoursExpression {
             ));
         }
 
-        Self { rules: simplified }
+        Self { rules: normalized }
     }
 }
 

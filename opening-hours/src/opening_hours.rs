@@ -82,7 +82,7 @@ impl<L: Localize> OpeningHours<L> {
     /// TODO: doc
     pub fn normalize(&self) -> Self {
         Self {
-            expr: Arc::new(self.expr.as_ref().clone().simplify()),
+            expr: Arc::new(self.expr.as_ref().clone().normalize()),
             ctx: self.ctx.clone(),
         }
     }
