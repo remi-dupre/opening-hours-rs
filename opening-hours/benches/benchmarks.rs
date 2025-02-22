@@ -34,48 +34,46 @@ fn bench_eval(c: &mut Criterion) {
     let fr_context = Context::default().with_holidays(Country::FR.holidays());
     let date_time = NaiveDateTime::parse_from_str("2021-02-01 12:03", "%Y-%m-%d %H:%M").unwrap();
 
-    let sch_24_7 = OpeningHours::parse(SCH_24_7).unwrap();
-    let sch_addition = OpeningHours::parse(SCH_ADDITION).unwrap();
-    let sch_jan_dec = OpeningHours::parse(SCH_JAN_DEC).unwrap();
-
-    let sch_holiday = OpeningHours::parse(SCH_HOLIDAY)
-        .unwrap()
-        .with_context(fr_context);
+    let expressions = [
+        ("24_7", OpeningHours::parse(SCH_24_7).unwrap()),
+        ("addition", OpeningHours::parse(SCH_ADDITION).unwrap()),
+        ("holidays", OpeningHours::parse(SCH_HOLIDAY).unwrap()),
+        (
+            "jan-dec",
+            OpeningHours::parse(SCH_JAN_DEC)
+                .unwrap()
+                .with_context(fr_context),
+        ),
+    ];
 
     {
         let mut group = c.benchmark_group("is_open");
 
-        group.bench_function("24_7", |b| {
-            b.iter(|| black_box(&sch_24_7).is_open(black_box(date_time)))
-        });
-
-        group.bench_function("addition", |b| {
-            b.iter(|| black_box(&sch_addition).is_open(black_box(date_time)))
-        });
-
-        group.bench_function("holiday", |b| {
-            b.iter(|| black_box(&sch_holiday).is_open(black_box(date_time)))
-        });
+        for (slug, expr) in &expressions {
+            group.bench_function(*slug, |b| {
+                b.iter(|| black_box(&expr).is_open(black_box(date_time)))
+            });
+        }
     }
 
     {
         let mut group = c.benchmark_group("next_change");
 
-        group.bench_function("24_7", |b| {
-            b.iter(|| black_box(&sch_24_7).next_change(black_box(date_time)))
-        });
+        for (slug, expr) in &expressions {
+            group.bench_function(*slug, |b| {
+                b.iter(|| black_box(black_box(&expr).next_change(black_box(date_time))))
+            });
+        }
+    }
 
-        group.bench_function("addition", |b| {
-            b.iter(|| black_box(&sch_addition).next_change(black_box(date_time)))
-        });
+    {
+        let mut group = c.benchmark_group("normalize");
 
-        group.bench_function("holiday", |b| {
-            b.iter(|| black_box(&sch_holiday).next_change(black_box(date_time)))
-        });
-
-        group.bench_function("jan-dec", |b| {
-            b.iter(|| black_box(&sch_jan_dec).next_change(black_box(date_time)))
-        });
+        for (slug, expr) in &expressions {
+            group.bench_function(*slug, |b| {
+                b.iter(|| black_box(black_box(&expr).normalize()))
+            });
+        }
     }
 }
 
