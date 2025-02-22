@@ -2,7 +2,7 @@ use crate::tests::stats::TestStats;
 use opening_hours_syntax::error::Error;
 use opening_hours_syntax::rules::RuleKind::*;
 
-use crate::{datetime, schedule_at, OpeningHours};
+use crate::{OpeningHours, datetime, schedule_at};
 
 #[test]
 fn always_open() -> Result<(), Error> {
@@ -113,10 +113,12 @@ fn comments() -> Result<(), Error> {
 #[test]
 fn explicit_closed_slow() {
     let stats = TestStats::watch(|| {
-        assert!(OpeningHours::parse("Feb Fr off")
-            .unwrap()
-            .next_change(datetime!("2021-07-09 19:30"))
-            .is_none());
+        assert!(
+            OpeningHours::parse("Feb Fr off")
+                .unwrap()
+                .next_change(datetime!("2021-07-09 19:30"))
+                .is_none()
+        );
     });
 
     assert!(stats.count_generated_schedules < 10);

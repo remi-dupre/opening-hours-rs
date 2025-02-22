@@ -5,18 +5,18 @@ use std::sync::Arc;
 
 use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime};
 
+use opening_hours_syntax::Error as ParserError;
 use opening_hours_syntax::extended_time::ExtendedTime;
 use opening_hours_syntax::rules::{OpeningHoursExpression, RuleKind, RuleOperator, RuleSequence};
-use opening_hours_syntax::Error as ParserError;
 
+use crate::Context;
+use crate::DateTimeRange;
 use crate::filter::date_filter::DateFilter;
 use crate::filter::time_filter::{
-    time_selector_intervals_at, time_selector_intervals_at_next_day, TimeFilter,
+    TimeFilter, time_selector_intervals_at, time_selector_intervals_at_next_day,
 };
 use crate::localization::{Localize, NoLocation};
 use crate::schedule::Schedule;
-use crate::Context;
-use crate::DateTimeRange;
 
 /// The lower bound of dates handled by specification
 pub const DATE_START: NaiveDateTime = {
@@ -175,7 +175,7 @@ impl<L: Localize> OpeningHours<L> {
         &self,
         from: NaiveDateTime,
         to: NaiveDateTime,
-    ) -> impl Iterator<Item = DateTimeRange> + Send + Sync {
+    ) -> impl Iterator<Item = DateTimeRange> + Send + Sync + use<L> {
         let from = std::cmp::min(DATE_END, from);
         let to = std::cmp::min(DATE_END, to);
 
@@ -198,7 +198,7 @@ impl<L: Localize> OpeningHours<L> {
         &self,
         from: L::DateTime,
         to: L::DateTime,
-    ) -> impl Iterator<Item = DateTimeRange<L::DateTime>> + Send + Sync {
+    ) -> impl Iterator<Item = DateTimeRange<L::DateTime>> + Send + Sync + use<L> {
         let locale = self.ctx.locale.clone();
         let naive_from = std::cmp::min(DATE_END, locale.naive(from));
         let naive_to = std::cmp::min(DATE_END, locale.naive(to));
@@ -216,7 +216,7 @@ impl<L: Localize> OpeningHours<L> {
     pub fn iter_from(
         &self,
         from: L::DateTime,
-    ) -> impl Iterator<Item = DateTimeRange<L::DateTime>> + Send + Sync {
+    ) -> impl Iterator<Item = DateTimeRange<L::DateTime>> + Send + Sync + use<L> {
         self.iter_range(from, self.ctx.locale.datetime(DATE_END))
     }
 

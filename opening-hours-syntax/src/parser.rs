@@ -7,8 +7,8 @@ use std::sync::Arc;
 
 use chrono::Duration;
 
-use pest::iterators::Pair;
 use pest::Parser;
+use pest::iterators::Pair;
 
 use crate::error::{Error, Result};
 use crate::extended_time::ExtendedTime;
@@ -253,7 +253,7 @@ fn build_timespan(pair: Pair<Rule>) -> Result<ts::TimeSpan> {
             ts::Time::Fixed(ExtendedTime::new(24, 0).unwrap())
         }
         Some(pair) if pair.as_rule() == Rule::timespan_plus => {
-            return Err(Error::Unsupported("point in time"))
+            return Err(Error::Unsupported("point in time"));
         }
         Some(pair) => build_extended_time(pair)?,
     };
@@ -534,7 +534,7 @@ fn build_monthday_range(pair: Pair<Rule>) -> Result<ds::MonthdayRange> {
                     return Ok(ds::MonthdayRange::Date {
                         start: (start, start_offset),
                         end: (start, start_offset),
-                    })
+                    });
                 }
                 Some(other) => unexpected_token(other, Rule::monthday_range),
             };

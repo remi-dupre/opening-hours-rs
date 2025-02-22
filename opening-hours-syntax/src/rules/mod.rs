@@ -5,7 +5,7 @@ use std::fmt::Display;
 use std::sync::Arc;
 
 use crate::rubik::{Paving, Paving5D};
-use crate::simplify::{canonical_to_seq, ruleseq_to_selector, FULL_TIME};
+use crate::simplify::{FULL_TIME, canonical_to_seq, ruleseq_to_selector};
 use crate::sorted_vec::UniqueSortedVec;
 
 // OpeningHoursExpression

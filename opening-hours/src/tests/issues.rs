@@ -4,7 +4,7 @@
 use opening_hours_syntax::error::Error;
 use opening_hours_syntax::rules::RuleKind;
 
-use crate::{datetime, DateTimeRange, OpeningHours};
+use crate::{DateTimeRange, OpeningHours, datetime};
 
 /// https://github.com/remi-dupre/opening-hours-rs/issues/23
 #[test]

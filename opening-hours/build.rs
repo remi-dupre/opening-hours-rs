@@ -5,9 +5,9 @@ use std::io::{BufRead, BufReader, BufWriter};
 use std::path::{Path, PathBuf};
 
 use chrono::NaiveDate;
-use flate2::write::DeflateEncoder;
 use flate2::Compression;
-use rustc_version::{version_meta, Channel};
+use flate2::write::DeflateEncoder;
+use rustc_version::{Channel, version_meta};
 
 use compact_calendar::CompactCalendar;
 

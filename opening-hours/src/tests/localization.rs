@@ -1,5 +1,5 @@
 use crate::localization::{Coordinates, TzLocation};
-use crate::{datetime, Context, OpeningHours};
+use crate::{Context, OpeningHours, datetime};
 
 #[cfg(feature = "auto-timezone")]
 const COORDS_PARIS: Coordinates = Coordinates::new(48.8535, 2.34839).unwrap();

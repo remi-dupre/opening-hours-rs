@@ -1,7 +1,7 @@
 use opening_hours_syntax::error::Error;
 use opening_hours_syntax::rules::RuleKind::*;
 
-use crate::{datetime, schedule_at, OpeningHours};
+use crate::{OpeningHours, datetime, schedule_at};
 
 #[test]
 fn exact_date() -> Result<(), Error> {
