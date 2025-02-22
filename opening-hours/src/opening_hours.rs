@@ -390,12 +390,8 @@ impl<L: Localize> TimeDomainIterator<L> {
         let start_date = self.curr_date;
 
         while self.curr_schedule.peek().map(|tr| tr.kind) == Some(curr_kind) {
-            debug_assert!(self.curr_schedule.peek().is_some());
-
             if let Some(max_interval_size) = self.opening_hours.ctx.approx_bound_interval_size {
-                let max_interval_size = max_interval_size + chrono::TimeDelta::days(2);
-
-                if self.curr_date - start_date > max_interval_size {
+                if self.curr_date - start_date > max_interval_size + chrono::TimeDelta::days(1) {
                     return;
                 }
             }
@@ -438,8 +434,8 @@ impl<L: Localize> Iterator for TimeDomainIterator<L> {
             );
 
             self.consume_until_next_kind(curr_tr.kind);
-
             let end_date = self.curr_date;
+
             let end_time = self
                 .curr_schedule
                 .peek()

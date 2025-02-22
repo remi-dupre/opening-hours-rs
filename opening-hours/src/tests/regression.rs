@@ -190,7 +190,7 @@ fn s013_fuzz_slow_weeknum() {
         );
     });
 
-    assert!(stats.count_generated_schedules < 50_000);
+    assert!(stats.count_generated_schedules < 8000 * 4);
 }
 
 #[test]
