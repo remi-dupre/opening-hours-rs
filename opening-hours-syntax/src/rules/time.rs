@@ -80,7 +80,7 @@ impl Display for TimeSpan {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.range.start)?;
 
-        if self.range.start != self.range.end {
+        if self.range.start != self.range.end && !self.open_end {
             write!(f, "-{}", self.range.end)?;
         }
 

@@ -42,8 +42,8 @@ pub const DATE_END: NaiveDateTime = {
 pub struct OpeningHours<L: Localize = NoLocation> {
     /// Rules describing opening hours
     expr: Arc<OpeningHoursExpression>,
-    /// Evalutation context
-    ctx: Context<L>,
+    /// Evaluation context
+    pub(crate) ctx: Context<L>,
 }
 
 impl OpeningHours<NoLocation> {
@@ -387,7 +387,19 @@ impl<L: Localize> TimeDomainIterator<L> {
     }
 
     fn consume_until_next_kind(&mut self, curr_kind: RuleKind) {
+        let start_date = self.curr_date;
+
         while self.curr_schedule.peek().map(|tr| tr.kind) == Some(curr_kind) {
+            debug_assert!(self.curr_schedule.peek().is_some());
+
+            if let Some(max_interval_size) = self.opening_hours.ctx.approx_bound_interval_size {
+                let max_interval_size = max_interval_size + chrono::TimeDelta::days(2);
+
+                if self.curr_date - start_date > max_interval_size {
+                    return;
+                }
+            }
+
             self.curr_schedule.next();
 
             if self.curr_schedule.peek().is_none() {
@@ -441,6 +453,16 @@ impl<L: Localize> Iterator for TimeDomainIterator<L> {
                     end_time.try_into().expect("got invalid time from schedule"),
                 ),
             );
+
+            if let Some(max_interval_size) = self.opening_hours.ctx.approx_bound_interval_size {
+                if end - start > max_interval_size {
+                    return Some(DateTimeRange::new_with_sorted_comments(
+                        start..DATE_END,
+                        curr_tr.kind,
+                        curr_tr.comments,
+                    ));
+                }
+            }
 
             Some(DateTimeRange::new_with_sorted_comments(
                 start..end,

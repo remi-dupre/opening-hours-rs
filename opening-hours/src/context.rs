@@ -37,8 +37,15 @@ impl ContextHolidays {
 /// alter its evaluation semantics.
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct Context<L = NoLocation> {
+    /// A calendar use for evaluation of public and private holidays.
     pub holidays: ContextHolidays,
+    /// Specify locality of the place attached to the expression: from
+    /// timezone to coordinates.
     pub locale: L,
+    /// As an approximation, consider that any interval bigger that this size
+    /// is infinite. This can be enabled if you need better performance and
+    /// you don't care if a shop is open in more than a year.
+    pub approx_bound_interval_size: Option<chrono::TimeDelta>,
 }
 
 impl<L> Context<L> {
@@ -49,7 +56,16 @@ impl<L> Context<L> {
 
     /// Attach a new locale component to this context.
     pub fn with_locale<L2: Localize>(self, locale: L2) -> Context<L2> {
-        Context { holidays: self.holidays, locale }
+        Context {
+            holidays: self.holidays,
+            locale,
+            approx_bound_interval_size: None,
+        }
+    }
+
+    /// Enables appromiation of long intervals.
+    pub fn approx_bound_interval_size(self, max_size: chrono::TimeDelta) -> Self {
+        Self { approx_bound_interval_size: Some(max_size), ..self }
     }
 }
 
@@ -80,12 +96,16 @@ impl Context<crate::localization::TzLocation<chrono_tz::Tz>> {
             .unwrap_or_default();
 
         let locale = crate::localization::TzLocation::from_coords(coords);
-        Self { holidays, locale }
+        Self { holidays, locale, approx_bound_interval_size: None }
     }
 }
 
 impl Default for Context<NoLocation> {
     fn default() -> Self {
-        Self { holidays: Default::default(), locale: NoLocation }
+        Self {
+            holidays: Default::default(),
+            locale: NoLocation,
+            approx_bound_interval_size: None,
+        }
     }
 }

@@ -1,4 +1,4 @@
-use crate::{OpeningHours, datetime};
+use crate::{Context, OpeningHours, datetime};
 use opening_hours_syntax::error::Error;
 
 #[test]
@@ -101,4 +101,21 @@ fn outside_date_bounds() -> Result<(), Error> {
     );
 
     Ok(())
+}
+
+#[test]
+fn with_max_interval_size() {
+    let ctx = Context::default().approx_bound_interval_size(chrono::TimeDelta::days(366));
+
+    let oh = OpeningHours::parse("2024-2030Jun open")
+        .unwrap()
+        .with_context(ctx);
+
+    assert_eq!(
+        oh.next_change(datetime!("2025-05-01 12:00")).unwrap(),
+        datetime!("2025-06-01 00:00"),
+    );
+
+    assert!(oh.next_change(datetime!("2000-05-01 12:00")).is_none());
+    assert!(oh.next_change(datetime!("2030-07-01 12:00")).is_none());
 }

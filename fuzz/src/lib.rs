@@ -11,6 +11,8 @@ use std::fmt::Debug;
 use opening_hours::localization::{Coordinates, Localize};
 use opening_hours::{Context, OpeningHours};
 
+const MAX_INTERVAL_RANGE: chrono::TimeDelta = chrono::TimeDelta::days(366 * 10);
+
 /// A fuzzing example
 #[derive(Arbitrary, Clone)]
 pub struct Data {
@@ -102,7 +104,9 @@ pub fn run_fuzz_oh(data: Data) -> bool {
             };
 
             if let Some([lat, lon]) = data.coords_float() {
-                let ctx = Context::from_coords(Coordinates::new(lat, lon).unwrap());
+                let ctx = Context::from_coords(Coordinates::new(lat, lon).unwrap())
+                    .approx_bound_interval_size(MAX_INTERVAL_RANGE);
+
                 let date = ctx.locale.datetime(date);
                 let oh_1 = oh_1.with_context(ctx.clone());
                 let oh_2 = oh_2.with_context(ctx.clone());
@@ -110,6 +114,9 @@ pub fn run_fuzz_oh(data: Data) -> bool {
                 assert_eq!(oh_1.state(date), oh_2.state(date));
                 assert_eq!(oh_1.next_change(date), oh_2.next_change(date));
             } else {
+                let ctx = Context::default().approx_bound_interval_size(MAX_INTERVAL_RANGE);
+                let oh_1 = oh_1.with_context(ctx.clone());
+                let oh_2 = oh_2.with_context(ctx.clone());
                 assert_eq!(oh_1.state(date), oh_2.state(date));
                 assert_eq!(oh_1.next_change(date), oh_2.next_change(date));
             }

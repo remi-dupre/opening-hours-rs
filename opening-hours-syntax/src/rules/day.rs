@@ -351,11 +351,11 @@ pub struct WeekRange {
 
 impl Display for WeekRange {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:02}", self.range.start())?;
-
-        if self.range.start() != self.range.end() {
-            write!(f, "-{:02}", self.range.end())?;
+        if self.range.start() == self.range.end() && self.step == 1 {
+            return write!(f, "{:02}", self.range.start());
         }
+
+        write!(f, "{:02}-{:02}", self.range.start(), self.range.end())?;
 
         if self.step != 1 {
             write!(f, "/{}", self.step)?;

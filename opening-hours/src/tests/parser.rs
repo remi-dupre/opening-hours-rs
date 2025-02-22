@@ -88,3 +88,8 @@ fn no_extended_time_as_begining() {
     assert!(OpeningHours::parse("27:43-28:00").is_err());
     assert!(OpeningHours::parse("24:11-28:00").is_err());
 }
+
+#[test]
+fn with_24_00() {
+    assert!(OpeningHours::parse("Jun24:00+").is_ok())
+}

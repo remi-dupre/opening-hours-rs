@@ -424,7 +424,11 @@ impl DateFilter for ds::WeekRange {
     {
         let week = date.iso_week().week() as u8;
 
-        // TODO: wrapping implemented well?
+        if self.range.start() > self.range.end() {
+            // TODO: wrapping implemented well?
+            return None;
+        }
+
         let weeknum = u32::from({
             if self.range.wrapping_contains(&week) {
                 if self.step == 1 {

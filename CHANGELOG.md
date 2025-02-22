@@ -8,6 +8,11 @@
   intervals over each dimension).
 - Weird expressions equivalent to "24/7" should generaly be evaluated faster.
 
+### Rust
+
+- Add `approx_bound_interval_size` option to context to allow optimizing calls
+  to `next_change` over long periods of time.
+
 ### Fixes
 
 - NaN values are now ignored in coordinates inputs.
