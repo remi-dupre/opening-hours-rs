@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use chrono::Weekday;
 
-use crate::rubik::{EmptyPavingSelector, Paving, Paving5D, Selector4D, Selector5D};
+use crate::rubik::{DimFromBack, EmptyPavingSelector, Paving, Paving5D, Selector4D, Selector5D};
 use crate::rules::day::{
     DaySelector, Month, MonthdayRange, WeekDayRange, WeekNum, WeekRange, Year, YearRange,
 };
@@ -15,19 +15,19 @@ use crate::sorted_vec::UniqueSortedVec;
 use crate::{ExtendedTime, RuleKind};
 
 pub(crate) type Canonical = Paving5D<
-    ExtendedTime,
-    Frame<OrderedWeekday>,
-    Frame<WeekNum>,
-    Frame<Month>,
     Frame<Year>,
+    Frame<Month>,
+    Frame<WeekNum>,
+    Frame<OrderedWeekday>,
+    ExtendedTime,
     RuleKind,
 >;
 
 pub(crate) type CanonicalDaySelector =
-    Selector4D<Frame<OrderedWeekday>, Frame<WeekNum>, Frame<Month>, Frame<Year>>;
+    Selector4D<Frame<Year>, Frame<Month>, Frame<WeekNum>, Frame<OrderedWeekday>>;
 
 pub(crate) type CanonicalSelector =
-    Selector5D<ExtendedTime, Frame<OrderedWeekday>, Frame<WeekNum>, Frame<Month>, Frame<Year>>;
+    Selector5D<Frame<Year>, Frame<Month>, Frame<WeekNum>, Frame<OrderedWeekday>, ExtendedTime>;
 
 // --
 // -- OrderedWeekday
@@ -373,10 +373,10 @@ pub(crate) fn ruleseq_to_day_selector(rs: &RuleSequence) -> Option<CanonicalDayS
     let ds = &rs.day_selector;
 
     let selector = EmptyPavingSelector
-        .dim(MakeCanonical::try_from_iterator(&ds.year)?)
-        .dim(MakeCanonical::try_from_iterator(&ds.monthday)?)
-        .dim(MakeCanonical::try_from_iterator(&ds.week)?)
-        .dim(MakeCanonical::try_from_iterator(&ds.weekday)?);
+        .dim(MakeCanonical::try_from_iterator(&ds.weekday)?)
+        .dim_front(MakeCanonical::try_from_iterator(&ds.week)?)
+        .dim_front(MakeCanonical::try_from_iterator(&ds.monthday)?)
+        .dim_front(MakeCanonical::try_from_iterator(&ds.year)?);
 
     Some(selector)
 }
@@ -384,25 +384,24 @@ pub(crate) fn ruleseq_to_day_selector(rs: &RuleSequence) -> Option<CanonicalDayS
 pub(crate) fn ruleseq_to_selector(rs: &RuleSequence) -> Option<CanonicalSelector> {
     let day_selector = ruleseq_to_day_selector(rs)?;
     let time_selector = MakeCanonical::try_from_iterator(&rs.time_selector.time)?;
-    Some(day_selector.dim(time_selector))
+    Some(day_selector.dim_back(time_selector))
 }
 
 pub(crate) fn canonical_to_seq(
     mut canonical: Canonical,
-    operator: RuleOperator,
     comments: UniqueSortedVec<Arc<str>>,
 ) -> impl Iterator<Item = RuleSequence> {
     std::iter::from_fn(move || {
         // Extract open periods first, then unknowns
         let (kind, selector) = [RuleKind::Open, RuleKind::Unknown]
             .into_iter()
-            .find_map(|kind| Some((kind, canonical.pop_selector(&kind)?)))?;
+            .find_map(|kind| Some((kind, canonical.pop_selector(kind)?)))?;
 
-        let (rgs_time, selector) = selector.into_unpack();
-        let (rgs_weekday, selector) = selector.into_unpack();
-        let (rgs_week, selector) = selector.into_unpack();
-        let (rgs_monthday, selector) = selector.into_unpack();
-        let (rgs_year, _) = selector.into_unpack();
+        let (rgs_year, selector) = selector.into_unpack_front();
+        let (rgs_monthday, selector) = selector.into_unpack_front();
+        let (rgs_week, selector) = selector.into_unpack_front();
+        let (rgs_weekday, selector) = selector.into_unpack_front();
+        let (rgs_time, _) = selector.into_unpack_front();
 
         let day_selector = DaySelector {
             year: MakeCanonical::into_selector(rgs_year),
@@ -417,7 +416,7 @@ pub(crate) fn canonical_to_seq(
             day_selector,
             time_selector,
             kind,
-            operator,
+            operator: RuleOperator::Additional,
             comments: comments.clone(),
         })
     })

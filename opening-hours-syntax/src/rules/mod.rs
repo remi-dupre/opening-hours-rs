@@ -4,8 +4,9 @@ pub mod time;
 use std::fmt::Display;
 use std::sync::Arc;
 
+use crate::ExtendedTime;
 use crate::normalize::{Bounded, canonical_to_seq, ruleseq_to_selector};
-use crate::rubik::{Paving, Paving5D};
+use crate::rubik::{DimFromBack, Paving, Paving5D};
 use crate::sorted_vec::UniqueSortedVec;
 
 // OpeningHoursExpression
@@ -56,8 +57,8 @@ impl OpeningHoursExpression {
             // because it may override part of the non-normalized rule.
             let skip_for_closes = |kind| !normalized.is_empty() && kind == RuleKind::Closed;
 
-            // TODO: implement addition and fallback
-            if head.operator != RuleOperator::Normal || skip_for_closes(head.kind) {
+            // TODO: implement fallback
+            if head.operator == RuleOperator::Fallback || skip_for_closes(head.kind) {
                 normalized.push(head);
                 continue;
             }
@@ -71,7 +72,7 @@ impl OpeningHoursExpression {
             paving.set(&selector, head.kind);
 
             while let Some(rule) = rules_queue.peek() {
-                if rule.operator != head.operator
+                if rule.operator == RuleOperator::Fallback
                     || rule.comments != head.comments
                     || skip_for_closes(rule.kind)
                 {
@@ -82,10 +83,11 @@ impl OpeningHoursExpression {
                     break;
                 };
 
-                if rule.kind != RuleKind::Closed {
+                if rule.operator == RuleOperator::Normal && rule.kind != RuleKind::Closed {
                     // If the rule is not explicitly targeting a closed kind, then it overrides
                     // previous rules for the whole day.
-                    let full_day_selector = selector.unpack().1.clone().dim([Bounded::bounds()]);
+                    let (_, day_selector) = selector.clone().into_unpack_back();
+                    let full_day_selector = day_selector.dim_back([ExtendedTime::bounds()]);
                     paving.set(&full_day_selector, RuleKind::Closed);
                 }
 
@@ -93,7 +95,7 @@ impl OpeningHoursExpression {
                 rules_queue.next();
             }
 
-            normalized.extend(canonical_to_seq(paving, head.operator, head.comments));
+            normalized.extend(canonical_to_seq(paving, head.comments));
         }
 
         Self { rules: normalized }

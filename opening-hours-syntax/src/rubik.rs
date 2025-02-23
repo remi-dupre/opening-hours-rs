@@ -41,16 +41,60 @@ pub(crate) struct PavingSelector<T, U> {
 }
 
 impl<T, U> PavingSelector<T, U> {
-    pub(crate) fn dim<V>(self, range: impl Into<Vec<Range<V>>>) -> PavingSelector<V, Self> {
+    pub(crate) fn dim_front<V>(self, range: impl Into<Vec<Range<V>>>) -> PavingSelector<V, Self> {
         PavingSelector { range: range.into(), tail: self }
     }
 
-    pub(crate) fn unpack(&self) -> (&[Range<T>], &U) {
+    pub(crate) fn unpack_front(&self) -> (&[Range<T>], &U) {
         (&self.range, &self.tail)
     }
 
-    pub(crate) fn into_unpack(self) -> (Vec<Range<T>>, U) {
+    pub(crate) fn into_unpack_front(self) -> (Vec<Range<T>>, U) {
         (self.range, self.tail)
+    }
+}
+
+/// A trait that helps with accessing a selector from the back.
+pub(crate) trait DimFromBack {
+    /// The type of selector resulting from pushing a dimension `U` to the back.
+    type PushedBack<U>;
+
+    /// The type of selector that remains after popping a dimension from the back.
+    type PoppedBack;
+
+    /// The type of the dimension from the back.
+    type BackType;
+
+    fn dim_back<U>(self, range: impl Into<Vec<Range<U>>>) -> Self::PushedBack<U>;
+    fn into_unpack_back(self) -> (Vec<Range<Self::BackType>>, Self::PoppedBack);
+}
+
+impl<X> DimFromBack for PavingSelector<X, EmptyPavingSelector> {
+    type PushedBack<U> = PavingSelector<X, PavingSelector<U, EmptyPavingSelector>>;
+    type PoppedBack = EmptyPavingSelector;
+    type BackType = X;
+
+    fn dim_back<U>(self, range: impl Into<Vec<Range<U>>>) -> Self::PushedBack<U> {
+        EmptyPavingSelector.dim(range).dim_front(self.range)
+    }
+
+    fn into_unpack_back(self) -> (Vec<Range<Self::BackType>>, Self::PoppedBack) {
+        (self.range, EmptyPavingSelector)
+    }
+}
+
+impl<X, Y: DimFromBack> DimFromBack for PavingSelector<X, Y> {
+    type PushedBack<U> = PavingSelector<X, Y::PushedBack<U>>;
+    type PoppedBack = PavingSelector<X, Y::PoppedBack>;
+    type BackType = Y::BackType;
+
+    fn dim_back<U>(self, range: impl Into<Vec<Range<U>>>) -> Self::PushedBack<U> {
+        PavingSelector { range: self.range, tail: self.tail.dim_back(range) }
+    }
+
+    fn into_unpack_back(self) -> (Vec<Range<Self::BackType>>, Self::PoppedBack) {
+        let (unpacked, tail) = self.tail.into_unpack_back();
+        (unpacked, PavingSelector { range: self.range, tail })
     }
 }
 
@@ -61,10 +105,10 @@ impl<T, U> PavingSelector<T, U> {
 /// Interface over a n-dim paving.
 pub(crate) trait Paving: Clone + Default {
     type Selector;
-    type Value: Clone + Default + Eq + Ord;
+    type Value: Copy + Default + Eq + Ord;
     fn set(&mut self, selector: &Self::Selector, val: Self::Value);
-    fn is_val(&self, selector: &Self::Selector, val: &Self::Value) -> bool;
-    fn pop_selector(&mut self, target_value: &Self::Value) -> Option<Self::Selector>;
+    fn is_val(&self, selector: &Self::Selector, val: Self::Value) -> bool;
+    fn pop_selector(&mut self, target_value: Self::Value) -> Option<Self::Selector>;
 }
 
 // --
@@ -77,24 +121,24 @@ pub(crate) struct Cell<Val: Default + Eq + Ord> {
     inner: Val,
 }
 
-impl<Val: Clone + Default + Eq + Ord> Paving for Cell<Val> {
-    type Value = Val;
+impl<Val: Copy + Default + Eq + Ord> Paving for Cell<Val> {
     type Selector = EmptyPavingSelector;
+    type Value = Val;
 
     fn set(&mut self, _selector: &Self::Selector, val: Val) {
         self.inner = val;
     }
 
-    fn pop_selector(&mut self, target_value: &Val) -> Option<Self::Selector> {
-        if &self.inner == target_value {
+    fn is_val(&self, _selector: &Self::Selector, val: Val) -> bool {
+        self.inner == val
+    }
+
+    fn pop_selector(&mut self, target_value: Val) -> Option<Self::Selector> {
+        if self.inner == target_value {
             Some(EmptyPavingSelector)
         } else {
             None
         }
-    }
-
-    fn is_val(&self, _selector: &Self::Selector, val: &Val) -> bool {
-        &self.inner == val
     }
 }
 
@@ -163,11 +207,11 @@ impl<T: Clone + Ord, U: Paving> Dim<T, U> {
 }
 
 impl<T: Clone + Ord, U: Paving> Paving for Dim<T, U> {
-    type Value = U::Value;
     type Selector = PavingSelector<T, U::Selector>;
+    type Value = U::Value;
 
     fn set(&mut self, selector: &Self::Selector, val: Self::Value) {
-        let (ranges, selector_tail) = selector.unpack();
+        let (ranges, selector_tail) = selector.unpack_front();
 
         for range in ranges {
             self.cut_at(range.start.clone());
@@ -175,14 +219,14 @@ impl<T: Clone + Ord, U: Paving> Paving for Dim<T, U> {
 
             for (col_start, col_val) in self.cuts.iter().zip(&mut self.cols) {
                 if *col_start >= range.start && *col_start < range.end {
-                    col_val.set(selector_tail, val.clone());
+                    col_val.set(selector_tail, val);
                 }
             }
         }
     }
 
-    fn is_val(&self, selector: &Self::Selector, val: &Self::Value) -> bool {
-        let (ranges, selector_tail) = selector.unpack();
+    fn is_val(&self, selector: &Self::Selector, val: Self::Value) -> bool {
+        let (ranges, selector_tail) = selector.unpack_front();
 
         for range in ranges {
             if range.start >= range.end {
@@ -197,7 +241,7 @@ impl<T: Clone + Ord, U: Paving> Paving for Dim<T, U> {
                 // There is either no columns either an overlap before the
                 // first column or the last one. In these cases we just need
                 // to ensure the requested value is the default.
-                return val == &Self::Value::default();
+                return val == Self::Value::default();
             }
 
             for ((col_start, col_end), col_val) in self
@@ -218,7 +262,7 @@ impl<T: Clone + Ord, U: Paving> Paving for Dim<T, U> {
         true
     }
 
-    fn pop_selector(&mut self, target_value: &Self::Value) -> Option<Self::Selector> {
+    fn pop_selector(&mut self, target_value: Self::Value) -> Option<Self::Selector> {
         let (mut start_idx, selector_tail) = self
             .cols
             .iter_mut()
