@@ -1,4 +1,3 @@
-use std::cmp::Ordering;
 use std::convert::TryInto;
 
 use chrono::prelude::Datelike;
@@ -10,7 +9,7 @@ use crate::Context;
 use crate::localization::Localize;
 use crate::opening_hours::DATE_END;
 use crate::utils::dates::{count_days_in_month, easter};
-use crate::utils::range::{RangeExt, WrappingRange};
+use crate::utils::range::WrappingRange;
 
 /// Get the first valid date before given "yyyy/mm/dd", for example if
 /// 2021/02/30 is given, this will return february 28th as 2021 is not a leap
@@ -36,14 +35,14 @@ fn next_change_from_bounds(
     loop {
         match (bounds_start.peek().copied(), bounds_end.peek().copied()) {
             // The date is after the end of the last interval
-            (None, None) => return None,
+            (None, None) => return Some(DATE_END.date()),
             (None, Some(end)) => {
                 if end >= date {
                     // The date belongs to the last interval
                     return end.succ_opt();
                 } else {
                     // The date is after the last interval end
-                    return None;
+                    return Some(DATE_END.date());
                 }
             }
             (Some(start), None) => {
@@ -52,7 +51,7 @@ fn next_change_from_bounds(
                     return Some(start);
                 } else {
                     // The date belongs to the last interval, which never ends.
-                    return None;
+                    return Some(DATE_END.date());
                 }
             }
             (Some(start), Some(end)) => {
@@ -293,11 +292,7 @@ impl DateFilter for ds::MonthdayRange {
                     }
                 };
 
-                Some(match (start..end).compare(&date) {
-                    Ordering::Less => start,
-                    Ordering::Equal => end,
-                    Ordering::Greater => DATE_END.date(),
-                })
+                next_change_from_bounds(date, [start], [end])
             }
             ds::MonthdayRange::Date {
                 start:
@@ -332,11 +327,7 @@ impl DateFilter for ds::MonthdayRange {
                     }
                 };
 
-                Some(match (start..end).compare(&date) {
-                    Ordering::Less => start,
-                    Ordering::Equal => end + Duration::days(1),
-                    Ordering::Greater => DATE_END.date(),
-                })
+                next_change_from_bounds(date, [start], [end])
             }
             ds::MonthdayRange::Date {
                 start: (start, start_offset),

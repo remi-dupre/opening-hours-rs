@@ -1,4 +1,4 @@
-use std::cmp::{Ordering, max, min};
+use std::cmp::{max, min};
 use std::ops::{Range, RangeInclusive};
 use std::sync::Arc;
 
@@ -54,40 +54,6 @@ impl<T: PartialOrd> WrappingRange<T> for RangeInclusive<T> {
             self.contains(elt)
         } else {
             self.start() <= elt || elt <= self.end()
-        }
-    }
-}
-
-// RangeCompare
-
-pub(crate) trait RangeExt<T> {
-    fn compare(&self, elt: &T) -> Ordering;
-}
-
-impl<T: PartialOrd> RangeExt<T> for RangeInclusive<T> {
-    fn compare(&self, elt: &T) -> Ordering {
-        debug_assert!(self.start() <= self.end());
-
-        if elt < self.start() {
-            Ordering::Less
-        } else if elt > self.end() {
-            Ordering::Greater
-        } else {
-            Ordering::Equal
-        }
-    }
-}
-
-impl<T: PartialOrd> RangeExt<T> for Range<T> {
-    fn compare(&self, elt: &T) -> Ordering {
-        debug_assert!(self.start <= self.end);
-
-        if elt < &self.start {
-            Ordering::Less
-        } else if elt >= &self.end {
-            Ordering::Greater
-        } else {
-            Ordering::Equal
         }
     }
 }

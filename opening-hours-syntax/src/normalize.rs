@@ -1,6 +1,5 @@
 #![allow(clippy::single_range_in_vec_init)]
 use std::cmp::Ordering;
-use std::iter::{Chain, Once};
 use std::ops::{Range, RangeInclusive};
 use std::sync::Arc;
 
@@ -18,38 +17,11 @@ use crate::{ExtendedTime, RuleKind};
 pub(crate) type Canonical =
     Paving5D<ExtendedTime, Frame<OrderedWeekday>, Frame<WeekNum>, Frame<Month>, Frame<Year>>;
 
+pub(crate) type CanonicalDaySelector =
+    Selector4D<Frame<OrderedWeekday>, Frame<WeekNum>, Frame<Month>, Frame<Year>>;
+
 pub(crate) type CanonicalSelector =
     Selector5D<ExtendedTime, Frame<OrderedWeekday>, Frame<WeekNum>, Frame<Month>, Frame<Year>>;
-
-// --
-// -- OneOrTwo
-// --
-
-pub(crate) enum OneOrTwo<T> {
-    One(T),
-    Two(T, T),
-}
-
-impl<T> OneOrTwo<T> {
-    fn map<U>(self, mut func: impl FnMut(T) -> U) -> OneOrTwo<U> {
-        match self {
-            OneOrTwo::One(x) => OneOrTwo::One(func(x)),
-            OneOrTwo::Two(x, y) => OneOrTwo::Two(func(x), func(y)),
-        }
-    }
-}
-
-impl<T> IntoIterator for OneOrTwo<T> {
-    type Item = T;
-    type IntoIter = Chain<Once<T>, <Option<T> as IntoIterator>::IntoIter>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        match self {
-            OneOrTwo::One(x) => std::iter::once(x).chain(None),
-            OneOrTwo::Two(x, y) => std::iter::once(x).chain(Some(y)),
-        }
-    }
-}
 
 // --
 // -- OrderedWeekday
@@ -214,12 +186,12 @@ pub(crate) trait Bounded: Ord + Sized {
 
     // Ensure that input range is "increasing", otherwise it is splited into two ranges:
     // [bounds.start, range.end[ and [range.start, bounds.end[
-    fn split_inverted_range(range: Range<Self>) -> OneOrTwo<Range<Self>> {
+    fn split_inverted_range(range: Range<Self>) -> impl Iterator<Item = Range<Self>> {
         if range.start >= range.end {
             // start == end when a wrapping range gets expanded from exclusive to inclusive range
-            OneOrTwo::Two(Self::BOUND_START..range.end, range.start..Self::BOUND_END)
+            std::iter::once(Self::BOUND_START..range.end).chain(Some(range.start..Self::BOUND_END))
         } else {
-            OneOrTwo::One(range)
+            std::iter::once(range).chain(None)
         }
     }
 }
@@ -235,113 +207,178 @@ impl Bounded for ExtendedTime {
 }
 
 // --
+// -- MakeCanonical
+// --
+
+trait MakeCanonical: Sized + 'static {
+    type CanonicalType: Bounded;
+    fn try_make_canonical(&self) -> Option<Range<Self::CanonicalType>>;
+    fn into_type(canonical: &Range<Self::CanonicalType>) -> Option<Self>;
+
+    fn try_from_iterator<'a>(
+        iter: impl IntoIterator<Item = &'a Self>,
+    ) -> Option<Vec<Range<Self::CanonicalType>>> {
+        let mut ranges = Vec::new();
+
+        for elem in iter {
+            let range = Self::try_make_canonical(elem)?;
+            ranges.extend(Bounded::split_inverted_range(range));
+        }
+
+        if ranges.is_empty() {
+            ranges.push(Self::CanonicalType::bounds())
+        }
+
+        Some(ranges)
+    }
+
+    fn into_selector(canonical: &[Range<Self::CanonicalType>]) -> Vec<Self> {
+        canonical
+            .iter()
+            .filter(|rg| **rg != Self::CanonicalType::bounds())
+            .filter_map(|rg| Self::into_type(rg))
+            .collect()
+    }
+}
+
+impl MakeCanonical for YearRange {
+    type CanonicalType = Frame<Year>;
+
+    fn try_make_canonical(&self) -> Option<Range<Self::CanonicalType>> {
+        if self.step != 1 {
+            return None;
+        }
+
+        Some(Frame::to_range_strict(self.range.clone()))
+    }
+
+    fn into_type(canonical: &Range<Self::CanonicalType>) -> Option<Self> {
+        Some(YearRange {
+            range: Frame::to_range_inclusive(canonical.clone())?,
+            step: 1,
+        })
+    }
+}
+
+impl MakeCanonical for MonthdayRange {
+    type CanonicalType = Frame<Month>;
+
+    fn try_make_canonical(&self) -> Option<Range<Self::CanonicalType>> {
+        match self {
+            Self::Month { range, year: None } => Some(Frame::to_range_strict(range.clone())),
+            _ => None,
+        }
+    }
+
+    fn into_type(canonical: &Range<Self::CanonicalType>) -> Option<Self> {
+        Some(MonthdayRange::Month {
+            range: Frame::to_range_inclusive(canonical.clone())?,
+            year: None,
+        })
+    }
+}
+
+impl MakeCanonical for WeekRange {
+    type CanonicalType = Frame<WeekNum>;
+
+    fn try_make_canonical(&self) -> Option<Range<Self::CanonicalType>> {
+        if self.step != 1 {
+            return None;
+        }
+
+        Some(Frame::to_range_strict(self.range.clone()))
+    }
+
+    fn into_type(canonical: &Range<Self::CanonicalType>) -> Option<Self> {
+        Some(WeekRange {
+            range: Frame::to_range_inclusive(canonical.clone())?,
+            step: 1,
+        })
+    }
+}
+
+impl MakeCanonical for WeekDayRange {
+    type CanonicalType = Frame<OrderedWeekday>;
+
+    fn try_make_canonical(&self) -> Option<Range<Self::CanonicalType>> {
+        match self {
+            WeekDayRange::Fixed {
+                range,
+                offset: 0,
+                // NOTE: These could be turned into canonical
+                // dimensions, but it may be uncommon enough to
+                // avoid extra complexity.
+                nth_from_start: [true, true, true, true, true],
+                nth_from_end: [true, true, true, true, true],
+            } => {
+                let (start, end) = range.clone().into_inner();
+                Some(Frame::to_range_strict(start.into()..=end.into()))
+            }
+            _ => None,
+        }
+    }
+
+    fn into_type(canonical: &Range<Self::CanonicalType>) -> Option<Self> {
+        let (start, end) = Frame::to_range_inclusive(canonical.clone())?.into_inner();
+
+        Some(WeekDayRange::Fixed {
+            range: start.into()..=end.into(),
+            offset: 0,
+            nth_from_start: [true; 5],
+            nth_from_end: [true; 5],
+        })
+    }
+}
+
+impl MakeCanonical for TimeSpan {
+    type CanonicalType = ExtendedTime;
+
+    fn try_make_canonical(&self) -> Option<Range<Self::CanonicalType>> {
+        match self {
+            TimeSpan { range, open_end: false, repeats: None } => {
+                let Time::Fixed(start) = range.start else {
+                    return None;
+                };
+
+                let Time::Fixed(end) = range.end else {
+                    return None;
+                };
+
+                Some(start..end)
+            }
+            _ => None,
+        }
+    }
+
+    fn into_type(canonical: &Range<Self::CanonicalType>) -> Option<Self> {
+        Some(TimeSpan {
+            range: Time::Fixed(canonical.start)..Time::Fixed(canonical.end),
+            open_end: false,
+            repeats: None,
+        })
+    }
+}
+
+// --
 // -- Normalization Logic
 // --
 
-fn vec_with_default<T>(default: T, mut vec: Vec<T>) -> Vec<T> {
-    if vec.is_empty() {
-        vec.push(default);
-    }
-
-    vec
-}
-
-pub(crate) fn ruleseq_to_day_selector(
-    rs: &RuleSequence,
-) -> Option<Selector4D<Frame<OrderedWeekday>, Frame<WeekNum>, Frame<Month>, Frame<Year>>> {
+pub(crate) fn ruleseq_to_day_selector(rs: &RuleSequence) -> Option<CanonicalDaySelector> {
     let ds = &rs.day_selector;
 
     let selector = PavingSelector::empty()
-        .dim(vec_with_default(
-            Bounded::bounds(),
-            (ds.year.iter())
-                .flat_map(|year| {
-                    if year.step != 1 {
-                        return OneOrTwo::One(None);
-                    }
-
-                    Bounded::split_inverted_range(Frame::to_range_strict(year.range.clone()))
-                        .map(Some)
-                })
-                .collect::<Option<Vec<_>>>()?,
-        ))
-        .dim(vec_with_default(
-            Bounded::bounds(),
-            (ds.monthday.iter())
-                .flat_map(|monthday| match monthday {
-                    MonthdayRange::Month { range, year: None } => {
-                        Bounded::split_inverted_range(Frame::to_range_strict(range.clone()))
-                            .map(Some)
-                    }
-                    _ => OneOrTwo::One(None),
-                })
-                .collect::<Option<Vec<_>>>()?,
-        ))
-        .dim(vec_with_default(
-            Bounded::bounds(),
-            (ds.week.iter())
-                .flat_map(|week| {
-                    if week.step != 1 {
-                        return OneOrTwo::One(None);
-                    }
-
-                    Bounded::split_inverted_range(Frame::to_range_strict(week.range.clone()))
-                        .map(Some)
-                })
-                .collect::<Option<Vec<_>>>()?,
-        ))
-        .dim(vec_with_default(
-            Bounded::bounds(),
-            (ds.weekday.iter())
-                .flat_map(|weekday| {
-                    match weekday {
-                        WeekDayRange::Fixed {
-                            range,
-                            offset: 0,
-                            // NOTE: These could be turned into canonical
-                            // dimensions, but it may be uncommon enough to
-                            // avoid extra complexity.
-                            nth_from_start: [true, true, true, true, true],
-                            nth_from_end: [true, true, true, true, true],
-                        } => {
-                            let (start, end) = range.clone().into_inner();
-
-                            Bounded::split_inverted_range(Frame::to_range_strict(
-                                start.into()..=end.into(),
-                            ))
-                            .map(Some)
-                        }
-                        _ => OneOrTwo::One(None),
-                    }
-                })
-                .collect::<Option<Vec<_>>>()?,
-        ));
+        .dim(MakeCanonical::try_from_iterator(&ds.year)?)
+        .dim(MakeCanonical::try_from_iterator(&ds.monthday)?)
+        .dim(MakeCanonical::try_from_iterator(&ds.week)?)
+        .dim(MakeCanonical::try_from_iterator(&ds.weekday)?);
 
     Some(selector)
 }
 
 pub(crate) fn ruleseq_to_selector(rs: &RuleSequence) -> Option<CanonicalSelector> {
-    Some(
-        ruleseq_to_day_selector(rs)?.dim(vec_with_default(
-            Bounded::bounds(),
-            (rs.time_selector.time.iter())
-                .flat_map(|time| match time {
-                    TimeSpan { range, open_end: false, repeats: None } => {
-                        let Time::Fixed(start) = range.start else {
-                            return OneOrTwo::One(None);
-                        };
-
-                        let Time::Fixed(end) = range.end else {
-                            return OneOrTwo::One(None);
-                        };
-
-                        Bounded::split_inverted_range(start..end).map(Some)
-                    }
-                    _ => OneOrTwo::One(None),
-                })
-                .collect::<Option<Vec<_>>>()?,
-        )),
-    )
+    let day_selector = ruleseq_to_day_selector(rs)?;
+    let time_selector = MakeCanonical::try_from_iterator(&rs.time_selector.time)?;
+    Some(day_selector.dim(time_selector))
 }
 
 pub(crate) fn canonical_to_seq(
@@ -359,58 +396,13 @@ pub(crate) fn canonical_to_seq(
         let (rgs_year, _) = selector.unpack();
 
         let day_selector = DaySelector {
-            year: (rgs_year.iter())
-                .filter(|rg| **rg != Bounded::bounds())
-                .filter_map(|rg_year| {
-                    Some(YearRange {
-                        range: Frame::to_range_inclusive(rg_year.clone())?,
-                        step: 1,
-                    })
-                })
-                .collect(),
-            monthday: (rgs_monthday.iter())
-                .filter(|rg| **rg != Bounded::bounds())
-                .filter_map(|rg_month| {
-                    Some(MonthdayRange::Month {
-                        range: Frame::to_range_inclusive(rg_month.clone())?,
-                        year: None,
-                    })
-                })
-                .collect(),
-            week: (rgs_week.iter())
-                .filter(|rg| **rg != Bounded::bounds())
-                .filter_map(|rg_week| {
-                    Some(WeekRange {
-                        range: Frame::to_range_inclusive(rg_week.clone())?,
-                        step: 1,
-                    })
-                })
-                .collect(),
-            weekday: (rgs_weekday.iter())
-                .filter(|rg| **rg != Bounded::bounds())
-                .filter_map(|rg_weekday| {
-                    let (start, end) = Frame::to_range_inclusive(rg_weekday.clone())?.into_inner();
-
-                    Some(WeekDayRange::Fixed {
-                        range: start.into()..=end.into(),
-                        offset: 0,
-                        nth_from_start: [true; 5],
-                        nth_from_end: [true; 5],
-                    })
-                })
-                .collect(),
+            year: MakeCanonical::into_selector(rgs_year),
+            monthday: MakeCanonical::into_selector(rgs_monthday),
+            week: MakeCanonical::into_selector(rgs_week),
+            weekday: MakeCanonical::into_selector(rgs_weekday),
         };
 
-        let time_selector = TimeSelector {
-            time: (rgs_time.iter())
-                .filter(|rg| **rg != Bounded::bounds())
-                .map(|rg_time| TimeSpan {
-                    range: Time::Fixed(rg_time.start)..Time::Fixed(rg_time.end),
-                    open_end: false,
-                    repeats: None,
-                })
-                .collect(),
-        };
+        let time_selector = TimeSelector { time: MakeCanonical::into_selector(rgs_time) };
 
         Some(RuleSequence {
             day_selector,
