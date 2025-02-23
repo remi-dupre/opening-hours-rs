@@ -70,6 +70,7 @@ fn test_pop_disjoint() {
     // 5 ⋅ A ⋅ ⋅ B B B ⋅
     // 6 ⋅ ⋅ ⋅ ⋅ ⋅ ⋅ ⋅ ⋅
     let mut grid = grid_empty.clone();
+
     grid.set(
         &EmptyPavingSelector.dim([1..2, 4..7]).dim_front([3..6]),
         true,
@@ -82,4 +83,22 @@ fn test_pop_disjoint() {
 
     assert_eq!(grid, grid_empty);
     assert_eq!(grid.pop_selector(true), None);
+}
+
+#[test]
+fn test_debug() {
+    //   0 1 2 3 4 5 6 7
+    // 2 ⋅ ⋅ ⋅ ⋅ ⋅ ⋅ ⋅ ⋅
+    // 3 ⋅ A ⋅ ⋅ B B B ⋅
+    // 4 ⋅ A ⋅ ⋅ B B B ⋅
+    // 5 ⋅ A ⋅ ⋅ B B B ⋅
+    // 6 ⋅ ⋅ ⋅ ⋅ ⋅ ⋅ ⋅ ⋅
+    let mut grid = Paving2D::default();
+
+    grid.set(
+        &EmptyPavingSelector.dim([1..2, 4..7]).dim_front([3..6]),
+        true,
+    );
+
+    assert_eq!(&format!("{grid:?}"), "Dim { [3, 6[: Dim { [1, 2[: Cell { inner: true }, [2, 4[: Cell { inner: false }, [4, 7[: Cell { inner: true } } }")
 }

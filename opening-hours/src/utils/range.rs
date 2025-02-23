@@ -24,22 +24,6 @@ impl<D> DateTimeRange<D> {
     ) -> Self {
         Self { range, kind, comments }
     }
-
-    pub fn map_dates<D2>(self, mut map: impl FnMut(D) -> D2) -> DateTimeRange<D2> {
-        DateTimeRange {
-            range: map(self.range.start)..map(self.range.end),
-            kind: self.kind,
-            comments: self.comments,
-        }
-    }
-
-    pub fn comments(&self) -> &[Arc<str>] {
-        &self.comments
-    }
-
-    pub fn into_comments(self) -> UniqueSortedVec<Arc<str>> {
-        self.comments
-    }
 }
 
 // WrappingRange
