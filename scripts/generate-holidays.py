@@ -67,9 +67,7 @@ async def load_dates(
     file = open(output_file, "w")
 
     for country in countries:
-        print(
-            f"Fetching {arg.kind.lower()} holidays for {country.name}", file=sys.stderr
-        )
+        print(f"Fetching {kind.lower()} holidays for {country.name}", file=sys.stderr)
 
         for year in range(arg.min_year, arg.max_year + 1):
             async with http.get(
@@ -82,7 +80,7 @@ async def load_dates(
                 resp = await resp.json()
 
             for day in resp:
-                if arg.kind.capitalize() in day["types"]:
+                if kind.capitalize() in day["types"]:
                     print(country.iso_code, day["date"], file=file)
 
     file.close()

@@ -83,11 +83,7 @@ fn run_fuzz_corpus(prefix: &str) {
     for entry in dir {
         let entry = entry.expect("failed to iter corpus directory");
 
-        if !entry
-            .file_name()
-            .to_string_lossy()
-            .starts_with(&prefix[1..])
-        {
+        if !entry.file_name().to_string_lossy().starts_with(prefix) {
             continue;
         }
 
@@ -107,7 +103,7 @@ macro_rules! gen_testcases {
         $(
             #[test]
             fn $prefix() {
-                run_fuzz_corpus(stringify!($prefix))
+                run_fuzz_corpus(&stringify!($prefix)[1..])
             }
         )*
     };
