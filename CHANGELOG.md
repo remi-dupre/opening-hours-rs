@@ -4,7 +4,7 @@
 
 ### General
 
-- Allow to simplify "canonical" expressions (expressions expressed as simple
+- Allow to normalize "canonical" expressions (expressions expressed as simple
   intervals over each dimension).
 - Weird expressions equivalent to "24/7" should generaly be evaluated faster.
 

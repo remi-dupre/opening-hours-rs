@@ -100,5 +100,5 @@ fn test_debug() {
         true,
     );
 
-    assert_eq!(&format!("{grid:?}"), "Dim { [3, 6[: Dim { [1, 2[: Cell { inner: true }, [2, 4[: Cell { inner: false }, [4, 7[: Cell { inner: true } } }")
+    assert_eq!(format!("{grid:?}"), "Dim { [3, 6[: Dim { [1, 2[: Cell { inner: true }, [2, 4[: Cell { inner: false }, [4, 7[: Cell { inner: true } } }")
 }

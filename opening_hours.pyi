@@ -53,6 +53,18 @@ class OpeningHours:
         auto_country: typing.Optional[builtins.bool] = True,
         auto_timezone: typing.Optional[builtins.bool] = True,
     ): ...
+    def normalize(self) -> OpeningHours:
+        r"""
+        Convert the expression into a normalized form. It will not affect the meaning of the
+        expression and might impact the performance of evaluations.
+
+        Examples
+        --------
+        >>> OpeningHours("24/7 ; Su closed").normalize()
+        OpeningHours("Mo-Sa")
+        """
+        ...
+
     def state(self, time: typing.Optional[datetime.datetime] = None) -> State:
         r"""
         Get current state of the time domain, the state can be either "open",

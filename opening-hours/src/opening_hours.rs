@@ -79,7 +79,15 @@ impl<L: Localize> OpeningHours<L> {
         OpeningHours { expr: self.expr, ctx }
     }
 
-    /// TODO: doc
+    /// Convert the expression into a normalized form. It will not affect the meaning of the
+    /// expression and might impact the performance of evaluations.
+    ///
+    /// ```
+    /// use opening_hours::OpeningHours;
+    ///
+    /// let oh = OpeningHours::parse("24/7 ; Su closed").unwrap();
+    /// assert_eq!(oh.normalize().to_string(), "Mo-Sa");
+    /// ```
     pub fn normalize(&self) -> Self {
         Self {
             expr: Arc::new(self.expr.as_ref().clone().normalize()),
