@@ -4,9 +4,6 @@ version = "0.1.0"
 authors = ["Rémi Dupré <remi@dupre.io>"]
 edition = "2021"
 
-[features]
-default = []
-
 [[bin]]
 name = "fuzz_oh"
 path = "fuzz_targets/fuzz_oh.rs"
