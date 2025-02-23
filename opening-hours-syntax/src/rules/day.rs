@@ -390,6 +390,12 @@ impl Month {
         ((num % 12) + 1).try_into().unwrap()
     }
 
+    #[inline]
+    pub fn prev(self) -> Self {
+        let num = self as u8;
+        (((num + 10) % 12) + 1).try_into().unwrap()
+    }
+
     /// Extract a month from a [`chrono::Datelike`].
     #[inline]
     pub fn from_date(date: impl Datelike) -> Self {
