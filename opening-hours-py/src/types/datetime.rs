@@ -4,8 +4,8 @@ use chrono::{DateTime, Local, NaiveDateTime, TimeDelta};
 use pyo3::prelude::*;
 use pyo3_stub_gen::{PyStubType, TypeInfo};
 
-use opening_hours_rs::DATE_END;
 use opening_hours_rs::localization::{Localize, TzLocation};
+use opening_hours_rs::DATE_END;
 
 #[derive(Clone, Copy, FromPyObject, IntoPyObject)]
 pub(crate) enum DateTimeMaybeAware {

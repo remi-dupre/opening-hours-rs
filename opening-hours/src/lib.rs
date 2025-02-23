@@ -19,6 +19,6 @@ mod tests;
 // Public re-exports
 // TODO: make opening_hours.rs lighter and less spaghetty
 pub use crate::context::{Context, ContextHolidays};
-pub use crate::opening_hours::{DATE_END, OpeningHours};
+pub use crate::opening_hours::{OpeningHours, DATE_END};
 pub use crate::utils::range::DateTimeRange;
 pub use opening_hours_syntax::rules::RuleKind;

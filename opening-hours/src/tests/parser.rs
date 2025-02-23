@@ -16,11 +16,9 @@ fn parse_open_ended() {
 
 #[test]
 fn parse_invalid() {
-    assert!(
-        "this is not a valid expression"
-            .parse::<OpeningHours>()
-            .is_err()
-    );
+    assert!("this is not a valid expression"
+        .parse::<OpeningHours>()
+        .is_err());
     assert!("10:00-100:00".parse::<OpeningHours>().is_err());
     assert!("10:00-12:00 tomorrow".parse::<OpeningHours>().is_err());
 }
@@ -38,11 +36,9 @@ fn parse_relaxed() {
     assert!("04:00 - 08:00".parse::<OpeningHours>().is_ok());
     assert!("4:00 - 8:00".parse::<OpeningHours>().is_ok());
 
-    assert!(
-        "Mo-Fr 10:00-18:00;Sa-Su 10:00-12:00"
-            .parse::<OpeningHours>()
-            .is_ok()
-    );
+    assert!("Mo-Fr 10:00-18:00;Sa-Su 10:00-12:00"
+        .parse::<OpeningHours>()
+        .is_ok());
 }
 
 #[test]

@@ -3,7 +3,7 @@ use opening_hours_syntax::error::Error;
 use opening_hours_syntax::rules::RuleKind::*;
 
 use crate::tests::stats::TestStats;
-use crate::{OpeningHours, datetime, schedule_at};
+use crate::{datetime, schedule_at, OpeningHours};
 
 #[test]
 fn s000_idunn_interval_stops_next_day() -> Result<(), Error> {
@@ -110,11 +110,9 @@ fn s007_idunn_date_separator() {
 
 #[test]
 fn s008_pj_no_open_before_separator() {
-    assert!(
-        "Mo-Su 00:00-01:00, 07:30-24:00 ; PH off"
-            .parse::<OpeningHours>()
-            .is_ok()
-    );
+    assert!("Mo-Su 00:00-01:00, 07:30-24:00 ; PH off"
+        .parse::<OpeningHours>()
+        .is_ok());
 }
 
 #[test]
@@ -129,23 +127,19 @@ fn s009_pj_no_open_before_separator() {
 #[test]
 fn s010_pj_slow_after_24_7() {
     let stats = TestStats::watch(|| {
-        assert!(
-            OpeningHours::parse("24/7 open ; 2021Jan-Feb off")
-                .unwrap()
-                .next_change(datetime!("2021-07-09 19:30"))
-                .is_none()
-        );
+        assert!(OpeningHours::parse("24/7 open ; 2021Jan-Feb off")
+            .unwrap()
+            .next_change(datetime!("2021-07-09 19:30"))
+            .is_none());
     });
 
     assert!(stats.count_generated_schedules < 10);
 
     let stats = TestStats::watch(|| {
-        assert!(
-            OpeningHours::parse("24/7 open ; 2021 Jan 01-Feb 10 off")
-                .unwrap()
-                .next_change(datetime!("2021-07-09 19:30"))
-                .is_none()
-        );
+        assert!(OpeningHours::parse("24/7 open ; 2021 Jan 01-Feb 10 off")
+            .unwrap()
+            .next_change(datetime!("2021-07-09 19:30"))
+            .is_none());
     });
 
     assert!(stats.count_generated_schedules < 10);
@@ -168,12 +162,10 @@ fn s011_fuzz_extreme_year() -> Result<(), Error> {
 #[test]
 fn s012_fuzz_slow_sh() {
     let stats = TestStats::watch(|| {
-        assert!(
-            OpeningHours::parse("SH")
-                .unwrap()
-                .next_change(datetime!("2020-01-01 00:00"))
-                .is_none()
-        );
+        assert!(OpeningHours::parse("SH")
+            .unwrap()
+            .next_change(datetime!("2020-01-01 00:00"))
+            .is_none());
     });
 
     assert!(stats.count_generated_schedules < 10);
@@ -182,12 +174,10 @@ fn s012_fuzz_slow_sh() {
 #[test]
 fn s013_fuzz_slow_weeknum() {
     let stats = TestStats::watch(|| {
-        assert!(
-            OpeningHours::parse("Novweek09")
-                .unwrap()
-                .next_change(datetime!("2020-01-01 00:00"))
-                .is_none()
-        );
+        assert!(OpeningHours::parse("Novweek09")
+            .unwrap()
+            .next_change(datetime!("2020-01-01 00:00"))
+            .is_none());
     });
 
     assert!(stats.count_generated_schedules < 8000 * 4);
@@ -255,8 +245,8 @@ fn s017_fuzz_open_range_timeout() {
 #[cfg(feature = "auto-timezone")]
 #[test]
 fn s018_fuzz_ph_infinite_loop() -> Result<(), Error> {
-    use crate::Context;
     use crate::localization::Coordinates;
+    use crate::Context;
 
     let ctx = Context::from_coords(Coordinates::new(0.0, 4.2619).unwrap());
     let tz = *ctx.locale.get_timezone();

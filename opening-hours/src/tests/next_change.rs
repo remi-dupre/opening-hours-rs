@@ -1,26 +1,22 @@
-use crate::{Context, OpeningHours, datetime};
+use crate::{datetime, Context, OpeningHours};
 use opening_hours_syntax::error::Error;
 
 #[test]
 fn always_open() -> Result<(), Error> {
-    assert!(
-        "24/7"
-            .parse::<OpeningHours>()?
-            .next_change(datetime!("2019-02-10 11:00"))
-            .is_none()
-    );
+    assert!("24/7"
+        .parse::<OpeningHours>()?
+        .next_change(datetime!("2019-02-10 11:00"))
+        .is_none());
 
     Ok(())
 }
 
 #[test]
 fn date_limit_exceeded() -> Result<(), Error> {
-    assert!(
-        "24/7"
-            .parse::<OpeningHours>()?
-            .next_change(datetime!("+10000-01-01 00:00"))
-            .is_none()
-    );
+    assert!("24/7"
+        .parse::<OpeningHours>()?
+        .next_change(datetime!("+10000-01-01 00:00"))
+        .is_none());
     Ok(())
 }
 
@@ -94,11 +90,9 @@ fn outside_date_bounds() -> Result<(), Error> {
         datetime!("1900-01-01 00:00")
     );
 
-    assert!(
-        OpeningHours::parse("24/7")?
-            .next_change(after_bounds)
-            .is_none()
-    );
+    assert!(OpeningHours::parse("24/7")?
+        .next_change(after_bounds)
+        .is_none());
 
     Ok(())
 }

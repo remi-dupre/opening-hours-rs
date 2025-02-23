@@ -4,10 +4,10 @@ pub mod time;
 use std::fmt::Display;
 use std::sync::Arc;
 
-use crate::ExtendedTime;
-use crate::normalize::{Bounded, canonical_to_seq, ruleseq_to_selector};
+use crate::normalize::{canonical_to_seq, ruleseq_to_selector, Bounded};
 use crate::rubik::{DimFromBack, Paving, Paving5D};
 use crate::sorted_vec::UniqueSortedVec;
+use crate::ExtendedTime;
 
 // OpeningHoursExpression
 

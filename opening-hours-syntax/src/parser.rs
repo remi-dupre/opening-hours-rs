@@ -7,8 +7,8 @@ use std::sync::Arc;
 
 use chrono::Duration;
 
-use pest::Parser;
 use pest::iterators::Pair;
+use pest::Parser;
 
 use crate::error::{Error, Result};
 use crate::extended_time::ExtendedTime;

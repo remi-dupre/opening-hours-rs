@@ -2,7 +2,7 @@ use opening_hours::localization::{Coordinates, Country};
 use opening_hours::{Context, OpeningHours};
 
 use chrono::NaiveDateTime;
-use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
 const SCH_24_7: &str = "24/7";
 const SCH_ADDITION: &str = "10:00-12:00 open, 14:00-16:00 unknown, 16:00-23:00 closed";

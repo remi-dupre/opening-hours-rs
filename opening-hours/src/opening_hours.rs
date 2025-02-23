@@ -5,18 +5,18 @@ use std::sync::Arc;
 
 use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime};
 
-use opening_hours_syntax::Error as ParserError;
 use opening_hours_syntax::extended_time::ExtendedTime;
 use opening_hours_syntax::rules::{OpeningHoursExpression, RuleKind, RuleOperator, RuleSequence};
+use opening_hours_syntax::Error as ParserError;
 
-use crate::Context;
-use crate::DateTimeRange;
 use crate::filter::date_filter::DateFilter;
 use crate::filter::time_filter::{
-    TimeFilter, time_selector_intervals_at, time_selector_intervals_at_next_day,
+    time_selector_intervals_at, time_selector_intervals_at_next_day, TimeFilter,
 };
 use crate::localization::{Localize, NoLocation};
 use crate::schedule::Schedule;
+use crate::Context;
+use crate::DateTimeRange;
 
 /// The lower bound of dates handled by specification
 pub const DATE_START: NaiveDateTime = {

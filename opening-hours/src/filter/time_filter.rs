@@ -5,9 +5,9 @@ use chrono::NaiveDate;
 use opening_hours_syntax::extended_time::ExtendedTime;
 use opening_hours_syntax::rules::time as ts;
 
-use crate::Context;
 use crate::localization::Localize;
 use crate::utils::range::{range_intersection, ranges_union};
+use crate::Context;
 
 pub(crate) fn time_selector_intervals_at<'a, L: 'a + Localize>(
     ctx: &'a Context<L>,

@@ -122,8 +122,7 @@ jobs:
           --workspace
           --all-features
           --run-types Tests
-        # Doctests are disabled because edition 2024 seems to have broken this
-        # --run-types Doctests
+          --run-types Doctests
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v2
         with:
