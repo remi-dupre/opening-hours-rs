@@ -16,21 +16,34 @@ pub struct OpeningHoursExpression {
 }
 
 impl OpeningHoursExpression {
-    // TODO: doc
-    pub fn is_24_7(&self) -> bool {
+    /// Check if this expression is *trivially* constant (ie. always evaluated at the exact same
+    /// status). Note that this may return `false` for an expression that is constant but should
+    /// cover most common cases.
+    ///
+    /// ```
+    /// use opening_hours_syntax::parse;
+    ///
+    /// assert!(parse("24/7").unwrap().is_constant());
+    /// assert!(parse("24/7 closed").unwrap().is_constant());
+    /// assert!(parse("00:00-24:00 open").unwrap().is_constant());
+    /// assert!(!parse("00:00-18:00 open").unwrap().is_constant());
+    /// assert!(!parse("24/7 ; PH off").unwrap().is_constant());
+    /// ```
+    pub fn is_constant(&self) -> bool {
         let Some(kind) = self.rules.last().map(|rs| rs.kind) else {
             return true;
         };
 
-        // TODO: are all kind of suffix OK ?
-        // TODO: maybe base on normalize && ensure this is cached
-        let Some(tail) = (self.rules.iter().rev()).find(|rs| {
+        // Ignores rules from the end as long as they are all evaluated to the same kind.
+        let search_tail_full = self.rules.iter().rev().find(|rs| {
             rs.day_selector.is_empty() || !rs.time_selector.is_00_24() || rs.kind != kind
-        }) else {
-            return kind == RuleKind::Closed;
+        });
+
+        let Some(tail) = search_tail_full else {
+            return false;
         };
 
-        tail.kind == kind && tail.is_24_7()
+        tail.kind == kind && tail.is_constant()
     }
 
     // TODO: doc
@@ -121,7 +134,7 @@ impl RuleSequence {
     ///
     /// If this returns `true`, then this expression is always open, but it
     /// can't detect all cases.
-    pub fn is_24_7(&self) -> bool {
+    pub fn is_constant(&self) -> bool {
         self.day_selector.is_empty() && self.time_selector.is_00_24()
     }
 }
@@ -130,7 +143,7 @@ impl Display for RuleSequence {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut is_empty = true;
 
-        if self.is_24_7() {
+        if self.is_constant() {
             is_empty = false;
             write!(f, "24/7")?;
         } else {

@@ -105,7 +105,7 @@ impl<L: Localize> OpeningHours<L> {
         }
 
         // TODO: cache a normalized expression?
-        if self.expr.is_24_7() {
+        if self.expr.is_constant() {
             return Some(DATE_END.date());
         }
 
