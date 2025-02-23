@@ -7,42 +7,58 @@ pub(crate) type Paving3D<T, U, V> = Dim<T, Paving2D<U, V>>;
 pub(crate) type Paving4D<T, U, V, W> = Dim<T, Paving3D<U, V, W>>;
 pub(crate) type Paving5D<T, U, V, W, X> = Dim<T, Paving4D<U, V, W, X>>;
 
-pub(crate) type SelectorEmpty = PavingSelector<(), ()>;
-pub(crate) type Selector1D<T> = PavingSelector<T, SelectorEmpty>;
+pub(crate) type Selector1D<T> = PavingSelector<T, EmptyPavingSelector>;
 pub(crate) type Selector2D<T, U> = PavingSelector<T, Selector1D<U>>;
 pub(crate) type Selector3D<T, U, V> = PavingSelector<T, Selector2D<U, V>>;
 pub(crate) type Selector4D<T, U, V, W> = PavingSelector<T, Selector3D<U, V, W>>;
 pub(crate) type Selector5D<T, U, V, W, X> = PavingSelector<T, Selector4D<U, V, W, X>>;
 
+// --
+// -- EmptyPavingSelector
+// --
+
+/// A selector for paving of zero dimensions. This is a convenience type
+/// intented to be expanded with more dimensions.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) enum PavingSelector<T, U> {
-    Empty,
-    Dim { range: Vec<Range<T>>, tail: U },
+pub(crate) struct EmptyPavingSelector;
+
+impl EmptyPavingSelector {
+    pub(crate) fn dim<T>(self, range: impl Into<Vec<Range<T>>>) -> PavingSelector<T, Self> {
+        PavingSelector { range: range.into(), tail: self }
+    }
 }
 
-impl PavingSelector<(), ()> {
-    pub(crate) fn empty() -> PavingSelector<(), ()> {
-        PavingSelector::<(), ()>::Empty
-    }
+// --
+// -- PavingSelector
+// --
+
+/// A selector for a paving for at least one dimension. Recursively built for
+/// each dimensions.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct PavingSelector<T, U> {
+    range: Vec<Range<T>>,
+    tail: U,
 }
 
 impl<T, U> PavingSelector<T, U> {
-    pub(crate) fn dim<K>(
-        self,
-        range: impl Into<Vec<Range<K>>>,
-    ) -> PavingSelector<K, PavingSelector<T, U>> {
-        PavingSelector::Dim { range: range.into(), tail: self }
+    pub(crate) fn dim<V>(self, range: impl Into<Vec<Range<V>>>) -> PavingSelector<V, Self> {
+        PavingSelector { range: range.into(), tail: self }
     }
 
     pub(crate) fn unpack(&self) -> (&[Range<T>], &U) {
-        let Self::Dim { range, tail } = &self else {
-            panic!("tried to unpack empty selector");
-        };
+        (&self.range, &self.tail)
+    }
 
-        (range, tail)
+    pub(crate) fn into_unpack(self) -> (Vec<Range<T>>, U) {
+        (self.range, self.tail)
     }
 }
 
+// --
+// -- Paving
+// --
+
+/// Interface over a n-dim paving.
 pub(crate) trait Paving: Clone + Default {
     type Selector;
     fn set(&mut self, selector: &Self::Selector, val: bool);
@@ -50,14 +66,18 @@ pub(crate) trait Paving: Clone + Default {
     fn pop_selector(&mut self) -> Option<Self::Selector>;
 }
 
-// Just a 0-dimension cell that is either filled or empty.
+// --
+// -- Cell
+// --
+
+/// Just a 0-dimension cell that is either filled or empty.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub(crate) struct Cell {
     filled: bool,
 }
 
 impl Paving for Cell {
-    type Selector = PavingSelector<(), ()>;
+    type Selector = EmptyPavingSelector;
 
     fn set(&mut self, _selector: &Self::Selector, val: bool) {
         self.filled = val;
@@ -65,7 +85,7 @@ impl Paving for Cell {
 
     fn pop_selector(&mut self) -> Option<Self::Selector> {
         if self.filled {
-            Some(PavingSelector::empty())
+            Some(EmptyPavingSelector)
         } else {
             None
         }
@@ -76,8 +96,11 @@ impl Paving for Cell {
     }
 }
 
-// Add a dimension over a lower dimension paving.
-// TODO: when some benchmark is implemented, check if a dequeue is better.
+// --
+// -- Dim
+// --
+
+/// Add a dimension over a lower dimension paving.
 #[derive(Clone)]
 pub(crate) struct Dim<T: Clone + Ord, U: Paving> {
     cuts: Vec<T>, // ordered
@@ -125,10 +148,10 @@ impl<T: Clone + Ord, U: Paving> Dim<T, U> {
             // First interval
             self.cols.push(U::default())
         } else if insert_pos == self.cuts.len() - 1 {
-            // Added the cut after the end
+            // Added the cut at the end
             self.cols.push(U::default())
         } else if insert_pos == 0 {
-            // Added the cut before the start
+            // Added the cut at the start
             self.cols.insert(0, U::default())
         } else {
             let cut_fill = self.cols[insert_pos - 1].clone();
@@ -137,7 +160,7 @@ impl<T: Clone + Ord, U: Paving> Dim<T, U> {
     }
 }
 
-impl<T: Clone + Ord, U: Default + Paving> Paving for Dim<T, U> {
+impl<T: Clone + Ord, U: Paving> Paving for Dim<T, U> {
     type Selector = PavingSelector<T, U::Selector>;
 
     fn set(&mut self, selector: &Self::Selector, val: bool) {
@@ -160,6 +183,7 @@ impl<T: Clone + Ord, U: Default + Paving> Paving for Dim<T, U> {
 
         for range in ranges {
             if range.start >= range.end {
+                // Wrapping ranges are not supported.
                 continue;
             }
 
@@ -167,6 +191,9 @@ impl<T: Clone + Ord, U: Default + Paving> Paving for Dim<T, U> {
                 || range.start < *self.cuts.first().unwrap()
                 || range.end > *self.cuts.last().unwrap()
             {
+                // There is either no columns either an overlap before the
+                // first column or the last one. In these cases we just need
+                // to ensure the requested value is `false`.
                 return !val;
             }
 
@@ -176,11 +203,10 @@ impl<T: Clone + Ord, U: Default + Paving> Paving for Dim<T, U> {
                 .zip(self.cuts.iter().skip(1))
                 .zip(&self.cols)
             {
-                // TODO: don't I miss something?
-                if *col_start < range.end
-                    && *col_end > range.start
-                    && !col_val.is_val(selector_tail, val)
-                {
+                // Column overlaps with the input range
+                let col_overlaps = *col_start < range.end && *col_end > range.start;
+
+                if col_overlaps && !col_val.is_val(selector_tail, val) {
                     return false;
                 }
             }
@@ -217,7 +243,7 @@ impl<T: Clone + Ord, U: Default + Paving> Paving for Dim<T, U> {
             selector_range.push(self.cuts[start_idx].clone()..self.cuts[end_idx].clone());
         }
 
-        let selector = PavingSelector::Dim { range: selector_range, tail: selector_tail };
+        let selector = PavingSelector { range: selector_range, tail: selector_tail };
         self.set(&selector, false);
         Some(selector)
     }

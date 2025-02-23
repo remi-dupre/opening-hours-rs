@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use chrono::Weekday;
 
-use crate::rubik::{Paving, Paving5D, PavingSelector, Selector4D, Selector5D};
+use crate::rubik::{EmptyPavingSelector, Paving, Paving5D, Selector4D, Selector5D};
 use crate::rules::day::{
     DaySelector, Month, MonthdayRange, WeekDayRange, WeekNum, WeekRange, Year, YearRange,
 };
@@ -213,7 +213,7 @@ impl Bounded for ExtendedTime {
 trait MakeCanonical: Sized + 'static {
     type CanonicalType: Bounded;
     fn try_make_canonical(&self) -> Option<Range<Self::CanonicalType>>;
-    fn into_type(canonical: &Range<Self::CanonicalType>) -> Option<Self>;
+    fn into_type(canonical: Range<Self::CanonicalType>) -> Option<Self>;
 
     fn try_from_iterator<'a>(
         iter: impl IntoIterator<Item = &'a Self>,
@@ -232,10 +232,10 @@ trait MakeCanonical: Sized + 'static {
         Some(ranges)
     }
 
-    fn into_selector(canonical: &[Range<Self::CanonicalType>]) -> Vec<Self> {
+    fn into_selector(canonical: Vec<Range<Self::CanonicalType>>) -> Vec<Self> {
         canonical
-            .iter()
-            .filter(|rg| **rg != Self::CanonicalType::bounds())
+            .into_iter()
+            .filter(|rg| *rg != Self::CanonicalType::bounds())
             .filter_map(|rg| Self::into_type(rg))
             .collect()
     }
@@ -252,9 +252,9 @@ impl MakeCanonical for YearRange {
         Some(Frame::to_range_strict(self.range.clone()))
     }
 
-    fn into_type(canonical: &Range<Self::CanonicalType>) -> Option<Self> {
+    fn into_type(canonical: Range<Self::CanonicalType>) -> Option<Self> {
         Some(YearRange {
-            range: Frame::to_range_inclusive(canonical.clone())?,
+            range: Frame::to_range_inclusive(canonical)?,
             step: 1,
         })
     }
@@ -270,9 +270,9 @@ impl MakeCanonical for MonthdayRange {
         }
     }
 
-    fn into_type(canonical: &Range<Self::CanonicalType>) -> Option<Self> {
+    fn into_type(canonical: Range<Self::CanonicalType>) -> Option<Self> {
         Some(MonthdayRange::Month {
-            range: Frame::to_range_inclusive(canonical.clone())?,
+            range: Frame::to_range_inclusive(canonical)?,
             year: None,
         })
     }
@@ -289,9 +289,9 @@ impl MakeCanonical for WeekRange {
         Some(Frame::to_range_strict(self.range.clone()))
     }
 
-    fn into_type(canonical: &Range<Self::CanonicalType>) -> Option<Self> {
+    fn into_type(canonical: Range<Self::CanonicalType>) -> Option<Self> {
         Some(WeekRange {
-            range: Frame::to_range_inclusive(canonical.clone())?,
+            range: Frame::to_range_inclusive(canonical)?,
             step: 1,
         })
     }
@@ -318,8 +318,8 @@ impl MakeCanonical for WeekDayRange {
         }
     }
 
-    fn into_type(canonical: &Range<Self::CanonicalType>) -> Option<Self> {
-        let (start, end) = Frame::to_range_inclusive(canonical.clone())?.into_inner();
+    fn into_type(canonical: Range<Self::CanonicalType>) -> Option<Self> {
+        let (start, end) = Frame::to_range_inclusive(canonical)?.into_inner();
 
         Some(WeekDayRange::Fixed {
             range: start.into()..=end.into(),
@@ -350,7 +350,7 @@ impl MakeCanonical for TimeSpan {
         }
     }
 
-    fn into_type(canonical: &Range<Self::CanonicalType>) -> Option<Self> {
+    fn into_type(canonical: Range<Self::CanonicalType>) -> Option<Self> {
         Some(TimeSpan {
             range: Time::Fixed(canonical.start)..Time::Fixed(canonical.end),
             open_end: false,
@@ -366,7 +366,7 @@ impl MakeCanonical for TimeSpan {
 pub(crate) fn ruleseq_to_day_selector(rs: &RuleSequence) -> Option<CanonicalDaySelector> {
     let ds = &rs.day_selector;
 
-    let selector = PavingSelector::empty()
+    let selector = EmptyPavingSelector
         .dim(MakeCanonical::try_from_iterator(&ds.year)?)
         .dim(MakeCanonical::try_from_iterator(&ds.monthday)?)
         .dim(MakeCanonical::try_from_iterator(&ds.week)?)
@@ -389,11 +389,11 @@ pub(crate) fn canonical_to_seq(
 ) -> impl Iterator<Item = RuleSequence> {
     std::iter::from_fn(move || {
         let selector = canonical.pop_selector()?;
-        let (rgs_time, selector) = selector.unpack();
-        let (rgs_weekday, selector) = selector.unpack();
-        let (rgs_week, selector) = selector.unpack();
-        let (rgs_monthday, selector) = selector.unpack();
-        let (rgs_year, _) = selector.unpack();
+        let (rgs_time, selector) = selector.into_unpack();
+        let (rgs_weekday, selector) = selector.into_unpack();
+        let (rgs_week, selector) = selector.into_unpack();
+        let (rgs_monthday, selector) = selector.into_unpack();
+        let (rgs_year, _) = selector.into_unpack();
 
         let day_selector = DaySelector {
             year: MakeCanonical::into_selector(rgs_year),
