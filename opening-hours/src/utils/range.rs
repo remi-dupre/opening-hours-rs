@@ -47,8 +47,8 @@ impl<T: PartialOrd> WrappingRange<T> for RangeInclusive<T> {
 pub(crate) fn ranges_union<T: Ord>(
     ranges: impl IntoIterator<Item = Range<T>>,
 ) -> impl Iterator<Item = Range<T>> {
-    // TODO: we could gain performance by ensuring that range iterators are
-    //       always sorted.
+    // TODO (optimisation): we could gain performance by ensuring that range iterators are always
+    // sorted.
     let mut ranges: Vec<_> = ranges.into_iter().collect();
     ranges.sort_unstable_by(|r1, r2| r1.start.cmp(&r2.start));
 

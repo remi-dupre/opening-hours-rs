@@ -47,7 +47,13 @@ impl OpeningHoursExpression {
         tail.kind == kind && tail.is_constant()
     }
 
-    // TODO: doc
+    /// Convert the expression into a normalized form. It will not affect the meaning of the
+    /// expression and might impact the performance of evaluations.
+    ///
+    /// ```
+    /// let oh = opening_hours_syntax::parse("24/7 ; Su closed").unwrap();
+    /// assert_eq!(oh.normalize().to_string(), "Mo-Sa");
+    /// ```
     pub fn normalize(self) -> Self {
         let mut rules_queue = self.rules.into_iter().peekable();
         let mut normalized = Vec::new();
@@ -136,8 +142,6 @@ pub struct RuleSequence {
 }
 
 impl RuleSequence {
-    /// TODO: more docs & examples
-    ///
     /// If this returns `true`, then this expression is always open, but it
     /// can't detect all cases.
     pub fn is_constant(&self) -> bool {

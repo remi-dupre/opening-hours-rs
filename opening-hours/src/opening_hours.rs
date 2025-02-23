@@ -112,7 +112,6 @@ impl<L: Localize> OpeningHours<L> {
             return Some(DATE_START.date());
         }
 
-        // TODO: cache a normalized expression?
         if self.expr.is_constant() {
             return Some(DATE_END.date());
         }
@@ -120,10 +119,12 @@ impl<L: Localize> OpeningHours<L> {
         (self.expr.rules)
             .iter()
             .map(|rule| {
-                if rule.time_selector.is_immutable_full_day() && rule.day_selector.is_empty() {
-                    Some(DATE_END.date())
-                } else {
+                if rule.time_selector.is_immutable_full_day()
+                    || !rule.day_selector.filter(date, &self.ctx)
+                {
                     rule.day_selector.next_change_hint(date, &self.ctx)
+                } else {
+                    date.succ_opt()
                 }
             })
             .min()

@@ -1,7 +1,7 @@
 use opening_hours_syntax::error::Error;
 use opening_hours_syntax::rules::RuleKind::*;
 
-use crate::schedule_at;
+use crate::{datetime, schedule_at, OpeningHours};
 
 #[test]
 fn basic_timespan() -> Result<(), Error> {
@@ -115,4 +115,14 @@ fn wrapping() -> Result<(), Error> {
     );
 
     Ok(())
+}
+
+#[test]
+fn test_dusk_open_ended() {
+    let oh = OpeningHours::parse("Jun dusk+").unwrap();
+
+    assert_eq!(
+        oh.next_change(datetime!("2024-06-21 22:30")).unwrap(),
+        datetime!("2024-06-22 00:00"),
+    );
 }

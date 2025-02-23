@@ -122,8 +122,8 @@ impl Schedule {
 
     /// Merge two schedules together.
     pub fn addition(self, mut other: Self) -> Self {
-        // TODO: this is implemented with quadratic time where it could probably
-        //       be linear.
+        // TODO (optimisation): this is implemented with quadratic time where it could probably be
+        // linear.
         match other.inner.pop() {
             None => self,
             Some(tr) => self.insert(tr).addition(other),

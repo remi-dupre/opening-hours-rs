@@ -123,7 +123,7 @@ impl DateFilter for ds::DaySelector {
     {
         // If there is no date filter, then all dates shall match
         if self.is_empty() {
-            return date.succ_opt();
+            return Some(DATE_END.date());
         }
 
         *[
