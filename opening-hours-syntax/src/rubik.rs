@@ -1,11 +1,11 @@
 use std::fmt::Debug;
 use std::ops::Range;
 
-pub(crate) type Paving1D<T> = Dim<T, Cell>;
-pub(crate) type Paving2D<T, U> = Dim<T, Paving1D<U>>;
-pub(crate) type Paving3D<T, U, V> = Dim<T, Paving2D<U, V>>;
-pub(crate) type Paving4D<T, U, V, W> = Dim<T, Paving3D<U, V, W>>;
-pub(crate) type Paving5D<T, U, V, W, X> = Dim<T, Paving4D<U, V, W, X>>;
+pub(crate) type Paving1D<T, Val> = Dim<T, Cell<Val>>;
+pub(crate) type Paving2D<T, U, Val> = Dim<T, Paving1D<U, Val>>;
+pub(crate) type Paving3D<T, U, V, Val> = Dim<T, Paving2D<U, V, Val>>;
+pub(crate) type Paving4D<T, U, V, W, Val> = Dim<T, Paving3D<U, V, W, Val>>;
+pub(crate) type Paving5D<T, U, V, W, X, Val> = Dim<T, Paving4D<U, V, W, X, Val>>;
 
 pub(crate) type Selector1D<T> = PavingSelector<T, EmptyPavingSelector>;
 pub(crate) type Selector2D<T, U> = PavingSelector<T, Selector1D<U>>;
@@ -61,38 +61,40 @@ impl<T, U> PavingSelector<T, U> {
 /// Interface over a n-dim paving.
 pub(crate) trait Paving: Clone + Default {
     type Selector;
-    fn set(&mut self, selector: &Self::Selector, val: bool);
-    fn is_val(&self, selector: &Self::Selector, val: bool) -> bool;
-    fn pop_selector(&mut self) -> Option<Self::Selector>;
+    type Value: Clone + Default + Eq + Ord;
+    fn set(&mut self, selector: &Self::Selector, val: Self::Value);
+    fn is_val(&self, selector: &Self::Selector, val: &Self::Value) -> bool;
+    fn pop_selector(&mut self, target_value: &Self::Value) -> Option<Self::Selector>;
 }
 
 // --
 // -- Cell
 // --
 
-/// Just a 0-dimension cell that is either filled or empty.
+/// Just a 0-dimension cell.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub(crate) struct Cell {
-    filled: bool,
+pub(crate) struct Cell<Val: Default + Eq + Ord> {
+    inner: Val,
 }
 
-impl Paving for Cell {
+impl<Val: Clone + Default + Eq + Ord> Paving for Cell<Val> {
+    type Value = Val;
     type Selector = EmptyPavingSelector;
 
-    fn set(&mut self, _selector: &Self::Selector, val: bool) {
-        self.filled = val;
+    fn set(&mut self, _selector: &Self::Selector, val: Val) {
+        self.inner = val;
     }
 
-    fn pop_selector(&mut self) -> Option<Self::Selector> {
-        if self.filled {
+    fn pop_selector(&mut self, target_value: &Val) -> Option<Self::Selector> {
+        if &self.inner == target_value {
             Some(EmptyPavingSelector)
         } else {
             None
         }
     }
 
-    fn is_val(&self, _selector: &Self::Selector, val: bool) -> bool {
-        self.filled == val
+    fn is_val(&self, _selector: &Self::Selector, val: &Val) -> bool {
+        &self.inner == val
     }
 }
 
@@ -161,9 +163,10 @@ impl<T: Clone + Ord, U: Paving> Dim<T, U> {
 }
 
 impl<T: Clone + Ord, U: Paving> Paving for Dim<T, U> {
+    type Value = U::Value;
     type Selector = PavingSelector<T, U::Selector>;
 
-    fn set(&mut self, selector: &Self::Selector, val: bool) {
+    fn set(&mut self, selector: &Self::Selector, val: Self::Value) {
         let (ranges, selector_tail) = selector.unpack();
 
         for range in ranges {
@@ -172,13 +175,13 @@ impl<T: Clone + Ord, U: Paving> Paving for Dim<T, U> {
 
             for (col_start, col_val) in self.cuts.iter().zip(&mut self.cols) {
                 if *col_start >= range.start && *col_start < range.end {
-                    col_val.set(selector_tail, val);
+                    col_val.set(selector_tail, val.clone());
                 }
             }
         }
     }
 
-    fn is_val(&self, selector: &Self::Selector, val: bool) -> bool {
+    fn is_val(&self, selector: &Self::Selector, val: &Self::Value) -> bool {
         let (ranges, selector_tail) = selector.unpack();
 
         for range in ranges {
@@ -193,8 +196,8 @@ impl<T: Clone + Ord, U: Paving> Paving for Dim<T, U> {
             {
                 // There is either no columns either an overlap before the
                 // first column or the last one. In these cases we just need
-                // to ensure the requested value is `false`.
-                return !val;
+                // to ensure the requested value is the default.
+                return val == &Self::Value::default();
             }
 
             for ((col_start, col_end), col_val) in self
@@ -215,18 +218,18 @@ impl<T: Clone + Ord, U: Paving> Paving for Dim<T, U> {
         true
     }
 
-    fn pop_selector(&mut self) -> Option<Self::Selector> {
+    fn pop_selector(&mut self, target_value: &Self::Value) -> Option<Self::Selector> {
         let (mut start_idx, selector_tail) = self
             .cols
             .iter_mut()
             .enumerate()
-            .find_map(|(idx, col)| Some((idx, col.pop_selector()?)))?;
+            .find_map(|(idx, col)| Some((idx, col.pop_selector(target_value)?)))?;
 
         let mut end_idx = start_idx + 1;
         let mut selector_range = Vec::new();
 
         while end_idx < self.cols.len() {
-            if self.cols[end_idx].is_val(&selector_tail, true) {
+            if self.cols[end_idx].is_val(&selector_tail, target_value) {
                 end_idx += 1;
                 continue;
             }
@@ -244,7 +247,7 @@ impl<T: Clone + Ord, U: Paving> Paving for Dim<T, U> {
         }
 
         let selector = PavingSelector { range: selector_range, tail: selector_tail };
-        self.set(&selector, false);
+        self.set(&selector, Self::Value::default());
         Some(selector)
     }
 }

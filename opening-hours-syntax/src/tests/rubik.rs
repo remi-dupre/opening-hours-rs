@@ -3,7 +3,7 @@ use crate::rubik::*;
 
 #[test]
 fn test_dim2() {
-    let grid_empty: Paving2D<i32, i32> = Paving2D::default();
+    let grid_empty: Paving2D<i32, i32, bool> = Paving2D::default();
 
     //   0 1 2 3 4 5
     // 2 ⋅ ⋅ ⋅ ⋅ ⋅ ⋅
@@ -49,12 +49,12 @@ fn test_pop_trivial() {
     grid.set(&EmptyPavingSelector.dim([1..5]).dim([4..6]), true); // C
 
     assert_eq!(
-        grid.pop_selector().unwrap(),
+        grid.pop_selector(&true).unwrap(),
         EmptyPavingSelector.dim([1..5]).dim([3..6]),
     );
 
     assert_eq!(grid, grid_empty);
-    assert_eq!(grid.pop_selector(), None);
+    assert_eq!(grid.pop_selector(&true), None);
 }
 
 #[test]
@@ -71,10 +71,10 @@ fn test_pop_disjoint() {
     grid.set(&EmptyPavingSelector.dim([1..2, 4..7]).dim([3..6]), true);
 
     assert_eq!(
-        grid.pop_selector().unwrap(),
+        grid.pop_selector(&true).unwrap(),
         EmptyPavingSelector.dim([1..2, 4..7]).dim([3..6]),
     );
 
     assert_eq!(grid, grid_empty);
-    assert_eq!(grid.pop_selector(), None);
+    assert_eq!(grid.pop_selector(&true), None);
 }

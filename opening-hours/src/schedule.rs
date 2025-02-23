@@ -115,8 +115,13 @@ impl Schedule {
         self.inner.is_empty()
     }
 
+    /// Check if a schedule is always closed.
+    pub(crate) fn is_always_closed(&self) -> bool {
+        self.inner.iter().all(|rg| rg.kind == RuleKind::Closed)
+    }
+
     /// Merge two schedules together.
-    pub fn addition(self, mut other: Self) -> Self {
+    pub(crate) fn addition(self, mut other: Self) -> Self {
         // TODO: this is implemented with quadratic time where it could probably
         //       be linear.
         match other.inner.pop() {

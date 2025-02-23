@@ -155,7 +155,11 @@ impl<L: Localize> OpeningHours<L> {
                     },
                 ),
                 RuleOperator::Fallback => {
-                    if prev_match {
+                    if prev_match
+                        && !(prev_eval.as_ref())
+                            .map(Schedule::is_always_closed)
+                            .unwrap_or(false)
+                    {
                         (prev_match, prev_eval)
                     } else {
                         (curr_match, curr_eval)

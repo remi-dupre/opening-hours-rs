@@ -14,8 +14,14 @@ use crate::rules::{RuleOperator, RuleSequence};
 use crate::sorted_vec::UniqueSortedVec;
 use crate::{ExtendedTime, RuleKind};
 
-pub(crate) type Canonical =
-    Paving5D<ExtendedTime, Frame<OrderedWeekday>, Frame<WeekNum>, Frame<Month>, Frame<Year>>;
+pub(crate) type Canonical = Paving5D<
+    ExtendedTime,
+    Frame<OrderedWeekday>,
+    Frame<WeekNum>,
+    Frame<Month>,
+    Frame<Year>,
+    RuleKind,
+>;
 
 pub(crate) type CanonicalDaySelector =
     Selector4D<Frame<OrderedWeekday>, Frame<WeekNum>, Frame<Month>, Frame<Year>>;
@@ -384,11 +390,14 @@ pub(crate) fn ruleseq_to_selector(rs: &RuleSequence) -> Option<CanonicalSelector
 pub(crate) fn canonical_to_seq(
     mut canonical: Canonical,
     operator: RuleOperator,
-    kind: RuleKind,
     comments: UniqueSortedVec<Arc<str>>,
 ) -> impl Iterator<Item = RuleSequence> {
     std::iter::from_fn(move || {
-        let selector = canonical.pop_selector()?;
+        // Extract open periods first, then unknowns
+        let (kind, selector) = [RuleKind::Open, RuleKind::Unknown]
+            .into_iter()
+            .find_map(|kind| Some((kind, canonical.pop_selector(&kind)?)))?;
+
         let (rgs_time, selector) = selector.into_unpack();
         let (rgs_weekday, selector) = selector.into_unpack();
         let (rgs_week, selector) = selector.into_unpack();

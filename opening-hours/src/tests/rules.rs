@@ -81,7 +81,7 @@ fn fallback_rule() -> Result<(), Error> {
             "Jun:10:00-12:00 open || Mo-Fr closed || unknown",
             "2020-05-29"
         ),
-        schedule! { 0,00 => Closed => 24,00 }
+        schedule! { 0,00 => Unknown => 24,00 }
     );
 
     assert_eq!(
@@ -122,4 +122,12 @@ fn explicit_closed_slow() {
     });
 
     assert!(stats.count_generated_schedules < 10);
+}
+
+#[test]
+fn fallback_take_all() {
+    let oh = OpeningHours::parse("Su closed || open").unwrap();
+    let dt = datetime!("2025-02-23 12:00");
+    assert!(oh.is_open(dt));
+    assert!(oh.next_change(dt).is_none());
 }

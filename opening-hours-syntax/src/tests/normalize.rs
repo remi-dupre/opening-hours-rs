@@ -21,6 +21,10 @@ const EXAMPLES: &[(&str, u32, &str, &str)] = &[
     ex!("Jun24:00+", "Jun 24:00+"),
     ex!("week02-02/7", "week02-02/7"),
     ex!("24/7 ; Su closed", "Mo-Sa"),
+    ex!("Tu off ; off ; Jun", "Jun"),
+    ex!("off ; Jun unknown", "Jun unknown"),
+    ex!("Mo-Fr open ; We unknown", "Mo-Tu,Th-Fr ; We unknown"),
+    ex!("Mo unknown ; Tu open ; We closed", "Tu ; Mo unknown"),
     ex!(
         "Mo 10:00-21:00; Tu,We,Th,Fr,Sa,Su 10:00-21:00",
         "10:00-21:00"
@@ -48,7 +52,7 @@ const EXAMPLES: &[(&str, u32, &str, &str)] = &[
 ];
 
 #[test]
-fn normalize_already_minimal() -> Result<()> {
+fn normalize_idempotent() -> Result<()> {
     for (file, line, _, example) in EXAMPLES {
         assert_eq!(
             parse(example)?.normalize().to_string(),
