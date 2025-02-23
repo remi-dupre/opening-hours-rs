@@ -7,27 +7,25 @@ use std::sync::Arc;
 use chrono::Weekday;
 
 use crate::rubik::{Paving, Paving5D, PavingSelector, Selector4D, Selector5D};
-use crate::rules::day::{DaySelector, Month, MonthdayRange, WeekDayRange, WeekRange, YearRange};
+use crate::rules::day::{
+    DaySelector, Month, MonthdayRange, WeekDayRange, WeekNum, WeekRange, Year, YearRange,
+};
 use crate::rules::time::{Time, TimeSelector, TimeSpan};
 use crate::rules::{RuleOperator, RuleSequence};
 use crate::sorted_vec::UniqueSortedVec;
 use crate::{ExtendedTime, RuleKind};
 
-pub(crate) type Canonical = Paving5D<ExtendedTime, Frame<OrderedWeekday>, u8, Frame<Month>, u16>;
+pub(crate) type Canonical =
+    Paving5D<ExtendedTime, Frame<OrderedWeekday>, Frame<WeekNum>, Frame<Month>, Frame<Year>>;
 
 pub(crate) type CanonicalSelector =
-    Selector5D<ExtendedTime, Frame<OrderedWeekday>, u8, Frame<Month>, u16>;
-
-pub(crate) const FULL_YEARS: Range<u16> = 1900..10_000;
-pub(crate) const FULL_WEEKS: Range<u8> = 1..54;
-pub(crate) const FULL_TIME: Range<ExtendedTime> =
-    ExtendedTime::new(0, 0).unwrap()..ExtendedTime::new(48, 0).unwrap();
+    Selector5D<ExtendedTime, Frame<OrderedWeekday>, Frame<WeekNum>, Frame<Month>, Frame<Year>>;
 
 // --
 // -- OneOrTwo
 // --
 
-enum OneOrTwo<T> {
+pub(crate) enum OneOrTwo<T> {
     One(T),
     Two(T, T),
 }
@@ -124,6 +122,32 @@ impl Framable for Month {
     }
 }
 
+impl Framable for Year {
+    const FRAME_START: Self = Year(1900);
+    const FRAME_END: Self = Year(9999);
+
+    fn succ(self) -> Self {
+        Year(self.0 + 1)
+    }
+
+    fn pred(self) -> Self {
+        Year(self.0 - 1)
+    }
+}
+
+impl Framable for WeekNum {
+    const FRAME_START: Self = WeekNum(1);
+    const FRAME_END: Self = WeekNum(53);
+
+    fn succ(self) -> Self {
+        WeekNum(*self % 53 + 1)
+    }
+
+    fn pred(self) -> Self {
+        WeekNum((*self + 51) % 53 + 1)
+    }
+}
+
 // --
 // -- Frame
 // --
@@ -135,10 +159,6 @@ pub(crate) enum Frame<T: Framable> {
 }
 
 impl<T: Framable> Frame<T> {
-    const fn full_strict_range() -> Range<Frame<T>> {
-        Self::Val(T::FRAME_START)..Self::End
-    }
-
     fn to_range_strict(range: RangeInclusive<T>) -> Range<Frame<T>> {
         let (start, end) = range.into_inner();
 
@@ -181,19 +201,42 @@ impl<T: Framable> Ord for Frame<T> {
 }
 
 // --
-// -- Normalization Logic
+// -- Bounded
 // --
 
-// Ensure that input range is "increasing", otherwise it is splited into two ranges:
-// [bounds.start, range.end[ and [range.start, bounds.end[
-fn split_inverted_range<T: Ord>(range: Range<T>, bounds: Range<T>) -> OneOrTwo<Range<T>> {
-    if range.start >= range.end {
-        // start == end when a wrapping range gets expanded from exclusive to inclusive range
-        OneOrTwo::Two(bounds.start..range.end, range.start..bounds.end)
-    } else {
-        OneOrTwo::One(range)
+pub(crate) trait Bounded: Ord + Sized {
+    const BOUND_START: Self;
+    const BOUND_END: Self; // Excluded
+
+    fn bounds() -> Range<Self> {
+        Self::BOUND_START..Self::BOUND_END
+    }
+
+    // Ensure that input range is "increasing", otherwise it is splited into two ranges:
+    // [bounds.start, range.end[ and [range.start, bounds.end[
+    fn split_inverted_range(range: Range<Self>) -> OneOrTwo<Range<Self>> {
+        if range.start >= range.end {
+            // start == end when a wrapping range gets expanded from exclusive to inclusive range
+            OneOrTwo::Two(Self::BOUND_START..range.end, range.start..Self::BOUND_END)
+        } else {
+            OneOrTwo::One(range)
+        }
     }
 }
+
+impl<T: Framable> Bounded for Frame<T> {
+    const BOUND_START: Self = Frame::Val(T::FRAME_START);
+    const BOUND_END: Self = Frame::End;
+}
+
+impl Bounded for ExtendedTime {
+    const BOUND_START: Self = ExtendedTime::new(0, 0).unwrap();
+    const BOUND_END: Self = ExtendedTime::new(48, 0).unwrap();
+}
+
+// --
+// -- Normalization Logic
+// --
 
 fn vec_with_default<T>(default: T, mut vec: Vec<T>) -> Vec<T> {
     if vec.is_empty() {
@@ -205,53 +248,50 @@ fn vec_with_default<T>(default: T, mut vec: Vec<T>) -> Vec<T> {
 
 pub(crate) fn ruleseq_to_day_selector(
     rs: &RuleSequence,
-) -> Option<Selector4D<Frame<OrderedWeekday>, u8, Frame<Month>, u16>> {
+) -> Option<Selector4D<Frame<OrderedWeekday>, Frame<WeekNum>, Frame<Month>, Frame<Year>>> {
     let ds = &rs.day_selector;
 
     let selector = PavingSelector::empty()
         .dim(vec_with_default(
-            FULL_YEARS,
+            Bounded::bounds(),
             (ds.year.iter())
                 .flat_map(|year| {
                     if year.step != 1 {
                         return OneOrTwo::One(None);
                     }
 
-                    let start = *year.range.start();
-                    let end = *year.range.end() + 1;
-                    split_inverted_range(start..end, FULL_YEARS).map(Some)
+                    Bounded::split_inverted_range(Frame::to_range_strict(year.range.clone()))
+                        .map(Some)
                 })
                 .collect::<Option<Vec<_>>>()?,
         ))
         .dim(vec_with_default(
-            Frame::full_strict_range(),
+            Bounded::bounds(),
             (ds.monthday.iter())
                 .flat_map(|monthday| match monthday {
-                    MonthdayRange::Month { range, year: None } => split_inverted_range(
-                        Frame::to_range_strict(range.clone()),
-                        Frame::full_strict_range(),
-                    )
-                    .map(Some),
+                    MonthdayRange::Month { range, year: None } => {
+                        Bounded::split_inverted_range(Frame::to_range_strict(range.clone()))
+                            .map(Some)
+                    }
                     _ => OneOrTwo::One(None),
                 })
                 .collect::<Option<Vec<_>>>()?,
         ))
         .dim(vec_with_default(
-            FULL_WEEKS,
+            Bounded::bounds(),
             (ds.week.iter())
                 .flat_map(|week| {
                     if week.step != 1 {
                         return OneOrTwo::One(None);
                     }
 
-                    let start = *week.range.start();
-                    let end = *week.range.end() + 1;
-                    split_inverted_range(start..end, FULL_WEEKS).map(Some)
+                    Bounded::split_inverted_range(Frame::to_range_strict(week.range.clone()))
+                        .map(Some)
                 })
                 .collect::<Option<Vec<_>>>()?,
         ))
         .dim(vec_with_default(
-            Frame::full_strict_range(),
+            Bounded::bounds(),
             (ds.weekday.iter())
                 .flat_map(|weekday| {
                     match weekday {
@@ -266,12 +306,11 @@ pub(crate) fn ruleseq_to_day_selector(
                         } => {
                             let (start, end) = range.clone().into_inner();
 
-                            split_inverted_range(
-                                Frame::to_range_strict(start.into()..=end.into()),
-                                Frame::full_strict_range(),
-                            )
+                            Bounded::split_inverted_range(Frame::to_range_strict(
+                                start.into()..=end.into(),
+                            ))
+                            .map(Some)
                         }
-                        .map(Some),
                         _ => OneOrTwo::One(None),
                     }
                 })
@@ -284,7 +323,7 @@ pub(crate) fn ruleseq_to_day_selector(
 pub(crate) fn ruleseq_to_selector(rs: &RuleSequence) -> Option<CanonicalSelector> {
     Some(
         ruleseq_to_day_selector(rs)?.dim(vec_with_default(
-            FULL_TIME,
+            Bounded::bounds(),
             (rs.time_selector.time.iter())
                 .flat_map(|time| match time {
                     TimeSpan { range, open_end: false, repeats: None } => {
@@ -296,7 +335,7 @@ pub(crate) fn ruleseq_to_selector(rs: &RuleSequence) -> Option<CanonicalSelector
                             return OneOrTwo::One(None);
                         };
 
-                        split_inverted_range(start..end, FULL_TIME).map(Some)
+                        Bounded::split_inverted_range(start..end).map(Some)
                     }
                     _ => OneOrTwo::One(None),
                 })
@@ -321,11 +360,16 @@ pub(crate) fn canonical_to_seq(
 
         let day_selector = DaySelector {
             year: (rgs_year.iter())
-                .filter(|rg| **rg != FULL_YEARS)
-                .map(|rg_year| YearRange { range: rg_year.start..=rg_year.end - 1, step: 1 })
+                .filter(|rg| **rg != Bounded::bounds())
+                .filter_map(|rg_year| {
+                    Some(YearRange {
+                        range: Frame::to_range_inclusive(rg_year.clone())?,
+                        step: 1,
+                    })
+                })
                 .collect(),
             monthday: (rgs_monthday.iter())
-                .filter(|rg| **rg != Frame::full_strict_range())
+                .filter(|rg| **rg != Bounded::bounds())
                 .filter_map(|rg_month| {
                     Some(MonthdayRange::Month {
                         range: Frame::to_range_inclusive(rg_month.clone())?,
@@ -334,11 +378,16 @@ pub(crate) fn canonical_to_seq(
                 })
                 .collect(),
             week: (rgs_week.iter())
-                .filter(|rg| **rg != FULL_WEEKS)
-                .map(|rg_week| WeekRange { range: rg_week.start..=rg_week.end - 1, step: 1 })
+                .filter(|rg| **rg != Bounded::bounds())
+                .filter_map(|rg_week| {
+                    Some(WeekRange {
+                        range: Frame::to_range_inclusive(rg_week.clone())?,
+                        step: 1,
+                    })
+                })
                 .collect(),
             weekday: (rgs_weekday.iter())
-                .filter(|rg| **rg != Frame::full_strict_range())
+                .filter(|rg| **rg != Bounded::bounds())
                 .filter_map(|rg_weekday| {
                     let (start, end) = Frame::to_range_inclusive(rg_weekday.clone())?.into_inner();
 
@@ -354,7 +403,7 @@ pub(crate) fn canonical_to_seq(
 
         let time_selector = TimeSelector {
             time: (rgs_time.iter())
-                .filter(|rg| **rg != FULL_TIME)
+                .filter(|rg| **rg != Bounded::bounds())
                 .map(|rg_time| TimeSpan {
                     range: Time::Fixed(rg_time.start)..Time::Fixed(rg_time.end),
                     open_end: false,

@@ -4,7 +4,7 @@ pub mod time;
 use std::fmt::Display;
 use std::sync::Arc;
 
-use crate::normalize::{FULL_TIME, canonical_to_seq, ruleseq_to_selector};
+use crate::normalize::{Bounded, canonical_to_seq, ruleseq_to_selector};
 use crate::rubik::{Paving, Paving5D};
 use crate::sorted_vec::UniqueSortedVec;
 
@@ -65,7 +65,7 @@ impl OpeningHoursExpression {
 
             let paving =
                 (selector_seq.into_iter()).fold(Paving5D::default(), |mut union, selector| {
-                    let full_day_selector = selector.unpack().1.clone().dim([FULL_TIME]);
+                    let full_day_selector = selector.unpack().1.clone().dim([Bounded::bounds()]);
                     union.set(&full_day_selector, false);
                     union.set(&selector, true);
                     union

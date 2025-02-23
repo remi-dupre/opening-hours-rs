@@ -1,6 +1,6 @@
 use std::convert::{TryFrom, TryInto};
 use std::fmt::Display;
-use std::ops::RangeInclusive;
+use std::ops::{Deref, DerefMut, RangeInclusive};
 
 use chrono::prelude::Datelike;
 use chrono::{Duration, NaiveDate};
@@ -73,20 +73,38 @@ impl Display for DaySelector {
     }
 }
 
-// YearRange
+// Year (newtype)
 
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Year(pub u16);
+
+impl Deref for Year {
+    type Target = u16;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for Year {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+// YearRange
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct YearRange {
-    pub range: RangeInclusive<u16>,
+    pub range: RangeInclusive<Year>,
     pub step: u16,
 }
 
 impl Display for YearRange {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.range.start())?;
+        write!(f, "{}", self.range.start().deref())?;
 
         if self.range.start() != self.range.end() {
-            write!(f, "-{}", self.range.end())?;
+            write!(f, "-{}", self.range.end().deref())?;
         }
 
         if self.step != 1 {
@@ -341,21 +359,40 @@ impl Display for HolidayKind {
     }
 }
 
+// WeekNum (newtype)
+
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct WeekNum(pub u8);
+
+impl Deref for WeekNum {
+    type Target = u8;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for WeekNum {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
 // WeekRange
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct WeekRange {
-    pub range: RangeInclusive<u8>,
+    pub range: RangeInclusive<WeekNum>,
     pub step: u8,
 }
 
 impl Display for WeekRange {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if self.range.start() == self.range.end() && self.step == 1 {
-            return write!(f, "{:02}", self.range.start());
+            return write!(f, "{:02}", **self.range.start());
         }
 
-        write!(f, "{:02}-{:02}", self.range.start(), self.range.end())?;
+        write!(f, "{:02}-{:02}", **self.range.start(), **self.range.end())?;
 
         if self.step != 1 {
             write!(f, "/{}", self.step)?;

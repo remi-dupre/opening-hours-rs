@@ -13,7 +13,7 @@ use pest::iterators::Pair;
 use crate::error::{Error, Result};
 use crate::extended_time::ExtendedTime;
 use crate::rules as rl;
-use crate::rules::day as ds;
+use crate::rules::day::{self as ds, WeekNum, Year};
 use crate::rules::time as ts;
 
 #[cfg(feature = "log")]
@@ -477,7 +477,10 @@ fn build_week(pair: Pair<Rule>) -> Result<ds::WeekRange> {
         expected: "an integer in [0, 255]".to_string(),
     })?;
 
-    Ok(ds::WeekRange { range: start..=end.unwrap_or(start), step })
+    Ok(ds::WeekRange {
+        range: WeekNum(start)..=WeekNum(end.unwrap_or(start)),
+        step,
+    })
 }
 
 // ---
@@ -663,7 +666,10 @@ fn build_year_range(pair: Pair<Rule>) -> Result<ds::YearRange> {
         expected: "an integer in [0, 2**16[".to_string(),
     })?;
 
-    Ok(ds::YearRange { range: start..=end.unwrap_or(start), step })
+    Ok(ds::YearRange {
+        range: Year(start)..=Year(end.unwrap_or(start)),
+        step,
+    })
 }
 
 // ---

@@ -144,13 +144,15 @@ impl DateFilter for ds::YearRange {
     where
         L: Localize,
     {
+        let range = **self.range.start()..=**self.range.end();
+
         let Ok(year) = date.year().try_into() else {
             return false;
         };
 
-        self.range.wrapping_contains(&year)
-            && (year.checked_sub(*self.range.start()))
-                .or_else(|| self.range.start().checked_sub(year))
+        range.wrapping_contains(&year)
+            && (year.checked_sub(*range.start()))
+                .or_else(|| range.start().checked_sub(year))
                 .unwrap_or(0)
                 % self.step
                 == 0
@@ -160,6 +162,8 @@ impl DateFilter for ds::YearRange {
     where
         L: Localize,
     {
+        let range = **self.range.start()..=**self.range.end();
+
         let Ok(curr_year) = date.year().try_into() else {
             return Some(DATE_END.date());
         };
@@ -169,22 +173,22 @@ impl DateFilter for ds::YearRange {
         }
 
         let next_year = {
-            if *self.range.end() < curr_year {
+            if *range.end() < curr_year {
                 // 1. time exceeded the range, the state won't ever change
                 return Some(DATE_END.date());
-            } else if curr_year < *self.range.start() {
+            } else if curr_year < *range.start() {
                 // 2. time didn't reach the range yet
-                *self.range.start()
+                *range.start()
             } else if self.step == 1 {
                 // 3. time is in the range and step is naive
-                *self.range.end() + 1
-            } else if (curr_year - self.range.start()) % self.step == 0 {
+                *range.end() + 1
+            } else if (curr_year - range.start()) % self.step == 0 {
                 // 4. time matches the range with step >= 2
                 curr_year + 1
             } else {
                 // 5. time is in the range but doesn't match the step
                 let round_up = |x: u16, d: u16| d * x.div_ceil(d); // get the first multiple of `d` greater than `x`.
-                self.range.start() + round_up(curr_year - self.range.start(), self.step)
+                range.start() + round_up(curr_year - range.start(), self.step)
             }
         };
 
@@ -438,9 +442,11 @@ impl DateFilter for ds::WeekRange {
         L: Localize,
     {
         let week = date.iso_week().week() as u8;
-        self.range.wrapping_contains(&week)
+        let range = **self.range.start()..=**self.range.end();
+
+        range.wrapping_contains(&week)
             // TODO: what happens when week < range.start ?
-            && week.saturating_sub(*self.range.start()) % self.step == 0
+            && week.saturating_sub(*range.start()) % self.step == 0
     }
 
     fn next_change_hint<L>(&self, date: NaiveDate, _ctx: &Context<L>) -> Option<NaiveDate>
@@ -448,6 +454,7 @@ impl DateFilter for ds::WeekRange {
         L: Localize,
     {
         let week = date.iso_week().week() as u8;
+        let range = **self.range.start()..=**self.range.end();
 
         if self.range.start() > self.range.end() {
             // TODO: wrapping implemented well?
@@ -455,16 +462,16 @@ impl DateFilter for ds::WeekRange {
         }
 
         let weeknum = u32::from({
-            if self.range.wrapping_contains(&week) {
+            if range.wrapping_contains(&week) {
                 if self.step == 1 {
-                    *self.range.end() % 54 + 1
-                } else if (week - self.range.start()) % self.step == 0 {
+                    *range.end() % 54 + 1
+                } else if (week - range.start()) % self.step == 0 {
                     (date.iso_week().week() as u8 % 54) + 1
                 } else {
                     return None;
                 }
             } else {
-                *self.range.start()
+                *range.start()
             }
         });
 
