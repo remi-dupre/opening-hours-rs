@@ -413,7 +413,21 @@ pub(crate) fn canonical_to_seq(
     mut canonical: Canonical,
     comments: UniqueSortedVec<Arc<str>>,
 ) -> impl Iterator<Item = RuleSequence> {
+    let mut is_first_iter = true;
+
     std::iter::from_fn(move || {
+        let operator = {
+            // When an expression is parsed, the first operator is always "Normal". This has no
+            // impact on how the expression is evaluated but ensures consistent representation of
+            // the expressions.
+            if is_first_iter {
+                is_first_iter = false;
+                RuleOperator::Normal
+            } else {
+                RuleOperator::Additional
+            }
+        };
+
         // Extract open periods first, then unknowns
         let (kind, selector) = [RuleKind::Open, RuleKind::Unknown]
             .into_iter()
@@ -440,7 +454,7 @@ pub(crate) fn canonical_to_seq(
             day_selector,
             time_selector,
             kind,
-            operator: RuleOperator::Additional,
+            operator,
             comments: comments.clone(),
         })
     })

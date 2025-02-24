@@ -79,3 +79,10 @@ fn no_extended_time_as_begining() {
 fn with_24_00() {
     assert!(OpeningHours::parse("Jun24:00+").is_ok())
 }
+
+#[test]
+
+fn comments() {
+    assert!(OpeningHours::parse(r#"Mo-Fr open "ring the bell""#).is_ok());
+    assert!(OpeningHours::parse(r#"Mo-Fr open "ring "the bell"""#).is_err());
+}

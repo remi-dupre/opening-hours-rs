@@ -175,6 +175,10 @@ impl Display for RuleSequence {
             write!(f, "{}", self.kind)?;
         }
 
+        if !self.comments.is_empty() {
+            write!(f, "\"{}\"", self.comments.join(", "))?;
+        }
+
         Ok(())
     }
 }

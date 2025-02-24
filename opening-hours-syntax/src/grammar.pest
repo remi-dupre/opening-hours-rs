@@ -22,7 +22,7 @@ any_rule_separator = {
 }
 
 // Relaxed: the space is normally mandatory
-normal_rule_separator = @{ ";" ~ space? }
+normal_rule_separator = @{ space? ~ ";" ~ space? }
 
 additional_rule_separator = @{ "," ~ space }
 
@@ -34,7 +34,7 @@ fallback_rule_separator = @{ space? ~ "||" ~ space }
 
 rules_modifier = {
       comment
-    | rules_modifier_enum ~ space? ~ comment?
+    | rules_modifier_enum ~ ( space? ~ comment )?
 }
 
 rules_modifier_enum = {

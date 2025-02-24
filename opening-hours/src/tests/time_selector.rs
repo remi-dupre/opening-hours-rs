@@ -126,3 +126,25 @@ fn test_dusk_open_ended() {
         datetime!("2024-06-22 00:00"),
     );
 }
+
+#[test]
+fn same_bounds() -> Result<(), Error> {
+    let raw_oh = "Mo 04:00-04:00";
+
+    assert_eq!(
+        schedule_at!(raw_oh, "2025-02-24"), // Monday
+        schedule! { 4,00 => Open => 24,00 },
+    );
+
+    assert_eq!(
+        schedule_at!(raw_oh, "2025-02-25"), // Tuesday
+        schedule! { 00,00 => Open => 4,00 },
+    );
+
+    assert_eq!(
+        schedule_at!(raw_oh, "2025-02-26"), // Wednesday
+        schedule! {},
+    );
+
+    Ok(())
+}
