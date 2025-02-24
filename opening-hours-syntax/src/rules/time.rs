@@ -22,7 +22,7 @@ impl TimeSelector {
                 self.time.first(),
                 Some(TimeSpan { range, open_end: false, repeats: None })
                 if range.start == Time::Fixed(ExtendedTime::new(0,0).unwrap())
-                    && range.end == Time::Fixed( ExtendedTime::new(24,0).unwrap())
+                    && range.end == Time::Fixed(ExtendedTime::new(24,0).unwrap())
             )
     }
 }
@@ -80,9 +80,7 @@ impl Display for TimeSpan {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.range.start)?;
 
-        if (self.open_end && self.range.end != Time::Fixed(ExtendedTime::new(24, 0).unwrap()))
-            || (!self.open_end && self.range.start != self.range.end)
-        {
+        if !self.open_end || self.range.end != Time::Fixed(ExtendedTime::new(24, 0).unwrap()) {
             write!(f, "-{}", self.range.end)?;
         }
 

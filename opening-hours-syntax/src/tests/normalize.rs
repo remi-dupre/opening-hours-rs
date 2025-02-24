@@ -9,7 +9,7 @@ macro_rules! ex {
 
 const EXAMPLES: &[(&str, u32, &str, &str)] = &[
     ex!("Sa; 24/7", "24/7"),
-    ex!("06:00+;24/7", "06:00+, 24/7"),
+    ex!("06:00+;24/7", "06:00+ ; 24/7"),
     ex!("06:00-24:00;24/7", "24/7"),
     ex!("Tu-Mo", "24/7"),
     ex!("2022;Fr", "Fr, 2022 Mo-Th,Sa-Su"),
@@ -26,7 +26,10 @@ const EXAMPLES: &[(&str, u32, &str, &str)] = &[
     ex!("Mo-Fr open ; We unknown", "Mo-Tu,Th-Fr, We unknown"),
     ex!("Mo unknown ; Tu open ; We closed", "Tu, Mo unknown"),
     ex!("unknown|| Th|| We", "24/7 unknown || Th || We"),
+    ex!("dusk-dusk", "dusk-dusk"),
     ex!("dusk-48:00+", "dusk-48:00+"),
+    ex!("Sep 24:00-04:20", "Sep 24:00-28:20"),
+    ex!("Sep 18:00-04:20", "Sep 18:00-28:20"),
     ex!(
         "10:00-16:00, We 15:00-20:00 unknown",
         "Mo-Tu,Th-Su 10:00-16:00, We 10:00-15:00, We 15:00-20:00 unknown",
@@ -54,6 +57,10 @@ const EXAMPLES: &[(&str, u32, &str, &str)] = &[
     ex!(
         "week2Mo;Jun;Fr",
         "Fr, week02 Mo, Jun week01,03-53 Mo-Th,Sa-Su, Jun week02 Tu-Th,Sa-Su",
+    ),
+    ex!(
+        "week04 Mo ; Jul ; Jun 5 ; Sep Fr ; 04:00-04:20", 
+        "week04 Mo, Jul week01-03,05-53, Jul week04 Tu-Su ; Jun 5 ; Sep Fr ; 04:00-04:20",
     ),
 ];
 

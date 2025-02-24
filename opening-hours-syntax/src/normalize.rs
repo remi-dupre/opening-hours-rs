@@ -209,7 +209,26 @@ impl<T: Framable> Bounded for Frame<T> {
 
 impl Bounded for ExtendedTime {
     const BOUND_START: Self = ExtendedTime::new(0, 0).unwrap();
-    const BOUND_END: Self = ExtendedTime::new(48, 0).unwrap();
+
+    /// While the end bound can actually reach 48:00, this end bound is only
+    /// used for inverted ranges (where start bound can only reach 24:00) and
+    /// detected full days (which are 00:00 to 24:00).
+    const BOUND_END: Self = ExtendedTime::new(24, 0).unwrap();
+
+    /// When a range is inverted for extended time, it means that it will overlap with next day,
+    /// contrary to other dimensions where it means that we have to split into two intervals.
+    fn split_inverted_range(range: Range<Self>) -> impl Iterator<Item = Range<Self>> {
+        if range.start >= range.end {
+            let bound_end = range
+                .end
+                .add_hours(24)
+                .expect("start time greater than 24:00");
+
+            std::iter::once(range.start..bound_end)
+        } else {
+            std::iter::once(range)
+        }
+    }
 }
 
 // --
@@ -238,10 +257,13 @@ trait MakeCanonical: Sized + 'static {
         Some(ranges)
     }
 
-    fn into_selector(canonical: Vec<Range<Self::CanonicalType>>) -> Vec<Self> {
+    fn into_selector(
+        canonical: Vec<Range<Self::CanonicalType>>,
+        remove_full_ranges: bool,
+    ) -> Vec<Self> {
         canonical
             .into_iter()
-            .filter(|rg| *rg != Self::CanonicalType::bounds())
+            .filter(|rg| !(remove_full_ranges && *rg == Self::CanonicalType::bounds()))
             .filter_map(|rg| Self::into_type(rg))
             .collect()
     }
@@ -404,13 +426,15 @@ pub(crate) fn canonical_to_seq(
         let (rgs_time, _) = selector.into_unpack_front();
 
         let day_selector = DaySelector {
-            year: MakeCanonical::into_selector(rgs_year),
-            monthday: MakeCanonical::into_selector(rgs_monthday),
-            week: MakeCanonical::into_selector(rgs_week),
-            weekday: MakeCanonical::into_selector(rgs_weekday),
+            year: MakeCanonical::into_selector(rgs_year, true),
+            monthday: MakeCanonical::into_selector(rgs_monthday, true),
+            week: MakeCanonical::into_selector(rgs_week, true),
+            weekday: MakeCanonical::into_selector(rgs_weekday, true),
         };
 
-        let time_selector = TimeSelector { time: MakeCanonical::into_selector(rgs_time) };
+        let time_selector = TimeSelector {
+            time: MakeCanonical::into_selector(rgs_time, false),
+        };
 
         Some(RuleSequence {
             day_selector,

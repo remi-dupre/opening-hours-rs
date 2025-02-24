@@ -58,52 +58,49 @@ impl OpeningHoursExpression {
         let mut rules_queue = self.rules.into_iter().peekable();
         let mut normalized = Vec::new();
 
-        while let Some(head) = rules_queue.next() {
-            // Explicit closes can't be normalized after another rule that cannot be normalized
-            // because it may override part of the non-normalized rule.
-            let skip_for_closes = |kind| !normalized.is_empty() && kind == RuleKind::Closed;
+        let Some(head) = rules_queue.next() else {
+            return Self { rules: normalized };
+        };
 
-            // TODO: implement fallback
-            if head.operator == RuleOperator::Fallback || skip_for_closes(head.kind) {
-                normalized.push(head);
-                continue;
-            }
-
-            let Some(selector) = ruleseq_to_selector(&head) else {
-                normalized.push(head);
-                continue;
-            };
-
-            let mut paving = Paving5D::default();
-            paving.set(&selector, head.kind);
-
-            while let Some(rule) = rules_queue.peek() {
-                if rule.operator == RuleOperator::Fallback
-                    || rule.comments != head.comments
-                    || skip_for_closes(rule.kind)
-                {
-                    break;
-                }
-
-                let Some(selector) = ruleseq_to_selector(rule) else {
-                    break;
-                };
-
-                if rule.operator == RuleOperator::Normal && rule.kind != RuleKind::Closed {
-                    // If the rule is not explicitly targeting a closed kind, then it overrides
-                    // previous rules for the whole day.
-                    let (_, day_selector) = selector.clone().into_unpack_back();
-                    let full_day_selector = day_selector.dim_back([ExtendedTime::bounds()]);
-                    paving.set(&full_day_selector, RuleKind::Closed);
-                }
-
-                paving.set(&selector, rule.kind);
-                rules_queue.next();
-            }
-
-            normalized.extend(canonical_to_seq(paving, head.comments));
+        // TODO: implement fallback
+        if head.operator == RuleOperator::Fallback {
+            normalized.push(head);
+            normalized.extend(rules_queue);
+            return Self { rules: normalized };
         }
 
+        let Some(selector) = ruleseq_to_selector(&head) else {
+            normalized.push(head);
+            normalized.extend(rules_queue);
+            return Self { rules: normalized };
+        };
+
+        let mut paving = Paving5D::default();
+        paving.set(&selector, head.kind);
+
+        while let Some(rule) = rules_queue.peek() {
+            if rule.operator == RuleOperator::Fallback || rule.comments != head.comments {
+                break;
+            }
+
+            let Some(selector) = ruleseq_to_selector(rule) else {
+                break;
+            };
+
+            if rule.operator == RuleOperator::Normal && rule.kind != RuleKind::Closed {
+                // If the rule is not explicitly targeting a closed kind, then it overrides
+                // previous rules for the whole day.
+                let (_, day_selector) = selector.clone().into_unpack_back();
+                let full_day_selector = day_selector.dim_back([ExtendedTime::bounds()]);
+                paving.set(&full_day_selector, RuleKind::Closed);
+            }
+
+            paving.set(&selector, rule.kind);
+            rules_queue.next();
+        }
+
+        normalized.extend(canonical_to_seq(paving, head.comments));
+        normalized.extend(rules_queue);
         Self { rules: normalized }
     }
 }
