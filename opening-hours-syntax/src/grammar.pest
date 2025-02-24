@@ -84,7 +84,7 @@ time_selector = { timespan ~ ( "," ~ timespan )* }
 timespan = {
       time ~ space? ~ "-" ~ extended_time ~ space? ~ "/" ~ space? ~ hour_minutes
     | time ~ space? ~ "-" ~ extended_time ~ space? ~ "/" ~ space? ~ minute
-    | time ~ space? ~ "-" ~ space? ~ extended_time ~ "+"
+    | time ~ space? ~ "-" ~ space? ~ extended_time ~ timespan_plus
     | time ~ space? ~ "-" ~ space? ~ extended_time
     | time ~ timespan_plus
 }

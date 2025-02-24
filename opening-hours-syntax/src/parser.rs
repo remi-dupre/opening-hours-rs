@@ -257,7 +257,7 @@ fn build_timespan(pair: Pair<Rule>) -> Result<ts::TimeSpan> {
         Some(pair) => (false, build_extended_time(pair)?),
     };
 
-    let (open_end, repeats) = match pairs.peek().map(|x| x.as_rule()) {
+    let (open_end, repeats) = match pairs.next().map(|x| x.as_rule()) {
         None => (open_end, None),
         Some(Rule::timespan_plus) => (true, None),
         Some(Rule::minute) => (open_end, Some(build_minute(pairs.next().unwrap()))),
