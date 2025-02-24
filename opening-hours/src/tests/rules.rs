@@ -129,3 +129,18 @@ fn fallback_take_all() {
     assert!(oh.is_open(dt));
     assert!(oh.next_change(dt).is_none());
 }
+
+#[test]
+fn override_with_closed() -> Result<(), Error> {
+    assert_eq!(
+        schedule_at!("Feb ; 00:00-04:00 closed", "2020-02-01"),
+        schedule! { 0,00 => Closed => 4,00 => Open => 24,00 }
+    );
+
+    assert_eq!(
+        schedule_at!("Feb ; 00:00-04:00 closed", "2020-03-01"),
+        schedule! { 0,00 => Closed => 4,00 }
+    );
+
+    Ok(())
+}

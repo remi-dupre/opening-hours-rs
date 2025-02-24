@@ -147,8 +147,9 @@ impl<L: Localize> OpeningHours<L> {
             let curr_match = rules_seq.day_selector.filter(date, &self.ctx);
             let curr_eval = rule_sequence_schedule_at(rules_seq, date, &self.ctx);
 
-            let (new_match, new_eval) = match rules_seq.operator {
-                RuleOperator::Normal => (
+            let (new_match, new_eval) = match (rules_seq.operator, rules_seq.kind) {
+                // The normal rule acts like the additional rule when the kind is "closed".
+                (RuleOperator::Normal, RuleKind::Open | RuleKind::Unknown) => (
                     curr_match || prev_match,
                     if curr_match {
                         curr_eval
@@ -156,14 +157,14 @@ impl<L: Localize> OpeningHours<L> {
                         prev_eval.or(curr_eval)
                     },
                 ),
-                RuleOperator::Additional => (
+                (RuleOperator::Additional, _) | (RuleOperator::Normal, RuleKind::Closed) => (
                     prev_match || curr_match,
                     match (prev_eval, curr_eval) {
                         (Some(prev), Some(curr)) => Some(prev.addition(curr)),
                         (prev, curr) => prev.or(curr),
                     },
                 ),
-                RuleOperator::Fallback => {
+                (RuleOperator::Fallback, _) => {
                     if prev_match
                         && !(prev_eval.as_ref())
                             .map(Schedule::is_always_closed)

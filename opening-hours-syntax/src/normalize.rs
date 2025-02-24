@@ -33,7 +33,7 @@ pub(crate) type CanonicalSelector =
 // -- OrderedWeekday
 // ---
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct OrderedWeekday(Weekday);
 
 impl Ord for OrderedWeekday {
@@ -130,7 +130,7 @@ impl Framable for WeekNum {
 // -- Frame
 // --
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum Frame<T: Framable> {
     Val(T),
     End,
@@ -208,27 +208,12 @@ impl<T: Framable> Bounded for Frame<T> {
 }
 
 impl Bounded for ExtendedTime {
+    // TODO: bounds to 48 could be handled but it's kinda tricky in current form
+    // (eg. "Feb ; 18:00-28:00 closed" has to be something like "Feb1 00:00-18:00 ; Feb2-Feb29
+    // 04:00-18:00").
+    // To solve that, the time should probably not be a dimension at all?
     const BOUND_START: Self = ExtendedTime::new(0, 0).unwrap();
-
-    /// While the end bound can actually reach 48:00, this end bound is only
-    /// used for inverted ranges (where start bound can only reach 24:00) and
-    /// detected full days (which are 00:00 to 24:00).
     const BOUND_END: Self = ExtendedTime::new(24, 0).unwrap();
-
-    /// When a range is inverted for extended time, it means that it will overlap with next day,
-    /// contrary to other dimensions where it means that we have to split into two intervals.
-    fn split_inverted_range(range: Range<Self>) -> impl Iterator<Item = Range<Self>> {
-        if range.start >= range.end {
-            let bound_end = range
-                .end
-                .add_hours(24)
-                .expect("start time greater than 24:00");
-
-            std::iter::once(range.start..bound_end)
-        } else {
-            std::iter::once(range)
-        }
-    }
 }
 
 // --
@@ -371,6 +356,10 @@ impl MakeCanonical for TimeSpan {
                 let Time::Fixed(end) = range.end else {
                     return None;
                 };
+
+                if start >= end || end > ExtendedTime::BOUND_END {
+                    return None;
+                }
 
                 Some(start..end)
             }

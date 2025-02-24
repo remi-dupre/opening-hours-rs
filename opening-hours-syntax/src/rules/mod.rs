@@ -7,7 +7,6 @@ use std::sync::Arc;
 use crate::normalize::{canonical_to_seq, ruleseq_to_selector, Bounded};
 use crate::rubik::{DimFromBack, Paving, Paving5D};
 use crate::sorted_vec::UniqueSortedVec;
-use crate::ExtendedTime;
 
 // OpeningHoursExpression
 
@@ -91,7 +90,7 @@ impl OpeningHoursExpression {
                 // If the rule is not explicitly targeting a closed kind, then it overrides
                 // previous rules for the whole day.
                 let (_, day_selector) = selector.clone().into_unpack_back();
-                let full_day_selector = day_selector.dim_back([ExtendedTime::bounds()]);
+                let full_day_selector = day_selector.dim_back([Bounded::bounds()]);
                 paving.set(&full_day_selector, RuleKind::Closed);
             }
 
