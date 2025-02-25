@@ -1,3 +1,10 @@
+//! This module defines a data structure that allows assigning arbitrary values to arbitrary
+//! subsets of an n-dimension space. It can then be used to extract maximally expanded
+//! selectors of same value.
+//!
+//! This last problem is hard, so the implementation here only focuses on being convenient and
+//! predictable.
+
 use std::fmt::Debug;
 use std::ops::Range;
 
@@ -51,50 +58,6 @@ impl<T, U> PavingSelector<T, U> {
 
     pub(crate) fn into_unpack_front(self) -> (Vec<Range<T>>, U) {
         (self.range, self.tail)
-    }
-}
-
-/// A trait that helps with accessing a selector from the back.
-pub(crate) trait DimFromBack {
-    /// The type of selector resulting from pushing a dimension `U` to the back.
-    type PushedBack<U>;
-
-    /// The type of selector that remains after popping a dimension from the back.
-    type PoppedBack;
-
-    /// The type of the dimension from the back.
-    type BackType;
-
-    fn dim_back<U>(self, range: impl Into<Vec<Range<U>>>) -> Self::PushedBack<U>;
-    fn into_unpack_back(self) -> (Vec<Range<Self::BackType>>, Self::PoppedBack);
-}
-
-impl<X> DimFromBack for PavingSelector<X, EmptyPavingSelector> {
-    type PushedBack<U> = PavingSelector<X, PavingSelector<U, EmptyPavingSelector>>;
-    type PoppedBack = EmptyPavingSelector;
-    type BackType = X;
-
-    fn dim_back<U>(self, range: impl Into<Vec<Range<U>>>) -> Self::PushedBack<U> {
-        EmptyPavingSelector.dim_front(range).dim_front(self.range)
-    }
-
-    fn into_unpack_back(self) -> (Vec<Range<Self::BackType>>, Self::PoppedBack) {
-        (self.range, EmptyPavingSelector)
-    }
-}
-
-impl<X, Y: DimFromBack> DimFromBack for PavingSelector<X, Y> {
-    type PushedBack<U> = PavingSelector<X, Y::PushedBack<U>>;
-    type PoppedBack = PavingSelector<X, Y::PoppedBack>;
-    type BackType = Y::BackType;
-
-    fn dim_back<U>(self, range: impl Into<Vec<Range<U>>>) -> Self::PushedBack<U> {
-        PavingSelector { range: self.range, tail: self.tail.dim_back(range) }
-    }
-
-    fn into_unpack_back(self) -> (Vec<Range<Self::BackType>>, Self::PoppedBack) {
-        let (unpacked, tail) = self.tail.into_unpack_back();
-        (unpacked, PavingSelector { range: self.range, tail })
     }
 }
 

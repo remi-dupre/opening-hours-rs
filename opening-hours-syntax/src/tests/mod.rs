@@ -1,2 +1,2 @@
 pub mod normalize;
-pub mod rubik;
+pub mod paving;

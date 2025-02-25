@@ -35,7 +35,7 @@ const EXAMPLES: &[(&str, u32, &str, &str)] = &[
     ),
     ex!(
         "10:00-16:00, We 15:00-20:00 unknown",
-        "Mo-Tu,Th-Su 10:00-16:00 ; We 10:00-15:00, We 15:00-20:00 unknown",
+        "10:00-15:00, Mo-Tu,Th-Su 15:00-16:00, We 15:00-20:00 unknown",
     ),
     ex!(
         "Mo 10:00-21:00; Tu,We,Th,Fr,Sa,Su 10:00-21:00",
@@ -43,7 +43,7 @@ const EXAMPLES: &[(&str, u32, &str, &str)] = &[
     ),
     ex!(
         "Nov-Mar Mo-Fr 10:00-16:00 ; Apr-Nov Mo-Fr 08:00-18:00",
-        "Mo-Fr 10:00-16:00, Apr-Nov Mo-Fr 08:00-10:00,16:00-18:00",
+        "Apr-Nov Mo-Fr 08:00-18:00 ; Jan-Mar,Dec Mo-Fr 10:00-16:00",
     ),
     ex!(
         "Apr-Oct Mo-Fr 08:00-18:00 ; Mo-Fr 10:00-16:00 open",
@@ -51,7 +51,7 @@ const EXAMPLES: &[(&str, u32, &str, &str)] = &[
     ),
     ex!(
         "Mo-Fr 10:00-16:00 open ; Apr-Oct Mo-Fr 08:00-18:00",
-        "Mo-Fr 10:00-16:00, Apr-Oct Mo-Fr 08:00-10:00,16:00-18:00",
+        "Apr-Oct Mo-Fr 08:00-18:00 ; Jan-Mar,Nov-Dec Mo-Fr 10:00-16:00",
     ),
     ex!(
         "Mo-Su 00:00-01:00, 10:30-24:00 ; PH off ; 2021 Apr 10 00:00-01:00 ; 2021 Apr 11-16 off ; 2021 Apr 17 10:30-24:00",

@@ -1,5 +1,5 @@
 #![allow(clippy::single_range_in_vec_init)]
-use crate::rubik::*;
+use crate::normalize::paving::*;
 
 #[test]
 fn test_dim2() {

@@ -4,12 +4,11 @@
 extern crate pest_derive;
 
 mod display;
+mod normalize;
 mod parser;
 
 pub mod error;
 pub mod extended_time;
-pub mod normalize;
-pub mod rubik;
 pub mod rules;
 pub mod sorted_vec;
 
