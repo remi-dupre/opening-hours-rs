@@ -23,7 +23,7 @@ pub(crate) type Selector5D<T, U, V, W, X> = PavingSelector<T, Selector4D<U, V, W
 pub(crate) struct EmptyPavingSelector;
 
 impl EmptyPavingSelector {
-    pub(crate) fn dim<T>(self, range: impl Into<Vec<Range<T>>>) -> PavingSelector<T, Self> {
+    pub(crate) fn dim_front<T>(self, range: impl Into<Vec<Range<T>>>) -> PavingSelector<T, Self> {
         PavingSelector { range: range.into(), tail: self }
     }
 }
@@ -75,7 +75,7 @@ impl<X> DimFromBack for PavingSelector<X, EmptyPavingSelector> {
     type BackType = X;
 
     fn dim_back<U>(self, range: impl Into<Vec<Range<U>>>) -> Self::PushedBack<U> {
-        EmptyPavingSelector.dim(range).dim_front(self.range)
+        EmptyPavingSelector.dim_front(range).dim_front(self.range)
     }
 
     fn into_unpack_back(self) -> (Vec<Range<Self::BackType>>, Self::PoppedBack) {

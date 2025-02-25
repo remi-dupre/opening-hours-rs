@@ -68,9 +68,9 @@ impl OpeningHoursExpression {
 
             let rule = rules_queue.next().unwrap();
 
+            // If the rule is not explicitly targeting a closed kind, then it overrides
+            // previous rules for the whole day.
             if rule.operator == RuleOperator::Normal && rule.kind != RuleKind::Closed {
-                // If the rule is not explicitly targeting a closed kind, then it overrides
-                // previous rules for the whole day.
                 let (_, day_selector) = selector.clone().into_unpack_back();
                 let full_day_selector = day_selector.dim_back([Bounded::bounds()]);
                 paving.set(&full_day_selector, &Default::default());

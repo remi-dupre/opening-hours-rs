@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use chrono::Weekday;
 
-use crate::rubik::{DimFromBack, EmptyPavingSelector, Paving, Paving5D, Selector4D, Selector5D};
+use crate::rubik::{DimFromBack, EmptyPavingSelector, Paving, Paving4D, Paving5D, Selector5D};
 use crate::rules::day::{
     DaySelector, Month, MonthdayRange, WeekDayRange, WeekNum, WeekRange, Year, YearRange,
 };
@@ -22,9 +22,6 @@ pub(crate) type Canonical = Paving5D<
     ExtendedTime,
     (RuleKind, UniqueSortedVec<Arc<str>>),
 >;
-
-pub(crate) type CanonicalDaySelector =
-    Selector4D<Frame<Year>, Frame<Month>, Frame<WeekNum>, Frame<OrderedWeekday>>;
 
 pub(crate) type CanonicalSelector =
     Selector5D<Frame<Year>, Frame<Month>, Frame<WeekNum>, Frame<OrderedWeekday>, ExtendedTime>;
@@ -380,11 +377,12 @@ impl MakeCanonical for TimeSpan {
 // -- Normalization Logic
 // --
 
-pub(crate) fn ruleseq_to_day_selector(rs: &RuleSequence) -> Option<CanonicalDaySelector> {
+pub(crate) fn ruleseq_to_selector(rs: &RuleSequence) -> Option<CanonicalSelector> {
     let ds = &rs.day_selector;
 
     let selector = EmptyPavingSelector
-        .dim(MakeCanonical::try_from_iterator(&ds.weekday)?)
+        .dim_front(MakeCanonical::try_from_iterator(&rs.time_selector.time)?)
+        .dim_front(MakeCanonical::try_from_iterator(&ds.weekday)?)
         .dim_front(MakeCanonical::try_from_iterator(&ds.week)?)
         .dim_front(MakeCanonical::try_from_iterator(&ds.monthday)?)
         .dim_front(MakeCanonical::try_from_iterator(&ds.year)?);
@@ -392,28 +390,12 @@ pub(crate) fn ruleseq_to_day_selector(rs: &RuleSequence) -> Option<CanonicalDayS
     Some(selector)
 }
 
-pub(crate) fn ruleseq_to_selector(rs: &RuleSequence) -> Option<CanonicalSelector> {
-    let day_selector = ruleseq_to_day_selector(rs)?;
-    let time_selector = MakeCanonical::try_from_iterator(&rs.time_selector.time)?;
-    Some(day_selector.dim_back(time_selector))
-}
-
 pub(crate) fn canonical_to_seq(mut canonical: Canonical) -> impl Iterator<Item = RuleSequence> {
-    let mut is_first_iter = true;
+    // Keep track of the days that have already been outputed. This allows to use an additional
+    // rule if it is absolutly required only.
+    let mut days_covered = Paving4D::default();
 
     std::iter::from_fn(move || {
-        let operator = {
-            // When an expression is parsed, the first operator is always "Normal". This has no
-            // impact on how the expression is evaluated but ensures consistent representation of
-            // the expressions.
-            if is_first_iter {
-                is_first_iter = false;
-                RuleOperator::Normal
-            } else {
-                RuleOperator::Additional
-            }
-        };
-
         // Extract open periods first, then unknowns
         let ((kind, comments), selector) = [RuleKind::Open, RuleKind::Unknown, RuleKind::Closed]
             .into_iter()
@@ -424,11 +406,21 @@ pub(crate) fn canonical_to_seq(mut canonical: Canonical) -> impl Iterator<Item =
                 })
             })?;
 
-        let (rgs_year, selector) = selector.into_unpack_front();
-        let (rgs_monthday, selector) = selector.into_unpack_front();
-        let (rgs_week, selector) = selector.into_unpack_front();
-        let (rgs_weekday, selector) = selector.into_unpack_front();
-        let (rgs_time, _) = selector.into_unpack_front();
+        let (rgs_time, day_selector) = selector.into_unpack_back();
+
+        let operator = {
+            if days_covered.is_val(&day_selector, &false) {
+                RuleOperator::Normal
+            } else {
+                RuleOperator::Additional
+            }
+        };
+
+        days_covered.set(&day_selector, &true);
+        let (rgs_year, day_selector) = day_selector.into_unpack_front();
+        let (rgs_monthday, day_selector) = day_selector.into_unpack_front();
+        let (rgs_week, day_selector) = day_selector.into_unpack_front();
+        let (rgs_weekday, _) = day_selector.into_unpack_front();
 
         let day_selector = DaySelector {
             year: MakeCanonical::into_selector(rgs_year, true),
