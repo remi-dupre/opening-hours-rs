@@ -51,12 +51,12 @@ fn test_pop_trivial() {
     grid.set(&EmptyPavingSelector.dim([1..5]).dim_front([4..6]), true); // C
 
     assert_eq!(
-        grid.pop_selector(true).unwrap(),
+        grid.pop_value(true).unwrap(),
         EmptyPavingSelector.dim([1..5]).dim_front([3..6]),
     );
 
     assert_eq!(grid, grid_empty);
-    assert_eq!(grid.pop_selector(true), None);
+    assert_eq!(grid.pop_value(true), None);
 }
 
 #[test]
@@ -77,12 +77,12 @@ fn test_pop_disjoint() {
     );
 
     assert_eq!(
-        grid.pop_selector(true).unwrap(),
+        grid.pop_value(true).unwrap(),
         EmptyPavingSelector.dim([1..2, 4..7]).dim_front([3..6]),
     );
 
     assert_eq!(grid, grid_empty);
-    assert_eq!(grid.pop_selector(true), None);
+    assert_eq!(grid.pop_value(true), None);
 }
 
 #[test]

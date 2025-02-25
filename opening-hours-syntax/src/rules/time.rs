@@ -9,7 +9,7 @@ use crate::extended_time::ExtendedTime;
 
 // TimeSelector
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TimeSelector {
     pub time: Vec<TimeSpan>,
 }
@@ -67,12 +67,37 @@ pub struct TimeSpan {
 
 impl TimeSpan {
     #[inline]
-    pub fn fixed_range(start: ExtendedTime, end: ExtendedTime) -> Self {
+    pub const fn fixed_range(start: ExtendedTime, end: ExtendedTime) -> Self {
         Self {
             range: Time::Fixed(start)..Time::Fixed(end),
             open_end: false,
             repeats: None,
         }
+    }
+}
+
+impl Default for TimeSpan {
+    fn default() -> Self {
+        Self::fixed_range(
+            ExtendedTime::new(0, 0).unwrap(),
+            ExtendedTime::new(24, 0).unwrap(),
+        )
+    }
+}
+
+impl Ord for TimeSpan {
+    fn cmp(&self, other: &Self) -> Ordering {
+        (self.range.start)
+            .cmp(&other.range.start)
+            .then_with(|| self.range.end.cmp(&other.range.end))
+            .then_with(|| self.open_end.cmp(&other.open_end))
+            .then_with(|| self.repeats.cmp(&other.repeats))
+    }
+}
+
+impl PartialOrd for TimeSpan {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 
@@ -102,7 +127,7 @@ impl Display for TimeSpan {
 
 // Time
 
-#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Time {
     Fixed(ExtendedTime),
     Variable(VariableTime),
@@ -119,7 +144,7 @@ impl Display for Time {
 
 // VariableTime
 
-#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct VariableTime {
     pub event: TimeEvent,
     pub offset: i16,
@@ -139,7 +164,7 @@ impl Display for VariableTime {
 
 // TimeEvent
 
-#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TimeEvent {
     Dawn,
     Sunrise,

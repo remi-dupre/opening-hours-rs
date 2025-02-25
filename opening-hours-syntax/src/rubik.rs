@@ -1,5 +1,5 @@
 use std::fmt::Debug;
-use std::ops::Range;
+use std::ops::{AddAssign, Range};
 
 pub(crate) type Paving1D<T, Val> = Dim<T, Cell<Val>>;
 pub(crate) type Paving2D<T, U, Val> = Dim<T, Paving1D<U, Val>>;
@@ -105,10 +105,15 @@ impl<X, Y: DimFromBack> DimFromBack for PavingSelector<X, Y> {
 /// Interface over a n-dim paving.
 pub(crate) trait Paving: Clone + Default {
     type Selector;
-    type Value: Copy + Default + Eq + Ord;
-    fn set(&mut self, selector: &Self::Selector, val: Self::Value);
+    type Value: Clone + Default + Eq;
+    fn set(&mut self, selector: &Self::Selector, val: Self::Value); // void cloning so much
     fn is_val(&self, selector: &Self::Selector, val: Self::Value) -> bool;
-    fn pop_selector(&mut self, target_value: Self::Value) -> Option<Self::Selector>;
+    fn pop_any(&mut self) -> Option<(Self::Value, Self::Selector)>;
+    fn pop_value(&mut self, target_value: Self::Value) -> Option<Self::Selector>;
+
+    fn add(&mut self, selector: &Self::Selector, val: &Self::Value)
+    where
+        Self::Value: AddAssign;
 }
 
 // --
@@ -116,12 +121,12 @@ pub(crate) trait Paving: Clone + Default {
 // --
 
 /// Just a 0-dimension cell.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub(crate) struct Cell<Val: Default + Eq + Ord> {
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub(crate) struct Cell<Val: Default + Eq> {
     inner: Val,
 }
 
-impl<Val: Copy + Default + Eq + Ord> Paving for Cell<Val> {
+impl<Val: Clone + Default + Eq> Paving for Cell<Val> {
     type Selector = EmptyPavingSelector;
     type Value = Val;
 
@@ -133,12 +138,27 @@ impl<Val: Copy + Default + Eq + Ord> Paving for Cell<Val> {
         self.inner == val
     }
 
-    fn pop_selector(&mut self, target_value: Val) -> Option<Self::Selector> {
+    fn pop_any(&mut self) -> Option<(Self::Value, Self::Selector)> {
+        if self.inner != Default::default() {
+            Some((std::mem::take(&mut self.inner), EmptyPavingSelector))
+        } else {
+            None
+        }
+    }
+
+    fn pop_value(&mut self, target_value: Val) -> Option<Self::Selector> {
         if self.inner == target_value {
             Some(EmptyPavingSelector)
         } else {
             None
         }
+    }
+
+    fn add(&mut self, _selector: &Self::Selector, val: &Self::Value)
+    where
+        Self::Value: AddAssign,
+    {
+        self.inner += val.clone();
     }
 }
 
@@ -219,7 +239,7 @@ impl<T: Clone + Ord, U: Paving> Paving for Dim<T, U> {
 
             for (col_start, col_val) in self.cuts.iter().zip(&mut self.cols) {
                 if *col_start >= range.start && *col_start < range.end {
-                    col_val.set(selector_tail, val);
+                    col_val.set(selector_tail, val.clone());
                 }
             }
         }
@@ -253,7 +273,7 @@ impl<T: Clone + Ord, U: Paving> Paving for Dim<T, U> {
                 // Column overlaps with the input range
                 let col_overlaps = *col_start < range.end && *col_end > range.start;
 
-                if col_overlaps && !col_val.is_val(selector_tail, val) {
+                if col_overlaps && !col_val.is_val(selector_tail, val.clone()) {
                     return false;
                 }
             }
@@ -262,18 +282,52 @@ impl<T: Clone + Ord, U: Paving> Paving for Dim<T, U> {
         true
     }
 
-    fn pop_selector(&mut self, target_value: Self::Value) -> Option<Self::Selector> {
-        let (mut start_idx, selector_tail) = self
+    fn pop_any(&mut self) -> Option<(Self::Value, Self::Selector)> {
+        // TODO: implem too redundant with pop_value
+        let (mut start_idx, (target_value, selector_tail)) = self
             .cols
             .iter_mut()
             .enumerate()
-            .find_map(|(idx, col)| Some((idx, col.pop_selector(target_value)?)))?;
+            .find_map(|(idx, col)| Some((idx, col.pop_any()?)))?;
 
         let mut end_idx = start_idx + 1;
         let mut selector_range = Vec::new();
 
         while end_idx < self.cols.len() {
-            if self.cols[end_idx].is_val(&selector_tail, target_value) {
+            if self.cols[end_idx].is_val(&selector_tail, target_value.clone()) {
+                end_idx += 1;
+                continue;
+            }
+
+            if start_idx < end_idx {
+                selector_range.push(self.cuts[start_idx].clone()..self.cuts[end_idx].clone());
+            }
+
+            end_idx += 1;
+            start_idx = end_idx;
+        }
+
+        if start_idx < end_idx {
+            selector_range.push(self.cuts[start_idx].clone()..self.cuts[end_idx].clone());
+        }
+
+        let selector = PavingSelector { range: selector_range, tail: selector_tail };
+        self.set(&selector, Self::Value::default());
+        Some((target_value, selector))
+    }
+
+    fn pop_value(&mut self, target_value: Self::Value) -> Option<Self::Selector> {
+        let (mut start_idx, selector_tail) = self
+            .cols
+            .iter_mut()
+            .enumerate()
+            .find_map(|(idx, col)| Some((idx, col.pop_value(target_value.clone())?)))?;
+
+        let mut end_idx = start_idx + 1;
+        let mut selector_range = Vec::new();
+
+        while end_idx < self.cols.len() {
+            if self.cols[end_idx].is_val(&selector_tail, target_value.clone()) {
                 end_idx += 1;
                 continue;
             }
@@ -293,6 +347,24 @@ impl<T: Clone + Ord, U: Paving> Paving for Dim<T, U> {
         let selector = PavingSelector { range: selector_range, tail: selector_tail };
         self.set(&selector, Self::Value::default());
         Some(selector)
+    }
+
+    fn add(&mut self, selector: &Self::Selector, val: &Self::Value)
+    where
+        Self::Value: AddAssign,
+    {
+        let (ranges, selector_tail) = selector.unpack_front();
+
+        for range in ranges {
+            self.cut_at(range.start.clone());
+            self.cut_at(range.end.clone());
+
+            for (col_start, col_val) in self.cuts.iter().zip(&mut self.cols) {
+                if *col_start >= range.start && *col_start < range.end {
+                    col_val.add(selector_tail, val);
+                }
+            }
+        }
     }
 }
 

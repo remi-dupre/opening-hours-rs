@@ -4,8 +4,11 @@ pub mod time;
 use std::fmt::Display;
 use std::sync::Arc;
 
-use crate::normalize::{canonical_to_seq, ruleseq_to_selector, Bounded};
-use crate::rubik::{DimFromBack, Paving, Paving5D};
+use crate::normalize::{
+    canonical_to_seq, new_canonical_to_seq, ruleseq_to_day_selector, ruleseq_to_selector, Bounded,
+    TimeSequenceList,
+};
+use crate::rubik::{DimFromBack, Paving, Paving4D, Paving5D};
 use crate::sorted_vec::UniqueSortedVec;
 
 // OpeningHoursExpression
@@ -53,7 +56,7 @@ impl OpeningHoursExpression {
     /// let oh = opening_hours_syntax::parse("24/7 ; Su closed").unwrap();
     /// assert_eq!(oh.normalize().to_string(), "Mo-Sa");
     /// ```
-    pub fn normalize(self) -> Self {
+    pub fn old_normalize(self) -> Self {
         let mut rules_queue = self.rules.into_iter().peekable();
         let mut normalized = Vec::new();
 
@@ -99,6 +102,56 @@ impl OpeningHoursExpression {
         }
 
         normalized.extend(canonical_to_seq(paving, head.comments));
+        normalized.extend(rules_queue);
+        Self { rules: normalized }
+    }
+
+    pub fn normalize(self) -> Self {
+        let mut rules_queue = self.rules.into_iter().peekable();
+        let mut normalized = Vec::new();
+
+        let Some(head) = rules_queue.next() else {
+            return Self { rules: normalized };
+        };
+
+        // TODO: implement fallback & addition
+        if head.operator == RuleOperator::Fallback || head.operator == RuleOperator::Additional {
+            normalized.push(head);
+            normalized.extend(rules_queue);
+            return Self { rules: normalized };
+        }
+
+        let Some(selector) = ruleseq_to_day_selector(&head) else {
+            normalized.push(head);
+            normalized.extend(rules_queue);
+            return Self { rules: normalized };
+        };
+
+        let mut paving = Paving4D::default();
+        let (time_sequence, _) = TimeSequenceList::extract_from_rule_sequence(head);
+        paving.set(&selector, time_sequence);
+
+        while let Some(rule) = rules_queue.peek() {
+            let Some(selector) = ruleseq_to_day_selector(rule) else {
+                break;
+            };
+
+            let (time_sequence, _) = TimeSequenceList::extract_from_rule_sequence(rule.clone());
+
+            match (rule.operator, rule.kind) {
+                (RuleOperator::Additional, _) | (RuleOperator::Normal, RuleKind::Closed) => {
+                    paving.add(&selector, &time_sequence)
+                }
+                (RuleOperator::Normal, RuleKind::Open | RuleKind::Unknown) => {
+                    paving.set(&selector, time_sequence)
+                }
+                (RuleOperator::Fallback, _) => break,
+            }
+
+            rules_queue.next();
+        }
+
+        normalized.extend(new_canonical_to_seq(paving));
         normalized.extend(rules_queue);
         Self { rules: normalized }
     }
@@ -215,9 +268,15 @@ impl Display for RuleKind {
 
 // RuleOperator
 
-#[derive(Copy, Clone, Debug, Hash, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Hash, Eq, PartialEq, PartialOrd, Ord)]
 pub enum RuleOperator {
     Normal,
     Additional,
     Fallback,
+}
+
+impl Default for RuleOperator {
+    fn default() -> Self {
+        Self::Normal
+    }
 }

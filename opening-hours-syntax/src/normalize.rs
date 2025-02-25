@@ -1,11 +1,12 @@
-#![allow(clippy::single_range_in_vec_init)]
 use std::cmp::Ordering;
-use std::ops::{Range, RangeInclusive};
+use std::ops::{AddAssign, Range, RangeInclusive};
 use std::sync::Arc;
 
 use chrono::Weekday;
 
-use crate::rubik::{DimFromBack, EmptyPavingSelector, Paving, Paving5D, Selector4D, Selector5D};
+use crate::rubik::{
+    DimFromBack, EmptyPavingSelector, Paving, Paving4D, Paving5D, Selector4D, Selector5D,
+};
 use crate::rules::day::{
     DaySelector, Month, MonthdayRange, WeekDayRange, WeekNum, WeekRange, Year, YearRange,
 };
@@ -23,11 +24,72 @@ pub(crate) type Canonical = Paving5D<
     RuleKind,
 >;
 
+pub(crate) type NewCanonical =
+    Paving4D<Frame<Year>, Frame<Month>, Frame<WeekNum>, Frame<OrderedWeekday>, TimeSequenceList>;
+
 pub(crate) type CanonicalDaySelector =
     Selector4D<Frame<Year>, Frame<Month>, Frame<WeekNum>, Frame<OrderedWeekday>>;
 
 pub(crate) type CanonicalSelector =
     Selector5D<Frame<Year>, Frame<Month>, Frame<WeekNum>, Frame<OrderedWeekday>, ExtendedTime>;
+
+// --
+// -- TimeSequence
+// --
+
+#[derive(Clone, Default, Eq, PartialEq)]
+pub(crate) struct TimeSequence {
+    time_selector: TimeSelector,
+    kind: RuleKind,
+    operator: RuleOperator,
+    comments: UniqueSortedVec<Arc<str>>,
+}
+
+impl TimeSequence {
+    pub(crate) fn extract_from_rule_sequence(rule: RuleSequence) -> (Self, DaySelector) {
+        (
+            Self {
+                time_selector: rule.time_selector,
+                kind: rule.kind,
+                operator: rule.operator,
+                comments: rule.comments,
+            },
+            rule.day_selector,
+        )
+    }
+
+    pub(crate) fn with_day_selector(self, day_selector: DaySelector) -> RuleSequence {
+        RuleSequence {
+            day_selector,
+            time_selector: self.time_selector,
+            kind: self.kind,
+            operator: self.operator,
+            comments: self.comments,
+        }
+    }
+}
+
+// --
+// -- TimeSequenceList
+// --
+
+#[derive(Clone, Default, Eq, PartialEq)]
+pub(crate) struct TimeSequenceList {
+    sequences: Vec<TimeSequence>,
+}
+
+impl TimeSequenceList {
+    pub(crate) fn extract_from_rule_sequence(rule: RuleSequence) -> (Self, DaySelector) {
+        let (sequence, day_selector) = TimeSequence::extract_from_rule_sequence(rule);
+        (Self { sequences: vec![sequence] }, day_selector)
+    }
+}
+
+impl AddAssign for TimeSequenceList {
+    fn add_assign(&mut self, rhs: Self) {
+        self.sequences.extend(rhs.sequences)
+    }
+}
 
 // --
 // -- OrderedWeekday
@@ -420,7 +482,7 @@ pub(crate) fn canonical_to_seq(
         // Extract open periods first, then unknowns
         let (kind, selector) = [RuleKind::Open, RuleKind::Unknown]
             .into_iter()
-            .find_map(|kind| Some((kind, canonical.pop_selector(kind)?)))?;
+            .find_map(|kind| Some((kind, canonical.pop_value(kind)?)))?;
 
         let (rgs_year, selector) = selector.into_unpack_front();
         let (rgs_monthday, selector) = selector.into_unpack_front();
@@ -447,4 +509,40 @@ pub(crate) fn canonical_to_seq(
             comments: comments.clone(),
         })
     })
+}
+
+pub(crate) fn new_canonical_to_seq(
+    mut canonical: NewCanonical,
+) -> impl Iterator<Item = RuleSequence> {
+    let mut is_first_iter = true;
+
+    std::iter::from_fn(move || {
+        let (time_sequence_list, selector) = canonical.pop_any()?;
+        let (rgs_year, selector) = selector.into_unpack_front();
+        let (rgs_monthday, selector) = selector.into_unpack_front();
+        let (rgs_week, selector) = selector.into_unpack_front();
+        let (rgs_weekday, _) = selector.into_unpack_front();
+
+        let day_selector = DaySelector {
+            year: MakeCanonical::into_selector(rgs_year, true),
+            monthday: MakeCanonical::into_selector(rgs_monthday, true),
+            week: MakeCanonical::into_selector(rgs_week, true),
+            weekday: MakeCanonical::into_selector(rgs_weekday, true),
+        };
+
+        let inner_iter = time_sequence_list
+            .sequences
+            .into_iter()
+            .map(move |mut time_sequence| {
+                if is_first_iter {
+                    is_first_iter = false;
+                    time_sequence.operator = RuleOperator::Normal;
+                }
+
+                time_sequence.with_day_selector(day_selector.clone())
+            });
+
+        Some(inner_iter)
+    })
+    .flatten()
 }

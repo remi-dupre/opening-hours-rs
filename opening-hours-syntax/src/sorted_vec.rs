@@ -13,7 +13,7 @@ use std::ops::Deref;
 /// assert_eq!(sorted.as_slice(), &[1, 2, 3, 5]);
 /// ```
 #[repr(transparent)]
-#[derive(Clone, Debug, Default, Hash, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Hash, Eq, PartialEq, PartialOrd, Ord)]
 pub struct UniqueSortedVec<T>(Vec<T>);
 
 impl<T> UniqueSortedVec<T> {
