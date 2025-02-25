@@ -17,7 +17,7 @@ fn test_dim2() {
         &EmptyPavingSelector
             .dim::<i32>([1..5])
             .dim_front::<i32>([3..6]),
-        true,
+        &true,
     );
 
     assert_ne!(grid_empty, grid_1);
@@ -29,9 +29,9 @@ fn test_dim2() {
     // 5 ⋅ C C C C ⋅
     // 6 ⋅ ⋅ ⋅ ⋅ ⋅ ⋅
     let mut grid_2 = grid_empty.clone();
-    grid_2.set(&EmptyPavingSelector.dim([1..4]).dim_front([3..4]), true); // A & #
-    grid_2.set(&EmptyPavingSelector.dim([2..5]).dim_front([3..4]), true); // B & #
-    grid_2.set(&EmptyPavingSelector.dim([1..5]).dim_front([4..6]), true); // C
+    grid_2.set(&EmptyPavingSelector.dim([1..4]).dim_front([3..4]), &true); // A & #
+    grid_2.set(&EmptyPavingSelector.dim([2..5]).dim_front([3..4]), &true); // B & #
+    grid_2.set(&EmptyPavingSelector.dim([1..5]).dim_front([4..6]), &true); // C
     assert_eq!(grid_1, grid_2);
 }
 
@@ -46,17 +46,17 @@ fn test_pop_trivial() {
     // 5 ⋅ C C C C ⋅
     // 6 ⋅ ⋅ ⋅ ⋅ ⋅ ⋅
     let mut grid = grid_empty.clone();
-    grid.set(&EmptyPavingSelector.dim([1..4]).dim_front([3..4]), true); // A & #
-    grid.set(&EmptyPavingSelector.dim([2..5]).dim_front([3..4]), true); // B & #
-    grid.set(&EmptyPavingSelector.dim([1..5]).dim_front([4..6]), true); // C
+    grid.set(&EmptyPavingSelector.dim([1..4]).dim_front([3..4]), &true); // A & #
+    grid.set(&EmptyPavingSelector.dim([2..5]).dim_front([3..4]), &true); // B & #
+    grid.set(&EmptyPavingSelector.dim([1..5]).dim_front([4..6]), &true); // C
 
     assert_eq!(
-        grid.pop_selector(true).unwrap(),
+        grid.pop_filter(|x| *x).unwrap().1,
         EmptyPavingSelector.dim([1..5]).dim_front([3..6]),
     );
 
     assert_eq!(grid, grid_empty);
-    assert_eq!(grid.pop_selector(true), None);
+    assert_eq!(grid.pop_filter(|x| *x), None);
 }
 
 #[test]
@@ -73,16 +73,16 @@ fn test_pop_disjoint() {
 
     grid.set(
         &EmptyPavingSelector.dim([1..2, 4..7]).dim_front([3..6]),
-        true,
+        &true,
     );
 
     assert_eq!(
-        grid.pop_selector(true).unwrap(),
+        grid.pop_filter(|x| *x).unwrap().1,
         EmptyPavingSelector.dim([1..2, 4..7]).dim_front([3..6]),
     );
 
     assert_eq!(grid, grid_empty);
-    assert_eq!(grid.pop_selector(true), None);
+    assert_eq!(grid.pop_filter(|x| *x), None);
 }
 
 #[test]
@@ -97,7 +97,7 @@ fn test_debug() {
 
     grid.set(
         &EmptyPavingSelector.dim([1..2, 4..7]).dim_front([3..6]),
-        true,
+        &true,
     );
 
     assert_eq!(format!("{grid:?}"), "Dim { [3, 6[: Dim { [1, 2[: Cell { inner: true }, [2, 4[: Cell { inner: false }, [4, 7[: Cell { inner: true } } }")

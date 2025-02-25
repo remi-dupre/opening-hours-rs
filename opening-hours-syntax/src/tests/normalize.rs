@@ -28,10 +28,8 @@ const EXAMPLES: &[(&str, u32, &str, &str)] = &[
     ex!("unknown|| Th|| We", "24/7 unknown || Th || We"),
     ex!("dusk-dusk", "dusk-dusk"),
     ex!("dusk-48:00+", "dusk-48:00+"),
-    // ex!("Sep 24:00-04:20", "Sep 24:00-28:20"),
-    // ex!("Sep 18:00-04:20", "Sep 18:00-28:20"),
-    // ex!("Sep 04:00-27:00 ; Sep", "Sep"),
-    // ex!("Sep ; Sep 04:00-27:00", "Sep 04:00-27:00"),
+    ex!("Sep24:00-04:20", "Sep 24:00-04:20"),
+    ex!("10:00-12:00 open ; 14:00-16:00 closed \"on demand\"", "10:00-12:00, 14:00-16:00 closed \"on demand\""),
     ex!(
         "10:00-16:00, We 15:00-20:00 unknown",
         "Mo-Tu,Th-Su 10:00-16:00, We 10:00-15:00, We 15:00-20:00 unknown",

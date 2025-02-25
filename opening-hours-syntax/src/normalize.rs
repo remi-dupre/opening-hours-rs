@@ -20,7 +20,7 @@ pub(crate) type Canonical = Paving5D<
     Frame<WeekNum>,
     Frame<OrderedWeekday>,
     ExtendedTime,
-    RuleKind,
+    (RuleKind, UniqueSortedVec<Arc<str>>),
 >;
 
 pub(crate) type CanonicalDaySelector =
@@ -398,10 +398,7 @@ pub(crate) fn ruleseq_to_selector(rs: &RuleSequence) -> Option<CanonicalSelector
     Some(day_selector.dim_back(time_selector))
 }
 
-pub(crate) fn canonical_to_seq(
-    mut canonical: Canonical,
-    comments: UniqueSortedVec<Arc<str>>,
-) -> impl Iterator<Item = RuleSequence> {
+pub(crate) fn canonical_to_seq(mut canonical: Canonical) -> impl Iterator<Item = RuleSequence> {
     let mut is_first_iter = true;
 
     std::iter::from_fn(move || {
@@ -418,9 +415,14 @@ pub(crate) fn canonical_to_seq(
         };
 
         // Extract open periods first, then unknowns
-        let (kind, selector) = [RuleKind::Open, RuleKind::Unknown]
+        let ((kind, comments), selector) = [RuleKind::Open, RuleKind::Unknown, RuleKind::Closed]
             .into_iter()
-            .find_map(|kind| Some((kind, canonical.pop_selector(kind)?)))?;
+            .find_map(|target_kind| {
+                canonical.pop_filter(|(kind, comments)| {
+                    *kind == target_kind
+                        && (target_kind != RuleKind::Closed || !comments.is_empty())
+                })
+            })?;
 
         let (rgs_year, selector) = selector.into_unpack_front();
         let (rgs_monthday, selector) = selector.into_unpack_front();
@@ -444,7 +446,7 @@ pub(crate) fn canonical_to_seq(
             time_selector,
             kind,
             operator,
-            comments: comments.clone(),
+            comments,
         })
     })
 }

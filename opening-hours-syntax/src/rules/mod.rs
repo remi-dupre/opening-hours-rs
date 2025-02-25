@@ -55,30 +55,10 @@ impl OpeningHoursExpression {
     /// ```
     pub fn normalize(self) -> Self {
         let mut rules_queue = self.rules.into_iter().peekable();
-        let mut normalized = Vec::new();
-
-        let Some(head) = rules_queue.next() else {
-            return Self { rules: normalized };
-        };
-
-        // TODO: implement fallback
-        if head.operator == RuleOperator::Fallback {
-            normalized.push(head);
-            normalized.extend(rules_queue);
-            return Self { rules: normalized };
-        }
-
-        let Some(selector) = ruleseq_to_selector(&head) else {
-            normalized.push(head);
-            normalized.extend(rules_queue);
-            return Self { rules: normalized };
-        };
-
         let mut paving = Paving5D::default();
-        paving.set(&selector, head.kind);
 
         while let Some(rule) = rules_queue.peek() {
-            if rule.operator == RuleOperator::Fallback || rule.comments != head.comments {
+            if rule.operator == RuleOperator::Fallback {
                 break;
             }
 
@@ -86,21 +66,22 @@ impl OpeningHoursExpression {
                 break;
             };
 
+            let rule = rules_queue.next().unwrap();
+
             if rule.operator == RuleOperator::Normal && rule.kind != RuleKind::Closed {
                 // If the rule is not explicitly targeting a closed kind, then it overrides
                 // previous rules for the whole day.
                 let (_, day_selector) = selector.clone().into_unpack_back();
                 let full_day_selector = day_selector.dim_back([Bounded::bounds()]);
-                paving.set(&full_day_selector, RuleKind::Closed);
+                paving.set(&full_day_selector, &Default::default());
             }
 
-            paving.set(&selector, rule.kind);
-            rules_queue.next();
+            paving.set(&selector, &(rule.kind, rule.comments));
         }
 
-        normalized.extend(canonical_to_seq(paving, head.comments));
-        normalized.extend(rules_queue);
-        Self { rules: normalized }
+        Self {
+            rules: canonical_to_seq(paving).chain(rules_queue).collect(),
+        }
     }
 }
 
@@ -171,10 +152,15 @@ impl Display for RuleSequence {
                 write!(f, " ")?;
             }
 
+            is_empty = false;
             write!(f, "{}", self.kind)?;
         }
 
         if !self.comments.is_empty() {
+            if !is_empty {
+                write!(f, " ")?;
+            }
+
             write!(f, "\"{}\"", self.comments.join(", "))?;
         }
 
