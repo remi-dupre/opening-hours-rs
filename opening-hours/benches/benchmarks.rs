@@ -4,23 +4,28 @@ use opening_hours::{Context, OpeningHours};
 use chrono::NaiveDateTime;
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
-const SCH_24_7: &str = "24/7";
-const SCH_ADDITION: &str = "10:00-12:00 open, 14:00-16:00 unknown, 16:00-23:00 closed";
-const SCH_HOLIDAY: &str = "PH";
-const SCH_JAN_DEC: &str = "Jan-Dec";
+const SAMPLES: &[[&str; 2]] = &[
+    ["24_7", "24/7"],
+    ["holidays", "Mo-Fr 10:00-18:00 ; PH off"],
+    [
+        "rule_normal",
+        "Mo-Fr 10:00-12:00,14:00-18:00 ; Sa-Su 10:00-14:00 unknown ; Dec31 off",
+    ],
+    [
+        "rule_addition",
+        "Mo-Fr 10:00-18:00 , Sa-Su 10:00-14:00 unknown, 12:00-14:00 closed",
+    ],
+    [
+        "rule_fallback",
+        "Mo-Fr 10:00-12:00,14:00-18:00 ; Sa 10:00-13:00 || 10:00-12:00 unknown",
+    ],
+    [
+        "huge",
+        "Aug:Sa;week50unknown;Nov;2492week9:;:Mo;Fr;1912week48;:Mo;7591-1918week1:;:Mo;week8Sa;1918week3:;:Mo;7191-1911Mo;MayWe;Fr;week2;Feb;Oct;3683;Fr;1915week48;:Mo;5182-1919week1:;:Mo;week8Sa;1918week4:;:Mo;7191-1911;Mo;MayWe;Fr;week2;Feb;Oct;3836week3:;:Th;Su;3818closed; Fr;1917week17",
+    ],
+];
+
 const PARIS_COORDS: Coordinates = Coordinates::new(48.8535, 2.34839).unwrap();
-
-fn bench_parse(c: &mut Criterion) {
-    let mut group = c.benchmark_group("parse");
-
-    group.bench_function("24_7", |b| {
-        b.iter(|| OpeningHours::parse(black_box(SCH_24_7)).unwrap())
-    });
-
-    group.bench_function("addition", |b| {
-        b.iter(|| OpeningHours::parse(black_box(SCH_ADDITION)).unwrap())
-    });
-}
 
 fn bench_context(c: &mut Criterion) {
     let mut group = c.benchmark_group("context");
@@ -30,54 +35,60 @@ fn bench_context(c: &mut Criterion) {
     });
 }
 
-fn bench_eval(c: &mut Criterion) {
+fn bench_sample(c: &mut Criterion) {
     let fr_context = Context::default().with_holidays(Country::FR.holidays());
     let date_time = NaiveDateTime::parse_from_str("2021-02-01 12:03", "%Y-%m-%d %H:%M").unwrap();
 
-    let sch_24_7 = OpeningHours::parse(SCH_24_7).unwrap();
-    let sch_addition = OpeningHours::parse(SCH_ADDITION).unwrap();
-    let sch_jan_dec = OpeningHours::parse(SCH_JAN_DEC).unwrap();
+    let sample_oh: Vec<_> = SAMPLES
+        .iter()
+        .map(|[slug, expr]| {
+            (
+                *slug,
+                OpeningHours::parse(expr)
+                    .unwrap()
+                    .with_context(fr_context.clone()),
+            )
+        })
+        .collect();
 
-    let sch_holiday = OpeningHours::parse(SCH_HOLIDAY)
-        .unwrap()
-        .with_context(fr_context);
+    {
+        let mut group = c.benchmark_group("parse");
+
+        for [slug, expr] in SAMPLES {
+            group.bench_function(*slug, |b| {
+                b.iter(|| OpeningHours::parse(black_box(expr)).unwrap())
+            });
+        }
+    }
 
     {
         let mut group = c.benchmark_group("is_open");
 
-        group.bench_function("24_7", |b| {
-            b.iter(|| black_box(&sch_24_7).is_open(black_box(date_time)))
-        });
-
-        group.bench_function("addition", |b| {
-            b.iter(|| black_box(&sch_addition).is_open(black_box(date_time)))
-        });
-
-        group.bench_function("holiday", |b| {
-            b.iter(|| black_box(&sch_holiday).is_open(black_box(date_time)))
-        });
+        for (slug, oh) in &sample_oh {
+            group.bench_function(*slug, |b| {
+                b.iter(|| black_box(&oh).is_open(black_box(date_time)))
+            });
+        }
     }
 
     {
         let mut group = c.benchmark_group("next_change");
 
-        group.bench_function("24_7", |b| {
-            b.iter(|| black_box(&sch_24_7).next_change(black_box(date_time)))
-        });
+        for (slug, oh) in &sample_oh {
+            group.bench_function(*slug, |b| {
+                b.iter(|| black_box(black_box(&oh).next_change(black_box(date_time))))
+            });
+        }
+    }
 
-        group.bench_function("addition", |b| {
-            b.iter(|| black_box(&sch_addition).next_change(black_box(date_time)))
-        });
+    {
+        let mut group = c.benchmark_group("normalize");
 
-        group.bench_function("holiday", |b| {
-            b.iter(|| black_box(&sch_holiday).next_change(black_box(date_time)))
-        });
-
-        group.bench_function("jan-dec", |b| {
-            b.iter(|| black_box(&sch_jan_dec).next_change(black_box(date_time)))
-        });
+        for (slug, oh) in &sample_oh {
+            group.bench_function(*slug, |b| b.iter(|| black_box(black_box(&oh).normalize())));
+        }
     }
 }
 
-criterion_group!(benches, bench_parse, bench_context, bench_eval);
+criterion_group!(benches, bench_context, bench_sample);
 criterion_main!(benches);

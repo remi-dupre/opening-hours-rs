@@ -11,6 +11,15 @@ pub struct ExtendedTime {
 }
 
 impl ExtendedTime {
+    /// 00:00 (start of day)
+    pub const MIDNIGHT_00: Self = Self::new(0, 0).unwrap();
+
+    /// 24:00 (end of day)
+    pub const MIDNIGHT_24: Self = Self::new(24, 0).unwrap();
+
+    /// 48:00 (end of next day)
+    pub const MIDNIGHT_48: Self = Self::new(48, 0).unwrap();
+
     /// Create a new extended time, this may return `None` if input values are
     /// out of range.
     ///

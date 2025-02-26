@@ -13,7 +13,7 @@ use pest::Parser;
 use crate::error::{Error, Result};
 use crate::extended_time::ExtendedTime;
 use crate::rules as rl;
-use crate::rules::day as ds;
+use crate::rules::day::{self as ds, WeekNum, Year};
 use crate::rules::time as ts;
 
 #[cfg(feature = "log")]
@@ -243,32 +243,32 @@ fn build_time_selector(pair: Pair<Rule>) -> Result<Vec<ts::TimeSpan>> {
 fn build_timespan(pair: Pair<Rule>) -> Result<ts::TimeSpan> {
     assert_eq!(pair.as_rule(), Rule::timespan);
     let mut pairs = pair.into_inner();
-
     let start = build_time(pairs.next().expect("empty timespan"))?;
 
-    let end = match pairs.next() {
+    let (open_end, end) = match pairs.next() {
         None => {
-            // TODO: opening_hours.js handles this better: it will set the
-            //       state to unknown and add a warning comment.
-            ts::Time::Fixed(ExtendedTime::new(24, 0).unwrap())
+            return Err(Error::Unsupported("point in time"));
         }
         Some(pair) if pair.as_rule() == Rule::timespan_plus => {
-            return Err(Error::Unsupported("point in time"))
+            // TODO: opening_hours.js handles this better: it will set the
+            //       state to unknown and add a warning comment.
+            (true, ts::Time::Fixed(ExtendedTime::MIDNIGHT_24))
         }
-        Some(pair) => build_extended_time(pair)?,
+        Some(pair) => (false, build_extended_time(pair)?),
     };
 
-    let (open_end, repeats) = match pairs.peek().map(|x| x.as_rule()) {
-        None => (false, None),
+    let (open_end, repeats) = match pairs.next().map(|x| x.as_rule()) {
+        None => (open_end, None),
         Some(Rule::timespan_plus) => (true, None),
-        Some(Rule::minute) => (false, Some(build_minute(pairs.next().unwrap()))),
+        Some(Rule::minute) => (open_end, Some(build_minute(pairs.next().unwrap()))),
         Some(Rule::hour_minutes) => (
-            false,
+            open_end,
             Some(build_hour_minutes_as_duration(pairs.next().unwrap())),
         ),
         Some(other) => unexpected_token(other, Rule::timespan),
     };
 
+    assert!(pairs.next().is_none());
     Ok(ts::TimeSpan { range: start..end, repeats, open_end })
 }
 
@@ -477,7 +477,10 @@ fn build_week(pair: Pair<Rule>) -> Result<ds::WeekRange> {
         expected: "an integer in [0, 255]".to_string(),
     })?;
 
-    Ok(ds::WeekRange { range: start..=end.unwrap_or(start), step })
+    Ok(ds::WeekRange {
+        range: WeekNum(start)..=WeekNum(end.unwrap_or(start)),
+        step,
+    })
 }
 
 // ---
@@ -530,7 +533,12 @@ fn build_monthday_range(pair: Pair<Rule>) -> Result<ds::MonthdayRange> {
                         ds::Date::md(31, ds::Month::December)
                     }
                 }
-                None => start,
+                None => {
+                    return Ok(ds::MonthdayRange::Date {
+                        start: (start, start_offset),
+                        end: (start, start_offset),
+                    });
+                }
                 Some(other) => unexpected_token(other, Rule::monthday_range),
             };
 
@@ -658,7 +666,10 @@ fn build_year_range(pair: Pair<Rule>) -> Result<ds::YearRange> {
         expected: "an integer in [0, 2**16[".to_string(),
     })?;
 
-    Ok(ds::YearRange { range: start..=end.unwrap_or(start), step })
+    Ok(ds::YearRange {
+        range: Year(start)..=Year(end.unwrap_or(start)),
+        step,
+    })
 }
 
 // ---
@@ -686,12 +697,11 @@ fn build_hour_minutes(pair: Pair<Rule>) -> Result<ExtendedTime> {
     assert_eq!(pair.as_rule(), Rule::hour_minutes);
     let mut pairs = pair.into_inner();
 
-    let hour = pairs
-        .next()
-        .expect("missing hour")
-        .as_str()
-        .parse()
-        .expect("invalid hour");
+    let Some(hour_rule) = pairs.next() else {
+        return Ok(ExtendedTime::MIDNIGHT_24);
+    };
+
+    let hour = hour_rule.as_str().parse().expect("invalid hour");
 
     let minutes = pairs
         .next()

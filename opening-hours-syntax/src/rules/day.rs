@@ -1,6 +1,6 @@
 use std::convert::{TryFrom, TryInto};
 use std::fmt::Display;
-use std::ops::RangeInclusive;
+use std::ops::{Deref, DerefMut, RangeInclusive};
 
 use chrono::prelude::Datelike;
 use chrono::{Duration, NaiveDate};
@@ -54,7 +54,15 @@ impl Display for DaySelector {
         if !(self.year.is_empty() && self.monthday.is_empty() && self.week.is_empty()) {
             write_selector(f, &self.year)?;
             write_selector(f, &self.monthday)?;
-            write_selector(f, &self.week)?;
+
+            if !self.week.is_empty() {
+                if !self.year.is_empty() || !self.monthday.is_empty() {
+                    write!(f, " ")?;
+                }
+
+                write!(f, "week")?;
+                write_selector(f, &self.week)?;
+            }
 
             if !self.weekday.is_empty() {
                 write!(f, " ")?;
@@ -65,20 +73,38 @@ impl Display for DaySelector {
     }
 }
 
-// YearRange
+// Year (newtype)
 
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Year(pub u16);
+
+impl Deref for Year {
+    type Target = u16;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for Year {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+// YearRange
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct YearRange {
-    pub range: RangeInclusive<u16>,
+    pub range: RangeInclusive<Year>,
     pub step: u16,
 }
 
 impl Display for YearRange {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.range.start())?;
+        write!(f, "{}", self.range.start().deref())?;
 
         if self.range.start() != self.range.end() {
-            write!(f, "-{}", self.range.end())?;
+            write!(f, "-{}", self.range.end().deref())?;
         }
 
         if self.step != 1 {
@@ -189,7 +215,7 @@ impl Display for Date {
 
 // DateOffset
 
-#[derive(Clone, Debug, Default, Hash, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, Hash, PartialEq, Eq)]
 pub struct DateOffset {
     pub wday_offset: WeekDayOffset,
     pub day_offset: i64,
@@ -203,12 +229,20 @@ impl DateOffset {
         match self.wday_offset {
             WeekDayOffset::None => {}
             WeekDayOffset::Prev(target) => {
-                let diff = (7 + target as i64 - date.weekday() as i64) % 7;
-                date -= Duration::days(diff)
+                let diff = (7 + date.weekday().days_since(Weekday::Mon)
+                    - target.days_since(Weekday::Mon))
+                    % 7;
+
+                date -= Duration::days(diff.into());
+                debug_assert_eq!(date.weekday(), target);
             }
             WeekDayOffset::Next(target) => {
-                let diff = (7 + date.weekday() as i64 - target as i64) % 7;
-                date += Duration::days(diff)
+                let diff = (7 + target.days_since(Weekday::Mon)
+                    - date.weekday().days_since(Weekday::Mon))
+                    % 7;
+
+                date += Duration::days(diff.into());
+                debug_assert_eq!(date.weekday(), target);
             }
         }
 
@@ -292,7 +326,6 @@ impl Display for WeekDayRange {
                         .map(|(idx, _)| -(idx as isize) - 1);
 
                     let mut weeknum_iter = pos_weeknum_iter.chain(neg_weeknum_iter);
-
                     write!(f, "[{}", weeknum_iter.next().unwrap())?;
 
                     for num in weeknum_iter {
@@ -334,21 +367,40 @@ impl Display for HolidayKind {
     }
 }
 
+// WeekNum (newtype)
+
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct WeekNum(pub u8);
+
+impl Deref for WeekNum {
+    type Target = u8;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for WeekNum {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
 // WeekRange
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct WeekRange {
-    pub range: RangeInclusive<u8>,
+    pub range: RangeInclusive<WeekNum>,
     pub step: u8,
 }
 
 impl Display for WeekRange {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "week {}", self.range.start())?;
-
-        if self.range.start() != self.range.end() {
-            write!(f, "-{}", self.range.end())?;
+        if self.range.start() == self.range.end() && self.step == 1 {
+            return write!(f, "{:02}", **self.range.start());
         }
+
+        write!(f, "{:02}-{:02}", **self.range.start(), **self.range.end())?;
 
         if self.step != 1 {
             write!(f, "/{}", self.step)?;
@@ -381,6 +433,12 @@ impl Month {
     pub fn next(self) -> Self {
         let num = self as u8;
         ((num % 12) + 1).try_into().unwrap()
+    }
+
+    #[inline]
+    pub fn prev(self) -> Self {
+        let num = self as u8;
+        (((num + 10) % 12) + 1).try_into().unwrap()
     }
 
     /// Extract a month from a [`chrono::Datelike`].

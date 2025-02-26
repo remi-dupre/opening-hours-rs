@@ -157,6 +157,17 @@ impl PyOpeningHours {
         Ok(PyOpeningHours { inner: oh.with_context(ctx.with_locale(locale)) })
     }
 
+    /// Convert the expression into a normalized form. It will not affect the meaning of the
+    /// expression and might impact the performance of evaluations.
+    ///
+    /// Examples
+    /// --------
+    /// >>> OpeningHours("24/7 ; Su closed").normalize()
+    /// OpeningHours("Mo-Sa")
+    fn normalize(&self) -> Self {
+        PyOpeningHours { inner: self.inner.normalize() }
+    }
+
     /// Get current state of the time domain, the state can be either "open",
     /// "closed" or "unknown".
     ///

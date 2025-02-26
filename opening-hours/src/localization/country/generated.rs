@@ -193,6 +193,8 @@ pub enum Country {
     PE,
     /// Papua New Guinea
     PG,
+    /// Philippines
+    PH,
     /// Poland
     PL,
     /// Puerto Rico
@@ -246,7 +248,7 @@ pub enum Country {
 }
 
 impl Country {
-    pub const ALL: [Self; 114] = [
+    pub const ALL: [Self; 115] = [
         Self::AD,
         Self::AL,
         Self::AM,
@@ -336,6 +338,7 @@ impl Country {
         Self::PA,
         Self::PE,
         Self::PG,
+        Self::PH,
         Self::PL,
         Self::PR,
         Self::PT,
@@ -461,6 +464,7 @@ impl Country {
             Self::PA => "Panama",
             Self::PE => "Peru",
             Self::PG => "Papua New Guinea",
+            Self::PH => "Philippines",
             Self::PL => "Poland",
             Self::PR => "Puerto Rico",
             Self::PT => "Portugal",
@@ -587,6 +591,7 @@ impl Country {
             Self::PA => "PA",
             Self::PE => "PE",
             Self::PG => "PG",
+            Self::PH => "PH",
             Self::PL => "PL",
             Self::PR => "PR",
             Self::PT => "PT",
@@ -716,6 +721,7 @@ impl FromStr for Country {
             "PA" => Ok(Self::PA),
             "PE" => Ok(Self::PE),
             "PG" => Ok(Self::PG),
+            "PH" => Ok(Self::PH),
             "PL" => Ok(Self::PL),
             "PR" => Ok(Self::PR),
             "PT" => Ok(Self::PT),

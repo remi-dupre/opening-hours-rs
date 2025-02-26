@@ -17,7 +17,8 @@ impl Coordinates {
     /// Return `None` if values are out of range (`abs(lat) > 90` or
     /// `abs(lon) > 180`).
     pub const fn new(lat: f64, lon: f64) -> Option<Self> {
-        if lat < -90.0 || lat > 90.0 || lon < -180.0 || lon > 180.0 {
+        if lat.is_nan() || lon.is_nan() || lat < -90.0 || lat > 90.0 || lon < -180.0 || lon > 180.0
+        {
             return None;
         }
 

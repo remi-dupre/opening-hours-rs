@@ -16,7 +16,11 @@ jobs:
     strategy:
       matrix:
         crate:
-          [".", "compact-calendar", "opening-hours-py", "opening-hours-syntax"]
+          - .
+          - compact-calendar
+          - opening-hours-py
+          - opening-hours-syntax
+          - fuzz
         features: [""]
         include:
           - { crate: ".", features: "log" }
@@ -29,6 +33,9 @@ jobs:
         working-directory: ${{ matrix.crate }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
+          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
@@ -102,17 +109,20 @@ jobs:
       image: xd009642/tarpaulin:develop-nightly
       options: --security-opt seccomp=unconfined
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Install Python library
         run: apt-get update && apt-get install -yy python3-dev && apt-get clean
       - name: Generate code coverage
         run: >-
           cargo +nightly tarpaulin --out xml
           --ignore-panics --ignore-tests
+          --workspace
           --all-features
-          --run-types Tests --run-types Doctests
-          -p opening-hours -p opening-hours-syntax -p compact-calendar -p opening-hours-py
+          --run-types Tests
+          --run-types Doctests
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v2
         with:

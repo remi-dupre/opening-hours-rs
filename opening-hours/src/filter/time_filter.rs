@@ -15,9 +15,7 @@ pub(crate) fn time_selector_intervals_at<'a, L: 'a + Localize>(
     date: NaiveDate,
 ) -> impl Iterator<Item = Range<ExtendedTime>> + 'a {
     ranges_union(time_selector.as_naive(ctx, date).filter_map(|range| {
-        let dstart = ExtendedTime::new(0, 0).unwrap();
-        let dend = ExtendedTime::new(24, 0).unwrap();
-        range_intersection(range, dstart..dend)
+        range_intersection(range, ExtendedTime::MIDNIGHT_00..ExtendedTime::MIDNIGHT_24)
     }))
 }
 
@@ -30,9 +28,7 @@ pub(crate) fn time_selector_intervals_at_next_day<'a, L: 'a + Localize>(
         time_selector
             .as_naive(ctx, date)
             .filter_map(|range| {
-                let dstart = ExtendedTime::new(24, 0).unwrap();
-                let dend = ExtendedTime::new(48, 0).unwrap();
-                range_intersection(range, dstart..dend)
+                range_intersection(range, ExtendedTime::MIDNIGHT_24..ExtendedTime::MIDNIGHT_48)
             })
             .map(|range| {
                 let start = range.start.add_hours(-24).unwrap();
@@ -82,8 +78,7 @@ impl TimeFilter for ts::TimeSpan {
     type Output<'a, L: 'a + Localize> = Range<ExtendedTime>;
 
     fn is_immutable_full_day(&self) -> bool {
-        self.range.start == ts::Time::Fixed(ExtendedTime::new(0, 0).unwrap())
-            && self.range.end == ts::Time::Fixed(ExtendedTime::new(24, 0).unwrap())
+        *self == Self::fixed_range(ExtendedTime::MIDNIGHT_00, ExtendedTime::MIDNIGHT_24)
     }
 
     fn as_naive<'a, L: 'a + Localize>(
@@ -96,7 +91,7 @@ impl TimeFilter for ts::TimeSpan {
 
         // If end < start, it actually wraps to next day
         let end = {
-            if start <= end {
+            if start < end {
                 end
             } else {
                 end.add_hours(24)
@@ -135,7 +130,7 @@ impl TimeFilter for ts::VariableTime {
         self.event
             .as_naive(ctx, date)
             .add_minutes(self.offset)
-            .unwrap_or_else(|| ExtendedTime::new(0, 0).unwrap())
+            .unwrap_or(ExtendedTime::MIDNIGHT_00)
     }
 }
 

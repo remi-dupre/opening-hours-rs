@@ -1,4 +1,4 @@
-use std::cmp::{max, min, Ordering};
+use std::cmp::{max, min};
 use std::ops::{Range, RangeInclusive};
 use std::sync::Arc;
 
@@ -24,22 +24,6 @@ impl<D> DateTimeRange<D> {
     ) -> Self {
         Self { range, kind, comments }
     }
-
-    pub fn map_dates<D2>(self, mut map: impl FnMut(D) -> D2) -> DateTimeRange<D2> {
-        DateTimeRange {
-            range: map(self.range.start)..map(self.range.end),
-            kind: self.kind,
-            comments: self.comments,
-        }
-    }
-
-    pub fn comments(&self) -> &[Arc<str>] {
-        &self.comments
-    }
-
-    pub fn into_comments(self) -> UniqueSortedVec<Arc<str>> {
-        self.comments
-    }
 }
 
 // WrappingRange
@@ -58,47 +42,13 @@ impl<T: PartialOrd> WrappingRange<T> for RangeInclusive<T> {
     }
 }
 
-// RangeCompare
-
-pub(crate) trait RangeExt<T> {
-    fn compare(&self, elt: &T) -> Ordering;
-}
-
-impl<T: PartialOrd> RangeExt<T> for RangeInclusive<T> {
-    fn compare(&self, elt: &T) -> Ordering {
-        debug_assert!(self.start() <= self.end());
-
-        if elt < self.start() {
-            Ordering::Less
-        } else if elt > self.end() {
-            Ordering::Greater
-        } else {
-            Ordering::Equal
-        }
-    }
-}
-
-impl<T: PartialOrd> RangeExt<T> for Range<T> {
-    fn compare(&self, elt: &T) -> Ordering {
-        debug_assert!(self.start <= self.end);
-
-        if elt < &self.start {
-            Ordering::Less
-        } else if elt >= &self.end {
-            Ordering::Greater
-        } else {
-            Ordering::Equal
-        }
-    }
-}
-
 // Range operations
 
 pub(crate) fn ranges_union<T: Ord>(
     ranges: impl IntoIterator<Item = Range<T>>,
 ) -> impl Iterator<Item = Range<T>> {
-    // TODO: we could gain performance by ensuring that range iterators are
-    //       always sorted.
+    // TODO (optimisation): we could gain performance by ensuring that range iterators are always
+    // sorted.
     let mut ranges: Vec<_> = ranges.into_iter().collect();
     ranges.sort_unstable_by(|r1, r2| r1.start.cmp(&r2.start));
 

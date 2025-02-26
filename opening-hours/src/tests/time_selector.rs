@@ -1,7 +1,7 @@
 use opening_hours_syntax::error::Error;
 use opening_hours_syntax::rules::RuleKind::*;
 
-use crate::schedule_at;
+use crate::{datetime, schedule_at, OpeningHours};
 
 #[test]
 fn basic_timespan() -> Result<(), Error> {
@@ -99,6 +99,51 @@ fn overlap() -> Result<(), Error> {
     assert_eq!(
         schedule_at!("Mo 14:00-25:30", "2020-06-02"),
         schedule! { 00,00 => Open =>  1,30 }
+    );
+
+    Ok(())
+}
+
+#[test]
+fn wrapping() -> Result<(), Error> {
+    assert_eq!(
+        schedule_at!("23:00-01:00", "2020-06-01"),
+        schedule! {
+            00,00 => Open =>  1,00;
+            23,00 => Open => 24,00;
+        }
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_dusk_open_ended() {
+    let oh = OpeningHours::parse("Jun dusk+").unwrap();
+
+    assert_eq!(
+        oh.next_change(datetime!("2024-06-21 22:30")).unwrap(),
+        datetime!("2024-06-22 00:00"),
+    );
+}
+
+#[test]
+fn same_bounds() -> Result<(), Error> {
+    let raw_oh = "Mo 04:00-04:00";
+
+    assert_eq!(
+        schedule_at!(raw_oh, "2025-02-24"), // Monday
+        schedule! { 4,00 => Open => 24,00 },
+    );
+
+    assert_eq!(
+        schedule_at!(raw_oh, "2025-02-25"), // Tuesday
+        schedule! { 00,00 => Open => 4,00 },
+    );
+
+    assert_eq!(
+        schedule_at!(raw_oh, "2025-02-26"), // Wednesday
+        schedule! {},
     );
 
     Ok(())

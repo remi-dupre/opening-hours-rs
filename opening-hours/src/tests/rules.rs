@@ -1,17 +1,8 @@
+use crate::tests::stats::TestStats;
 use opening_hours_syntax::error::Error;
 use opening_hours_syntax::rules::RuleKind::*;
 
-use crate::schedule_at;
-
-#[test]
-fn empty() -> Result<(), Error> {
-    assert_eq!(
-        schedule_at!("", "2020-06-01"),
-        schedule! { 00,00 => Open => 24,00 }
-    );
-
-    Ok(())
-}
+use crate::{datetime, schedule_at, OpeningHours};
 
 #[test]
 fn always_open() -> Result<(), Error> {
@@ -90,7 +81,7 @@ fn fallback_rule() -> Result<(), Error> {
             "Jun:10:00-12:00 open || Mo-Fr closed || unknown",
             "2020-05-29"
         ),
-        schedule! { 0,00 => Closed => 24,00 }
+        schedule! { 0,00 => Unknown => 24,00 }
     );
 
     assert_eq!(
@@ -114,6 +105,41 @@ fn comments() -> Result<(), Error> {
     assert_eq!(
         schedule_at!(r#""42", "31", "53", "53", "42", "01""#, "2020-06-01"),
         schedule! { 0,00 => Open, "01", "31", "42", "53" => 24,00 }
+    );
+
+    Ok(())
+}
+
+#[test]
+fn explicit_closed_slow() {
+    let stats = TestStats::watch(|| {
+        assert!(OpeningHours::parse("Feb Fr off")
+            .unwrap()
+            .next_change(datetime!("2021-07-09 19:30"))
+            .is_none());
+    });
+
+    assert!(stats.count_generated_schedules < 10);
+}
+
+#[test]
+fn fallback_take_all() {
+    let oh = OpeningHours::parse("Su closed || open").unwrap();
+    let dt = datetime!("2025-02-23 12:00");
+    assert!(oh.is_open(dt));
+    assert!(oh.next_change(dt).is_none());
+}
+
+#[test]
+fn override_with_closed() -> Result<(), Error> {
+    assert_eq!(
+        schedule_at!("Feb ; 00:00-04:00 closed", "2020-02-01"),
+        schedule! { 0,00 => Closed => 4,00 => Open => 24,00 }
+    );
+
+    assert_eq!(
+        schedule_at!("Feb ; 00:00-04:00 closed", "2020-03-01"),
+        schedule! { 0,00 => Closed => 4,00 }
     );
 
     Ok(())

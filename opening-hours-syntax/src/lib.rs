@@ -4,6 +4,7 @@
 extern crate pest_derive;
 
 mod display;
+mod normalize;
 mod parser;
 
 pub mod error;
@@ -15,3 +16,6 @@ pub use error::{Error, Result};
 pub use extended_time::ExtendedTime;
 pub use parser::parse;
 pub use rules::RuleKind;
+
+#[cfg(test)]
+pub mod tests;

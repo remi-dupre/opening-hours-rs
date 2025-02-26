@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.1.0
+
+### General
+
+- Allow to normalize "canonical" expressions (expressions expressed as simple
+  intervals over each dimension).
+- Weird expressions equivalent to "24/7" should generally be evaluated faster.
+- Fixed a lot of bugs. This comes from the fuzzer being super happy of the
+  addition of a normalization which acts as a sort of concurrent implementation
+  of the evaluation rules.
+
+### Rust
+
+- Add `approx_bound_interval_size` option to context to allow optimizing calls
+  to `next_change` over long periods of time.
+
+### Fixes
+
+- NaN values are now ignored in coordinates inputs.
+- Empty expressions are no longer allowed.
+- Monthday "0" is no no longer allowed.
+
 ## 1.0.3
 
 ### Python
@@ -7,12 +29,6 @@
 - stub: fix variants casing for `State`
 
 ## 1.0.2
-
-### Python
-
-- Fix deployment.
-
-## 1.0.1
 
 ### Python
 
@@ -27,7 +43,7 @@ That's not really a huge milestone, but:
 
 ### General
 
-- Add easter support
+- Add Easter support
 
 ## 0.11.1
 

@@ -82,7 +82,6 @@ impl CompactCalendar {
                 self.calendar.back_mut().unwrap() // just pushed
             } else if date.year() < self.first_year {
                 for _ in date.year()..self.first_year {
-                    eprintln!("Push front");
                     self.calendar.push_front(CompactYear::default());
                 }
 
