@@ -6,7 +6,10 @@
 
 - Allow to normalize "canonical" expressions (expressions expressed as simple
   intervals over each dimension).
-- Weird expressions equivalent to "24/7" should generaly be evaluated faster.
+- Weird expressions equivalent to "24/7" should generally be evaluated faster.
+- Fixed a lot of bugs. This comes from the fuzzer being super happy of the
+  addition of a normalization which acts as a sort of concurrent implementation
+  of the evaluation rules.
 
 ### Rust
 
