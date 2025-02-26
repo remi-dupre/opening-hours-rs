@@ -229,12 +229,20 @@ impl DateOffset {
         match self.wday_offset {
             WeekDayOffset::None => {}
             WeekDayOffset::Prev(target) => {
-                let diff = (7 + target as i64 - date.weekday() as i64) % 7;
-                date -= Duration::days(diff)
+                let diff = (7 + date.weekday().days_since(Weekday::Mon)
+                    - target.days_since(Weekday::Mon))
+                    % 7;
+
+                date -= Duration::days(diff.into());
+                debug_assert_eq!(date.weekday(), target);
             }
             WeekDayOffset::Next(target) => {
-                let diff = (7 + date.weekday() as i64 - target as i64) % 7;
-                date += Duration::days(diff)
+                let diff = (7 + target.days_since(Weekday::Mon)
+                    - date.weekday().days_since(Weekday::Mon))
+                    % 7;
+
+                date += Duration::days(diff.into());
+                debug_assert_eq!(date.weekday(), target);
             }
         }
 
