@@ -185,9 +185,9 @@ fn s013_fuzz_slow_weeknum() {
 
 #[test]
 fn s014_fuzz_feb30_before_leap_year() -> Result<(), Error> {
-    OpeningHours::parse("Feb30")?
+    assert!(OpeningHours::parse("Feb30")?
         .next_change(datetime!("4419-03-01 00:00"))
-        .unwrap();
+        .is_none());
 
     Ok(())
 }

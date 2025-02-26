@@ -1,23 +1,45 @@
 use std::convert::TryInto;
+use std::ops::RangeInclusive;
 
 use chrono::prelude::Datelike;
 use chrono::{Duration, NaiveDate, Weekday};
 
-use opening_hours_syntax::rules::day::{self as ds, Month};
+use opening_hours_syntax::rules::day::{self as ds, Date, Month};
 
 use crate::localization::Localize;
-use crate::opening_hours::DATE_END;
+use crate::opening_hours::{DATE_END, DATE_START};
 use crate::utils::dates::{count_days_in_month, easter};
 use crate::utils::range::WrappingRange;
 use crate::Context;
 
-/// Get the first valid date before given "yyyy/mm/dd", for example if
-/// 2021/02/30 is given, this will return february 28th as 2021 is not a leap
-/// year.
-fn first_valid_ymd(year: i32, month: u32, day: u32) -> NaiveDate {
-    (1..=day)
-        .rev()
-        .filter_map(|day| NaiveDate::from_ymd_opt(year, month, day))
+/// Get the first valid date before given "yyyy/mm/dd", for example if 2021/02/30 is given, this
+/// will return february 28th as 2021 is not a leap year.
+fn valid_ymd_before(year: i32, month: u32, day: u32) -> NaiveDate {
+    debug_assert!((1..=31).contains(&day));
+
+    NaiveDate::from_ymd_opt(year, month, day)
+        .into_iter()
+        .chain(
+            (28..day)
+                .rev()
+                .filter_map(|day| NaiveDate::from_ymd_opt(year, month, day)),
+        )
+        .next()
+        .unwrap_or(DATE_END.date())
+}
+
+/// Get the first valid date after given "yyyy/mm/dd", for example if 2021/02/30 is given, this
+/// will return march 1st of 2021.
+fn valid_ymd_after(year: i32, month: u32, day: u32) -> NaiveDate {
+    debug_assert!((1..=31).contains(&day));
+
+    NaiveDate::from_ymd_opt(year, month, day)
+        .into_iter()
+        .chain(
+            (28..day)
+                .rev()
+                .filter_map(|day| NaiveDate::from_ymd_opt(year, month, day)?.succ_opt()),
+        )
         .next()
         .unwrap_or(DATE_END.date())
 }
@@ -28,50 +50,91 @@ fn next_change_from_bounds(
     date: NaiveDate,
     bounds_start: impl IntoIterator<Item = NaiveDate>,
     bounds_end: impl IntoIterator<Item = NaiveDate>,
-) -> Option<NaiveDate> {
-    let mut bounds_start = bounds_start.into_iter().peekable();
-    let mut bounds_end = bounds_end.into_iter().peekable();
+) -> NaiveDate {
+    next_change_from_intervals(date, intervals_from_bounds(bounds_start, bounds_end))
+}
 
-    loop {
-        match (bounds_start.peek().copied(), bounds_end.peek().copied()) {
+fn is_open_from_bounds(
+    date: NaiveDate,
+    bounds_start: impl IntoIterator<Item = NaiveDate>,
+    bounds_end: impl IntoIterator<Item = NaiveDate>,
+) -> bool {
+    is_open_from_intervals(date, intervals_from_bounds(bounds_start, bounds_end))
+}
+
+fn ensure_increasing_iter<T: Ord>(iter: impl Iterator<Item = T>) -> impl Iterator<Item = T> {
+    let mut iter = iter.peekable();
+
+    std::iter::from_fn(move || {
+        let val = iter.next()?;
+        while iter.next_if(|next_val| *next_val <= val).is_some() {}
+        Some(val)
+    })
+}
+
+fn intervals_from_bounds(
+    bounds_start: impl IntoIterator<Item = NaiveDate>,
+    bounds_end: impl IntoIterator<Item = NaiveDate>,
+) -> impl Iterator<Item = RangeInclusive<NaiveDate>> {
+    let mut bounds_start = ensure_increasing_iter(bounds_start.into_iter()).peekable();
+    let mut bounds_end = ensure_increasing_iter(bounds_end.into_iter()).peekable();
+
+    std::iter::from_fn(move || {
+        if let Some(start) = bounds_start.peek() {
+            while bounds_end.next_if(|end| end < start).is_some() {}
+        }
+
+        let range = match (bounds_start.peek().copied(), bounds_end.peek().copied()) {
             // The date is after the end of the last interval
-            (None, None) => return Some(DATE_END.date()),
+            (None, None) => return None,
             (None, Some(end)) => {
-                if end >= date {
-                    // The date belongs to the last interval
-                    return end.succ_opt();
-                } else {
-                    // The date is after the last interval end
-                    return Some(DATE_END.date());
-                }
+                bounds_end.next();
+                DATE_START.date()..=end
             }
             (Some(start), None) => {
-                if start > date {
-                    // The date is before the first interval
-                    return Some(start);
-                } else {
-                    // The date belongs to the last interval, which never ends.
-                    return Some(DATE_END.date());
-                }
+                bounds_start.next();
+                start..=DATE_END.date()
             }
-            (Some(start), Some(end)) => {
-                if start <= end {
-                    if (start..=end).contains(&date) {
-                        // We found an interval the date belongs to
-                        return end.succ_opt();
-                    }
-
-                    bounds_start.next();
-                } else {
-                    if (end.succ_opt()?..start).contains(&date) {
-                        // We found an inbetween of intervals the date belongs to
-                        return Some(start);
-                    }
-
+            (Some(start), Some(end)) if (start <= end) => {
+                if start == end {
                     bounds_end.next();
                 }
+
+                bounds_start.next();
+                start..=end
             }
-        }
+            (Some(_), Some(_)) => {
+                unreachable!()
+            }
+        };
+
+        Some(range)
+    })
+}
+
+fn is_open_from_intervals(
+    date: NaiveDate,
+    mut intervals: impl Iterator<Item = RangeInclusive<NaiveDate>>,
+) -> bool {
+    let Some(first_interval) = intervals.find(|rg| *rg.end() >= date) else {
+        return false;
+    };
+
+    first_interval.contains(&date)
+}
+
+fn next_change_from_intervals(
+    date: NaiveDate,
+    mut intervals: impl Iterator<Item = RangeInclusive<NaiveDate>>,
+) -> NaiveDate {
+    let Some(first_interval) = intervals.find(|rg| *rg.end() >= date) else {
+        return DATE_END.date();
+    };
+
+    if *first_interval.start() <= date {
+        first_interval.end().succ_opt().unwrap_or(DATE_END.date())
+    } else {
+        *first_interval.start()
     }
 }
 
@@ -196,14 +259,20 @@ impl DateFilter for ds::YearRange {
 }
 
 /// Project date on a given year.
-fn date_on_year(date: ds::Date, for_year: i32) -> Option<NaiveDate> {
+fn date_on_year(
+    date: ds::Date,
+    for_year: i32,
+    date_builder: impl FnOnce(i32, u32, u32) -> NaiveDate,
+) -> Option<NaiveDate> {
     match date {
         ds::Date::Easter { year } => easter(year.map(Into::into).unwrap_or(for_year)),
-        ds::Date::Fixed { year, month, day } => Some(first_valid_ymd(
-            year.map(Into::into).unwrap_or(for_year),
-            month.into(),
-            day.into(),
-        )),
+        ds::Date::Fixed { year: None, month, day } => {
+            Some(date_builder(for_year, month.into(), day.into()))
+        }
+        ds::Date::Fixed { year: Some(year), month, day } if i32::from(year) == for_year => {
+            Some(date_builder(year.into(), month.into(), day.into()))
+        }
+        _ => None,
     }
 }
 
@@ -223,31 +292,27 @@ impl DateFilter for ds::MonthdayRange {
                 start: (start, start_offset),
                 end: (end, end_offset),
             } => {
-                let mut start_date = match date_on_year(*start, date.year()) {
-                    Some(date) => start_offset.apply(date),
-                    None => return false,
-                };
+                let year = date.year();
 
-                if start_date > date {
-                    start_date = match date_on_year(*start, date.year() - 1) {
-                        Some(date) => start_offset.apply(date),
-                        None => return false,
-                    };
+                if *start == Date::md(29, Month::February) && *end == Date::md(29, Month::February)
+                {
+                    return is_open_from_intervals(
+                        date,
+                        (year - 1..=DATE_END.year())
+                            .filter_map(|y| NaiveDate::from_ymd_opt(y, 2, 29))
+                            .map(|d| start_offset.apply(d)..=end_offset.apply(d)),
+                    );
                 }
 
-                let mut end_date = match date_on_year(*end, start_date.year()) {
-                    Some(date) => end_offset.apply(date),
-                    None => return false,
-                };
-
-                if end_date < start_date {
-                    end_date = match date_on_year(*end, start_date.year() + 1) {
-                        Some(date) => end_offset.apply(date),
-                        None => return false,
-                    };
-                }
-
-                (start_date..=end_date).contains(&date)
+                is_open_from_bounds(
+                    date,
+                    (year - 1..=year + 1)
+                        .filter_map(|y| date_on_year(*start, y, valid_ymd_after))
+                        .map(|d| start_offset.apply(d)),
+                    (year - 1..=year + 1)
+                        .filter_map(|y| date_on_year(*end, y, valid_ymd_before))
+                        .map(|d| end_offset.apply(d)),
+                )
             }
         }
     }
@@ -292,7 +357,7 @@ impl DateFilter for ds::MonthdayRange {
                     }
                 };
 
-                next_change_from_bounds(date, [start], [end])
+                Some(next_change_from_bounds(date, [start], [end]))
             }
             ds::MonthdayRange::Date {
                 start:
@@ -327,7 +392,7 @@ impl DateFilter for ds::MonthdayRange {
                     }
                 };
 
-                next_change_from_bounds(date, [start], [end])
+                Some(next_change_from_bounds(date, [start], [end]))
             }
             ds::MonthdayRange::Date {
                 start: (start, start_offset),
@@ -335,15 +400,25 @@ impl DateFilter for ds::MonthdayRange {
             } => {
                 let year = date.year();
 
-                next_change_from_bounds(
+                if *start == Date::md(29, Month::February) && *end == Date::md(29, Month::February)
+                {
+                    return Some(next_change_from_intervals(
+                        date,
+                        (year - 1..=DATE_END.year())
+                            .filter_map(|y| NaiveDate::from_ymd_opt(y, 2, 29))
+                            .map(|d| start_offset.apply(d)..=end_offset.apply(d)),
+                    ));
+                }
+
+                Some(next_change_from_bounds(
                     date,
-                    (year - 1..=year + 1)
-                        .filter_map(|y| date_on_year(*start, y))
+                    (year - 1..=year + 10)
+                        .filter_map(|y| date_on_year(*start, y, valid_ymd_after))
                         .map(|d| start_offset.apply(d)),
-                    (year - 1..=year + 1)
-                        .filter_map(|y| date_on_year(*end, y))
+                    (year - 1..=year + 10)
+                        .filter_map(|y| date_on_year(*end, y, valid_ymd_before))
                         .map(|d| end_offset.apply(d)),
-                )
+                ))
             }
         }
     }
