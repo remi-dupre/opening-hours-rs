@@ -63,6 +63,9 @@
                     <a class="class" href="#OpeningHours">OpeningHours</a>
                             <ul class="memberlist">
                         <li>
+                                <a class="function" href="#OpeningHours.normalize">normalize</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#OpeningHours.state">state</a>
                         </li>
                         <li>
@@ -308,6 +311,30 @@ when they are specified.</li>
 </div>
 
 
+                            <div id="OpeningHours.normalize" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">normalize</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#OpeningHours.normalize"></a>
+    
+            <div class="docstring"><p>Convert the expression into a normalized form. It will not affect the meaning of the
+expression and might impact the performance of evaluations.</p>
+
+<h6 id="examples">Examples</h6>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">OpeningHours</span><span class="p">(</span><span class="s2">&quot;24/7 ; Su closed&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">normalize</span><span class="p">()</span>
+<span class="go">OpeningHours(&quot;Mo-Sa&quot;)</span>
+</code></pre>
+</div>
+</div>
+
+
+                            </div>
                             <div id="OpeningHours.state" class="classattr">
                                 <div class="attr function">
             
