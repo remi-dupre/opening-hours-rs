@@ -3,7 +3,9 @@
 //! selectors of same value.
 //!
 //! This last problem is hard, so the implementation here only focuses on being convenient and
-//! predictable.
+//! predictable. For example this research paper show that there is no known polytime approximation
+//! for this problem in two dimensions and for boolean values :
+//! https://dl.acm.org/doi/10.1145/73833.73871
 
 use std::fmt::Debug;
 use std::ops::Range;

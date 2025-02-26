@@ -1,3 +1,5 @@
+//! Helpers to convert from open-ended ranges from and to close-ended ranges.
+
 // --
 // -- Framable
 // --
@@ -12,6 +14,7 @@ use crate::ExtendedTime;
 
 use super::canonical::OrderedWeekday;
 
+/// A type that can be enclosed in a `Frame`.
 pub(crate) trait Framable: PartialEq + Eq + PartialOrd + Ord {
     const FRAME_START: Self;
     const FRAME_END: Self;
@@ -76,6 +79,7 @@ impl Framable for WeekNum {
 // -- Frame
 // --
 
+/// Wraps an unbounded type to add a virtual bound end.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum Frame<T: Framable> {
     Val(T),
@@ -128,6 +132,7 @@ impl<T: Framable> Ord for Frame<T> {
 // -- Bounded
 // --
 
+/// A type with a lower bound and an open ended bound.
 pub(crate) trait Bounded: Ord + Sized {
     const BOUND_START: Self;
     const BOUND_END: Self; // Excluded
@@ -154,10 +159,6 @@ impl<T: Framable> Bounded for Frame<T> {
 }
 
 impl Bounded for ExtendedTime {
-    // TODO: bounds to 48 could be handled but it's kinda tricky in current form
-    // (eg. "Feb ; 18:00-28:00 closed" has to be something like "Feb1 00:00-18:00 ; Feb2-Feb29
-    // 04:00-18:00").
-    // To solve that, the time should probably not be a dimension at all?
-    const BOUND_START: Self = ExtendedTime::new(0, 0).unwrap();
-    const BOUND_END: Self = ExtendedTime::new(24, 0).unwrap();
+    const BOUND_START: Self = ExtendedTime::MIDNIGHT_00;
+    const BOUND_END: Self = ExtendedTime::MIDNIGHT_24;
 }

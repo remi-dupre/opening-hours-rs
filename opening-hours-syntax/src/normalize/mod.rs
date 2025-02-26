@@ -14,6 +14,7 @@ use self::canonical::{Canonical, CanonicalSelector, MakeCanonical};
 // -- Normalization Logic
 // --
 
+/// Convert a rule sequence to a n-dim selector.
 pub(crate) fn ruleseq_to_selector(rs: &RuleSequence) -> Option<CanonicalSelector> {
     let ds = &rs.day_selector;
 
@@ -27,6 +28,7 @@ pub(crate) fn ruleseq_to_selector(rs: &RuleSequence) -> Option<CanonicalSelector
     Some(selector)
 }
 
+/// Convert a canonical paving back into a rules sequence.
 pub(crate) fn canonical_to_seq(mut canonical: Canonical) -> impl Iterator<Item = RuleSequence> {
     // Keep track of the days that have already been outputed. This allows to use an additional
     // rule if it is absolutly required only.

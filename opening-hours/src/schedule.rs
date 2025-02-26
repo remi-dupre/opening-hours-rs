@@ -223,16 +223,10 @@ impl IntoIter {
     /// The value that will fill holes
     const HOLES_STATE: RuleKind = RuleKind::Closed;
 
-    /// First minute of the schedule
-    const START_TIME: ExtendedTime = ExtendedTime::new(0, 0).unwrap();
-
-    /// Last minute of the schedule
-    const END_TIME: ExtendedTime = ExtendedTime::new(24, 0).unwrap();
-
     /// Create a new iterator from a schedule.
     fn new(schedule: Schedule) -> Self {
         Self {
-            last_end: Self::START_TIME,
+            last_end: ExtendedTime::MIDNIGHT_00,
             ranges: schedule.inner.into_iter().peekable(),
         }
     }
@@ -253,7 +247,7 @@ impl Iterator for IntoIter {
     type Item = TimeRange;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.last_end >= Self::END_TIME {
+        if self.last_end >= ExtendedTime::MIDNIGHT_24 {
             // Iteration ended
             return None;
         }
@@ -297,7 +291,7 @@ impl Iterator for IntoIter {
 
         if yielded_range.kind == Self::HOLES_STATE {
             // Extend with the last hole
-            yielded_range.range.end = Self::END_TIME;
+            yielded_range.range.end = ExtendedTime::MIDNIGHT_24;
         }
 
         self.pre_yield(yielded_range)

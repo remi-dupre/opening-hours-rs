@@ -18,12 +18,11 @@ impl TimeSelector {
     /// Note that not all cases can be covered
     pub(crate) fn is_00_24(&self) -> bool {
         self.time.len() == 1
-            && matches!(
-                self.time.first(),
-                Some(TimeSpan { range, open_end: false, repeats: None })
-                if range.start == Time::Fixed(ExtendedTime::new(0,0).unwrap())
-                    && range.end == Time::Fixed(ExtendedTime::new(24,0).unwrap())
-            )
+            && self.time.first()
+                == Some(&TimeSpan::fixed_range(
+                    ExtendedTime::MIDNIGHT_00,
+                    ExtendedTime::MIDNIGHT_24,
+                ))
     }
 }
 
@@ -43,8 +42,8 @@ impl Default for TimeSelector {
     fn default() -> Self {
         Self {
             time: vec![TimeSpan::fixed_range(
-                ExtendedTime::new(0, 0).unwrap(),
-                ExtendedTime::new(24, 0).unwrap(),
+                ExtendedTime::MIDNIGHT_00,
+                ExtendedTime::MIDNIGHT_24,
             )],
         }
     }
@@ -67,7 +66,7 @@ pub struct TimeSpan {
 
 impl TimeSpan {
     #[inline]
-    pub fn fixed_range(start: ExtendedTime, end: ExtendedTime) -> Self {
+    pub const fn fixed_range(start: ExtendedTime, end: ExtendedTime) -> Self {
         Self {
             range: Time::Fixed(start)..Time::Fixed(end),
             open_end: false,
@@ -80,7 +79,7 @@ impl Display for TimeSpan {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.range.start)?;
 
-        if !self.open_end || self.range.end != Time::Fixed(ExtendedTime::new(24, 0).unwrap()) {
+        if !self.open_end || self.range.end != Time::Fixed(ExtendedTime::MIDNIGHT_24) {
             write!(f, "-{}", self.range.end)?;
         }
 

@@ -252,7 +252,7 @@ fn build_timespan(pair: Pair<Rule>) -> Result<ts::TimeSpan> {
         Some(pair) if pair.as_rule() == Rule::timespan_plus => {
             // TODO: opening_hours.js handles this better: it will set the
             //       state to unknown and add a warning comment.
-            (true, ts::Time::Fixed(ExtendedTime::new(24, 0).unwrap()))
+            (true, ts::Time::Fixed(ExtendedTime::MIDNIGHT_24))
         }
         Some(pair) => (false, build_extended_time(pair)?),
     };
@@ -698,7 +698,7 @@ fn build_hour_minutes(pair: Pair<Rule>) -> Result<ExtendedTime> {
     let mut pairs = pair.into_inner();
 
     let Some(hour_rule) = pairs.next() else {
-        return Ok(ExtendedTime::new(24, 0).unwrap());
+        return Ok(ExtendedTime::MIDNIGHT_24);
     };
 
     let hour = hour_rule.as_str().parse().expect("invalid hour");

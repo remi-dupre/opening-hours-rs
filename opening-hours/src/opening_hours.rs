@@ -454,7 +454,7 @@ impl<L: Localize> Iterator for TimeDomainIterator<L> {
                 .curr_schedule
                 .peek()
                 .map(|tr| tr.range.start)
-                .unwrap_or_else(|| ExtendedTime::new(0, 0).unwrap());
+                .unwrap_or(ExtendedTime::MIDNIGHT_00);
 
             let end = std::cmp::min(
                 self.end_datetime,
