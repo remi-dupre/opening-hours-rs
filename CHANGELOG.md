@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.1
+
+### Rust
+
+- Upgrade to edition 2024
+
 ## 1.1.0
 
 ### General
