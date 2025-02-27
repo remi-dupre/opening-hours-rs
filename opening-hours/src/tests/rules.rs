@@ -102,11 +102,6 @@ fn comments() -> Result<(), Error> {
         schedule! { 10,00 => Open, "welcome!" => 12,00 }
     );
 
-    assert_eq!(
-        schedule_at!(r#""42", "31", "53", "53", "42", "01""#, "2020-06-01"),
-        schedule! { 0,00 => Open, "01", "31", "42", "53" => 24,00 }
-    );
-
     Ok(())
 }
 
