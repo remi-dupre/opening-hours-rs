@@ -64,10 +64,12 @@ class OpeningHours:
         >>> OpeningHours("24/7 ; Su closed").normalize()
         OpeningHours("Mo-Sa")
         """
-    def state(self, time: typing.Optional[datetime.datetime] = None) -> State:
+    def state(
+        self, time: typing.Optional[datetime.datetime] = None
+    ) -> tuple[State, builtins.str]:
         r"""
-        Get current state of the time domain, the state can be either "open",
-        "closed" or "unknown".
+        Get current state of the time domain together with current comment. The state can be either
+        "open", "closed" or "unknown".
 
         Parameters
         ----------
@@ -76,7 +78,7 @@ class OpeningHours:
         Examples
         --------
         >>> OpeningHours("24/7 off").state()
-        State.CLOSED
+        (State.CLOSED, '')
         """
     def is_open(self, time: typing.Optional[datetime.datetime] = None) -> builtins.bool:
         r"""
@@ -159,9 +161,9 @@ class OpeningHours:
         --------
         >>> intervals = OpeningHours("2099Mo-Su 12:30-17:00").intervals()
         >>> next(intervals)
-        (..., datetime.datetime(2099, 1, 1, 12, 30), State.CLOSED, [])
+        (..., datetime.datetime(2099, 1, 1, 12, 30), State.CLOSED, '')
         >>> next(intervals)
-        (datetime.datetime(2099, 1, 1, 12, 30), datetime.datetime(2099, 1, 1, 17, 0), State.OPEN, [])
+        (datetime.datetime(2099, 1, 1, 12, 30), datetime.datetime(2099, 1, 1, 17, 0), State.OPEN, '')
         """
     def __str__(self) -> builtins.str: ...
     def __repr__(self) -> builtins.str: ...

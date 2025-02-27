@@ -168,8 +168,8 @@ impl PyOpeningHours {
         PyOpeningHours { inner: self.inner.normalize() }
     }
 
-    /// Get current state of the time domain, the state can be either "open",
-    /// "closed" or "unknown".
+    /// Get current state of the time domain together with current comment. The state can be either
+    /// "open", "closed" or "unknown".
     ///
     /// Parameters
     /// ----------
@@ -178,11 +178,12 @@ impl PyOpeningHours {
     /// Examples
     /// --------
     /// >>> OpeningHours("24/7 off").state()
-    /// State.CLOSED
+    /// (State.CLOSED, '')
     #[pyo3(signature = (time=None))]
-    fn state(&self, time: Option<DateTimeMaybeAware>) -> State {
+    fn state(&self, time: Option<DateTimeMaybeAware>) -> (State, String) {
         let time = DateTimeMaybeAware::unwrap_or_now(time);
-        self.inner.state(time).into()
+        let (kind, comment) = self.inner.state(time);
+        (kind.into(), comment.to_string())
     }
 
     /// Check if current state is open.
@@ -267,9 +268,9 @@ impl PyOpeningHours {
     /// --------
     /// >>> intervals = OpeningHours("2099Mo-Su 12:30-17:00").intervals()
     /// >>> next(intervals)
-    /// (..., datetime.datetime(2099, 1, 1, 12, 30), State.CLOSED, [])
+    /// (..., datetime.datetime(2099, 1, 1, 12, 30), State.CLOSED, '')
     /// >>> next(intervals)
-    /// (datetime.datetime(2099, 1, 1, 12, 30), datetime.datetime(2099, 1, 1, 17, 0), State.OPEN, [])
+    /// (datetime.datetime(2099, 1, 1, 12, 30), datetime.datetime(2099, 1, 1, 17, 0), State.OPEN, '')
     #[pyo3(signature = (start=None, end=None))]
     fn intervals(
         &self,

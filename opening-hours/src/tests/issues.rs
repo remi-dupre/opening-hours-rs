@@ -54,7 +54,7 @@ fn gh52_no_interval_after_last_midnight() -> Result<(), Error> {
         Some(DateTimeRange {
             range: datetime!("2024-11-11 01:00")..datetime!("2024-11-11 06:00"),
             kind: RuleKind::Open,
-            comments: Default::default()
+            comment: Default::default()
         })
     );
 
@@ -63,7 +63,7 @@ fn gh52_no_interval_after_last_midnight() -> Result<(), Error> {
         Some(DateTimeRange {
             range: datetime!("2024-11-11 06:00")..datetime!("2024-11-11 23:00"),
             kind: RuleKind::Closed,
-            comments: Default::default()
+            comment: Default::default()
         })
     );
 
@@ -72,7 +72,7 @@ fn gh52_no_interval_after_last_midnight() -> Result<(), Error> {
         Some(DateTimeRange {
             range: datetime!("2024-11-11 23:00")..datetime!("2024-11-12 01:00"),
             kind: RuleKind::Open,
-            comments: Default::default()
+            comment: Default::default()
         })
     );
 
@@ -93,7 +93,7 @@ fn gh56_only_close_when_no_day_filter() -> Result<(), Error> {
         Some(DateTimeRange {
             range: date_start..datetime!("2024-11-26 00:30"),
             kind: RuleKind::Closed,
-            comments: Default::default(),
+            comment: Default::default(),
         })
     );
 
