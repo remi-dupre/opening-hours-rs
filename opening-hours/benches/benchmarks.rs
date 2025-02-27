@@ -21,7 +21,7 @@ const SAMPLES: &[[&str; 2]] = &[
     ],
     [
         "huge",
-        "Aug:Sa;week50unknown;Nov;2492week9:;:Mo;Fr;1912week48;:Mo;7591-1918week1:;:Mo;week8Sa;1918week3:;:Mo;7191-1911Mo;MayWe;Fr;week2;Feb;Oct;3683;Fr;1915week48;:Mo;5182-1919week1:;:Mo;week8Sa;1918week4:;:Mo;7191-1911;Mo;MayWe;Fr;week2;Feb;Oct;3836week3:;:Th;Su;3818closed; Fr;1917week17",
+        "Aug:Sa;week50unknown;Nov;2492week9:;:Mo;Fr;1912week48;:Mo;1918-7591week1:;:Mo;week8Sa;1918week3:;:Mo;1911-7191Mo;MayWe;Fr;week2;Feb;Oct;3683;Fr;1915week48;:Mo;1919-5182week1:;:Mo;week8Sa;1918week4:;:Mo;1911-7191;Mo;MayWe;Fr;week2;Feb;Oct;3836week3:;:Th;Su;3818closed; Fr;1917week17",
     ],
 ];
 
