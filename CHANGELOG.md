@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.0.0
+
+### General
+
+- **(breaking)** Intervals from iterators will now return a unique comment (an
+  empty string if there is no comment).
+- **(breaking)** `next_change()` can now return a date where the facility remains
+  open or remains closed if the comment changes.
+- **(breaking)** `state()` now returns the current comment together with the
+  rule kind.
+
+### Python
+
+- **(breaking)** `State` has been renamed to `RuleKind`.
+
 ## 1.1.3
 
 ### General

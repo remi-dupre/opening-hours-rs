@@ -12,6 +12,7 @@ use opening_hours::localization::{Coordinates, Localize};
 use opening_hours::{Context, OpeningHours};
 
 const MAX_INTERVAL_RANGE: chrono::TimeDelta = chrono::TimeDelta::days(366 * 10);
+const MAX_OH_LENGTH: usize = 256;
 
 /// A fuzzing example
 #[derive(Arbitrary, Clone)]
@@ -69,8 +70,7 @@ impl Debug for Data {
 /// Run a fuzzing test and return `true` if the example should be kept in
 /// corpus.
 pub fn run_fuzz_oh(data: Data) -> bool {
-    if data.oh.contains('=') {
-        // The fuzzer spends way too much time building comments.
+    if data.oh.len() > MAX_OH_LENGTH {
         return false;
     }
 
@@ -110,7 +110,6 @@ pub fn run_fuzz_oh(data: Data) -> bool {
                 let date = ctx.locale.datetime(date);
                 let oh_1 = oh_1.with_context(ctx.clone());
                 let oh_2 = oh_2.with_context(ctx.clone());
-
                 assert_eq!(oh_1.state(date), oh_2.state(date));
                 assert_eq!(oh_1.next_change(date), oh_2.next_change(date));
             } else {

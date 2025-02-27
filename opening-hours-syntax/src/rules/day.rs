@@ -93,18 +93,42 @@ impl DerefMut for Year {
 }
 
 // YearRange
+
+/// A year range that ensures that bounds are always in the right order
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct YearRange {
-    pub range: RangeInclusive<Year>,
-    pub step: u16,
+    range: RangeInclusive<Year>,
+    step: u16,
+}
+
+impl YearRange {
+    /// Create a new `YearRange`. Return `None` if the bounds are in the wrong order.
+    pub fn new(range: RangeInclusive<Year>, mut step: u16) -> Option<Self> {
+        if range.start() > range.end() {
+            return None;
+        }
+
+        if range.start().abs_diff(**range.end()) < step {
+            step = 1;
+        }
+
+        Some(Self { range, step })
+    }
+
+    /// Extract range and step from this object.
+    pub fn into_parts(&self) -> (RangeInclusive<Year>, u16) {
+        (self.range.clone(), self.step)
+    }
 }
 
 impl Display for YearRange {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.range.start().deref())?;
+        let start = **self.range.start();
+        let end = **self.range.end();
+        write!(f, "{start}")?;
 
-        if self.range.start() != self.range.end() {
-            write!(f, "-{}", self.range.end().deref())?;
+        if start != end || self.step != 1 {
+            write!(f, "-{end}")?;
         }
 
         if self.step != 1 {

@@ -4,7 +4,7 @@ use std::ops::RangeInclusive;
 use chrono::prelude::Datelike;
 use chrono::{Duration, NaiveDate, Weekday};
 
-use opening_hours_syntax::rules::day::{self as ds, Date, Month};
+use opening_hours_syntax::rules::day::{self as ds, Date, Month, Year};
 
 use crate::localization::Localize;
 use crate::opening_hours::{DATE_END, DATE_START};
@@ -206,33 +206,24 @@ impl DateFilter for ds::YearRange {
     where
         L: Localize,
     {
-        let range = **self.range.start()..=**self.range.end();
+        let (range, step) = self.into_parts();
 
-        let Ok(year) = date.year().try_into() else {
+        let Ok(year) = date.year().try_into().map(Year) else {
             return false;
         };
 
-        range.wrapping_contains(&year)
-            && (year.checked_sub(*range.start()))
-                .or_else(|| range.start().checked_sub(year))
-                .unwrap_or(0)
-                % self.step
-                == 0
+        range.contains(&year) && (*year - **range.start()) % step == 0
     }
 
     fn next_change_hint<L>(&self, date: NaiveDate, _ctx: &Context<L>) -> Option<NaiveDate>
     where
         L: Localize,
     {
-        let range = **self.range.start()..=**self.range.end();
+        let (range, step) = self.into_parts();
 
-        let Ok(curr_year) = date.year().try_into() else {
+        let Ok(curr_year) = date.year().try_into().map(Year) else {
             return Some(DATE_END.date());
         };
-
-        if self.range.start() > self.range.end() {
-            return None; // TODO
-        }
 
         let next_year = {
             if *range.end() < curr_year {
@@ -241,20 +232,20 @@ impl DateFilter for ds::YearRange {
             } else if curr_year < *range.start() {
                 // 2. time didn't reach the range yet
                 *range.start()
-            } else if self.step == 1 {
+            } else if step == 1 {
                 // 3. time is in the range and step is naive
-                *range.end() + 1
-            } else if (curr_year - range.start()) % self.step == 0 {
+                Year(**range.end() + 1)
+            } else if (*curr_year - **range.start()) % step == 0 {
                 // 4. time matches the range with step >= 2
-                curr_year + 1
+                Year(*curr_year + 1)
             } else {
                 // 5. time is in the range but doesn't match the step
                 let round_up = |x: u16, d: u16| d * x.div_ceil(d); // get the first multiple of `d` greater than `x`.
-                range.start() + round_up(curr_year - range.start(), self.step)
+                Year(**range.start() + round_up(*curr_year - **range.start(), step))
             }
         };
 
-        Some(NaiveDate::from_ymd_opt(next_year.into(), 1, 1).unwrap_or(DATE_END.date()))
+        Some(NaiveDate::from_ymd_opt((*next_year).into(), 1, 1).unwrap_or(DATE_END.date()))
     }
 }
 

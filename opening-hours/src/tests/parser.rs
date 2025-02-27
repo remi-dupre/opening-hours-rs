@@ -1,3 +1,5 @@
+use opening_hours_syntax::Error;
+
 use super::sample;
 use crate::OpeningHours;
 
@@ -17,6 +19,16 @@ fn parse_invalid() {
     assert!(OpeningHours::parse("this is not a valid expression").is_err());
     assert!(OpeningHours::parse("10:00-100:00").is_err());
     assert!(OpeningHours::parse("10:00-12:00 tomorrow").is_err());
+
+    assert!(matches!(
+        OpeningHours::parse("2020-2010").unwrap_err(),
+        Error::InvertedYearRange { .. }
+    ));
+
+    assert!(matches!(
+        OpeningHours::parse("2020-2010/3").unwrap_err(),
+        Error::InvertedYearRange { .. }
+    ));
 }
 
 #[test]

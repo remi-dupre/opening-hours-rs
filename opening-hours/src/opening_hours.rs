@@ -167,7 +167,7 @@ impl<L: Localize> OpeningHours<L> {
                 (RuleOperator::Fallback, _) => {
                     if prev_match
                         && !(prev_eval.as_ref())
-                            .map(Schedule::is_always_closed)
+                            .map(Schedule::is_always_closed_with_no_comments)
                             .unwrap_or(false)
                     {
                         (prev_match, prev_eval)
@@ -198,7 +198,12 @@ impl<L: Localize> OpeningHours<L> {
             .map(move |dtr| {
                 let start = std::cmp::max(dtr.range.start, from);
                 let end = std::cmp::min(dtr.range.end, to);
-                DateTimeRange::new_with_sorted_comments(start..end, dtr.kind, dtr.comments)
+
+                DateTimeRange {
+                    range: start..end,
+                    kind: dtr.kind,
+                    comment: dtr.comment.clone(),
+                }
             })
     }
 
@@ -217,13 +222,12 @@ impl<L: Localize> OpeningHours<L> {
         let naive_from = std::cmp::min(DATE_END, locale.naive(from));
         let naive_to = std::cmp::min(DATE_END, locale.naive(to));
 
-        self.iter_range_naive(naive_from, naive_to).map(move |dtr| {
-            DateTimeRange::new_with_sorted_comments(
-                locale.datetime(dtr.range.start)..locale.datetime(dtr.range.end),
-                dtr.kind,
-                dtr.comments,
-            )
-        })
+        self.iter_range_naive(naive_from, naive_to)
+            .map(move |dtr| DateTimeRange {
+                range: locale.datetime(dtr.range.start)..locale.datetime(dtr.range.end),
+                kind: dtr.kind,
+                comment: dtr.comment.clone(),
+            })
     }
 
     // Same as [`OpeningHours::iter_range`] but with an open end.
@@ -266,14 +270,14 @@ impl<L: Localize> OpeningHours<L> {
     /// let oh = OpeningHours::parse("12:00-18:00 open, 18:00-20:00 unknown").unwrap();
     /// let date_1 = NaiveDateTime::parse_from_str("2024-11-18 15:00", "%Y-%m-%d %H:%M").unwrap();
     /// let date_2 = NaiveDateTime::parse_from_str("2024-11-18 19:00", "%Y-%m-%d %H:%M").unwrap();
-    /// assert_eq!(oh.state(date_1), RuleKind::Open);
-    /// assert_eq!(oh.state(date_2), RuleKind::Unknown);
+    /// assert_eq!(oh.state(date_1), (RuleKind::Open, "".into()));
+    /// assert_eq!(oh.state(date_2), (RuleKind::Unknown, "".into()));
     /// ```
-    pub fn state(&self, current_time: L::DateTime) -> RuleKind {
+    pub fn state(&self, current_time: L::DateTime) -> (RuleKind, Arc<str>) {
         self.iter_range(current_time.clone(), current_time + Duration::minutes(1))
             .next()
-            .map(|dtr| dtr.kind)
-            .unwrap_or(RuleKind::Closed)
+            .map(|dtr| dtr.into_state())
+            .unwrap_or_default()
     }
 
     /// Check if this is open at a given time.
@@ -289,7 +293,7 @@ impl<L: Localize> OpeningHours<L> {
     /// assert!(!oh.is_open(date_2));
     /// ```
     pub fn is_open(&self, current_time: L::DateTime) -> bool {
-        self.state(current_time) == RuleKind::Open
+        self.state(current_time).0 == RuleKind::Open
     }
 
     /// Check if this is closed at a given time.
@@ -305,7 +309,7 @@ impl<L: Localize> OpeningHours<L> {
     /// assert!(!oh.is_closed(date_2));
     /// ```
     pub fn is_closed(&self, current_time: L::DateTime) -> bool {
-        self.state(current_time) == RuleKind::Closed
+        self.state(current_time).0 == RuleKind::Closed
     }
 
     /// Check if this is unknown at a given time.
@@ -321,7 +325,7 @@ impl<L: Localize> OpeningHours<L> {
     /// assert!(!oh.is_unknown(date_2));
     /// ```
     pub fn is_unknown(&self, current_time: L::DateTime) -> bool {
-        self.state(current_time) == RuleKind::Unknown
+        self.state(current_time).0 == RuleKind::Unknown
     }
 }
 
@@ -347,12 +351,12 @@ fn rule_sequence_schedule_at<L: Localize>(
     let from_today = Some(date)
         .filter(|date| rule_sequence.day_selector.filter(*date, ctx))
         .map(|date| time_selector_intervals_at(ctx, &rule_sequence.time_selector, date))
-        .map(|rgs| Schedule::from_ranges(rgs, rule_sequence.kind, &rule_sequence.comments));
+        .map(|rgs| Schedule::from_ranges(rgs, rule_sequence.kind, rule_sequence.comment.clone()));
 
     let from_yesterday = (date.pred_opt())
         .filter(|prev| rule_sequence.day_selector.filter(*prev, ctx))
         .map(|prev| time_selector_intervals_at_next_day(ctx, &rule_sequence.time_selector, prev))
-        .map(|rgs| Schedule::from_ranges(rgs, rule_sequence.kind, &rule_sequence.comments));
+        .map(|rgs| Schedule::from_ranges(rgs, rule_sequence.kind, rule_sequence.comment.clone()));
 
     match (from_today, from_yesterday) {
         (Some(sched_1), Some(sched_2)) => Some(sched_1.addition(sched_2)),
@@ -400,10 +404,16 @@ impl<L: Localize> TimeDomainIterator<L> {
         }
     }
 
-    fn consume_until_next_kind(&mut self, curr_kind: RuleKind) {
+    fn consume_until_next_state(&mut self, curr_state: (RuleKind, &str)) {
         let start_date = self.curr_date;
 
-        while self.curr_schedule.peek().map(|tr| tr.kind) == Some(curr_kind) {
+        while self
+            .curr_schedule
+            .peek()
+            .map(|tr| tr.as_state() == curr_state)
+            .unwrap_or(false)
+        {
+            // Early return if infinite approximation is enabled
             if let Some(max_interval_size) = self.opening_hours.ctx.approx_bound_interval_size {
                 if self.curr_date - start_date > max_interval_size + chrono::TimeDelta::days(1) {
                     return;
@@ -421,13 +431,14 @@ impl<L: Localize> TimeDomainIterator<L> {
                 assert!(next_change_hint > self.curr_date, "infinite loop detected");
                 self.curr_date = next_change_hint;
 
-                if self.curr_date <= self.end_datetime.date() && self.curr_date < DATE_END.date() {
-                    self.curr_schedule = self
-                        .opening_hours
-                        .schedule_at(self.curr_date)
-                        .into_iter()
-                        .peekable();
+                if self.curr_date > self.end_datetime.date() || self.curr_date >= DATE_END.date() {
+                    break;
                 }
+
+                self.curr_schedule = (self.opening_hours)
+                    .schedule_at(self.curr_date)
+                    .into_iter()
+                    .peekable();
             }
         }
     }
@@ -447,7 +458,7 @@ impl<L: Localize> Iterator for TimeDomainIterator<L> {
                     .expect("got invalid time from schedule"),
             );
 
-            self.consume_until_next_kind(curr_tr.kind);
+            self.consume_until_next_state(curr_tr.as_state());
             let end_date = self.curr_date;
 
             let end_time = self
@@ -464,21 +475,22 @@ impl<L: Localize> Iterator for TimeDomainIterator<L> {
                 ),
             );
 
+            // Infinity approximation, if enabled
             if let Some(max_interval_size) = self.opening_hours.ctx.approx_bound_interval_size {
                 if end - start > max_interval_size {
-                    return Some(DateTimeRange::new_with_sorted_comments(
-                        start..DATE_END,
-                        curr_tr.kind,
-                        curr_tr.comments,
-                    ));
+                    return Some(DateTimeRange {
+                        range: start..DATE_END,
+                        kind: curr_tr.kind,
+                        comment: curr_tr.comment.clone(),
+                    });
                 }
             }
 
-            Some(DateTimeRange::new_with_sorted_comments(
-                start..end,
-                curr_tr.kind,
-                curr_tr.comments,
-            ))
+            Some(DateTimeRange {
+                range: start..end,
+                kind: curr_tr.kind,
+                comment: curr_tr.comment.clone(),
+            })
         } else {
             None
         }

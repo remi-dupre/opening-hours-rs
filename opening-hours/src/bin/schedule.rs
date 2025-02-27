@@ -22,7 +22,12 @@ fn main() {
     println!(" - expression: {oh}");
     println!(" - normalized: {}", oh.normalize());
     println!(" - date: {start_date:?}");
-    println!(" - current status: {:?}", oh.state(start_datetime));
+    let (kind, comment) = oh.state(start_datetime);
+    println!(" - current status: {kind:?}");
+
+    if !comment.is_empty() {
+        println!(" - current comment: {comment}");
+    }
 
     if let Some(next_change) = oh.next_change(start_datetime) {
         println!(" - next change: {next_change:?}");
@@ -42,8 +47,8 @@ fn main() {
         for tr in schedule {
             print!(" - {:?} - {:?}", tr.range, tr.kind);
 
-            if !tr.comments.is_empty() {
-                print!(" ({})", tr.comments.join(", "));
+            if !tr.comment.is_empty() {
+                print!(" ({})", tr.comment);
             }
 
             println!()

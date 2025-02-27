@@ -17,7 +17,6 @@ const EXAMPLES: &[(&str, u32, &str, &str)] = &[
     ex!("Mo-Fr 10:00-14:00 ; We-Su 10:00-14:00", "10:00-14:00"),
     ex!("Mo,Tu,We,Th,Fr,Sa,Su 10:00-21:00", "10:00-21:00"),
     ex!("5554Mo;5555", "5554-5555 Mo ; 5555 Tu-Su"),
-    ex!("4444-4405", "1900-4405,4444-9999"),
     ex!("Jun24:00+", "Jun 24:00+"),
     ex!("week02-02/7", "week02-02/7"),
     ex!("24/7 ; Su closed", "Mo-Sa"),
@@ -29,6 +28,7 @@ const EXAMPLES: &[(&str, u32, &str, &str)] = &[
     ex!("dusk-dusk", "dusk-dusk"),
     ex!("dusk-48:00+", "dusk-48:00+"),
     ex!("Sep24:00-04:20", "Sep 24:00-04:20"),
+    ex!("Sa;Su;2490-2490/8", "Sa-Su ; 2490 Mo-Fr"),
     ex!(
         "10:00-12:00 open ; 14:00-16:00 closed \"on demand\"",
         "10:00-12:00, 14:00-16:00 closed \"on demand\"",
