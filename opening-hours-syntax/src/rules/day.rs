@@ -206,11 +206,11 @@ impl Date {
     }
 
     #[inline]
-    pub fn has_year(&self) -> bool {
-        matches!(
-            self,
-            Self::Fixed { year: Some(_), .. } | Self::Easter { year: Some(_) }
-        )
+    pub fn year(&self) -> Option<u16> {
+        match self {
+            Self::Fixed { year: Some(y), .. } | Self::Easter { year: Some(y) } => Some(*y),
+            _ => None,
+        }
     }
 }
 

@@ -526,7 +526,7 @@ fn build_monthday_range(pair: Pair<Rule>) -> Result<ds::MonthdayRange> {
                 Some(Rule::monthday_range_plus) => {
                     pairs.next();
 
-                    if start.has_year() {
+                    if start.year().is_some() {
                         ds::Date::ymd(31, ds::Month::December, 9999)
                     } else {
                         ds::Date::md(31, ds::Month::December)

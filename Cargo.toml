@@ -59,6 +59,10 @@ criterion = "0.5"
 name = "schedule"
 path = "opening-hours/src/bin/schedule.rs"
 
+[[bin]]
+name = "check-sample"
+path = "opening-hours/src/bin/check_sample.rs"
+
 [[bench]]
 name = "benchmarks"
 harness = false
