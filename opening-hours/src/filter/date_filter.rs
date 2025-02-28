@@ -3,12 +3,11 @@ use std::ops::RangeInclusive;
 use chrono::prelude::Datelike;
 use chrono::{Duration, NaiveDate};
 
-use opening_hours_syntax::rules::day::{self as ds, Date, Month};
+use opening_hours_syntax::rules::day::{self as ds, Date, Month, WeekNum, Year};
 
 use crate::localization::Localize;
 use crate::opening_hours::{DATE_END, DATE_START};
 use crate::utils::dates::{count_days_in_month, easter};
-use crate::utils::range::WrappingRange;
 use crate::Context;
 
 /// Get the first valid date before given "yyyy/mm/dd", for example if 2021/02/30 is given, this
@@ -253,8 +252,8 @@ impl NewDateFilter for ds::YearRange {
         L: Localize,
     {
         let (range, step) = self.into_parts();
-        let (start, end) = range.into_inner();
-        let [mut start, end, step] = [*start, *end, step].map(i32::from);
+        let (Year(start), Year(end)) = range.into_inner();
+        let [mut start, end, step] = [start, end, step].map(i32::from);
 
         if date.year() > start {
             // Find the first matching year in range start..=date.year()
@@ -446,52 +445,35 @@ impl NewDateFilter for ds::WeekDayRange {
     }
 }
 
-impl DateFilter for ds::WeekRange {
-    fn filter<L>(&self, date: NaiveDate, _ctx: &Context<L>) -> bool
+impl NewDateFilter for ds::WeekRange {
+    fn intervals<'a, L>(
+        &'a self,
+        date: NaiveDate,
+        _ctx: &'a Context<L>,
+    ) -> impl Iterator<Item = RangeInclusive<NaiveDate>> + 'a
     where
         L: Localize,
     {
-        let week = date.iso_week().week() as u8;
-        let range = **self.range.start()..=**self.range.end();
+        let (range, step) = self.into_parts();
+        let (WeekNum(start), WeekNum(end)) = range.into_inner();
 
-        range.wrapping_contains(&week)
-            // TODO: what happens when week < range.start ?
-            && week.saturating_sub(*range.start()) % self.step == 0
-    }
-
-    fn next_change_hint<L>(&self, date: NaiveDate, _ctx: &Context<L>) -> Option<NaiveDate>
-    where
-        L: Localize,
-    {
-        let week = date.iso_week().week() as u8;
-        let range = **self.range.start()..=**self.range.end();
-
-        if self.range.start() > self.range.end() {
-            // TODO: wrapping implemented well?
-            return None;
-        }
-
-        let weeknum = u32::from({
-            if range.wrapping_contains(&week) {
-                if self.step == 1 {
-                    *range.end() % 54 + 1
-                } else if (week - range.start()) % self.step == 0 {
-                    (date.iso_week().week() as u8 % 54) + 1
-                } else {
-                    return None;
-                }
+        let weeknums = {
+            if start <= end {
+                #[allow(clippy::reversed_empty_ranges)]
+                (start..=end).chain(1..=0)
             } else {
-                *range.start()
+                (start..=53).chain(1..=end)
             }
-        });
+        };
 
-        let mut res =
-            NaiveDate::from_isoywd_opt(date.iso_week().year(), weeknum, ds::Weekday::Mon)?;
+        let weeknums = weeknums.step_by(step.into());
 
-        while res <= date {
-            res = NaiveDate::from_isoywd_opt(res.iso_week().year() + 1, weeknum, ds::Weekday::Mon)?;
-        }
-
-        Some(res)
+        (date.year() - 1..DATE_END.year()).flat_map(move |year| {
+            weeknums.clone().filter_map(move |weeknum| {
+                let start = NaiveDate::from_isoywd_opt(year, weeknum.into(), ds::Weekday::Mon)?;
+                let end = NaiveDate::from_isoywd_opt(year, weeknum.into(), ds::Weekday::Sun)?;
+                Some(start..=end)
+            })
+        })
     }
 }

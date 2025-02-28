@@ -412,10 +412,31 @@ impl DerefMut for WeekNum {
 
 // WeekRange
 
+// TODO: ensure there can't be wrapping with step
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct WeekRange {
-    pub range: RangeInclusive<WeekNum>,
-    pub step: u8,
+    range: RangeInclusive<WeekNum>,
+    step: u8,
+}
+
+impl WeekRange {
+    /// Create a new `WeekRange`. Return `None` if the bounds are in the wrong order.
+    pub fn new(range: RangeInclusive<WeekNum>, mut step: u8) -> Option<Self> {
+        if range.start() > range.end() {
+            return None;
+        }
+
+        if range.start().abs_diff(**range.end()) < step {
+            step = 1;
+        }
+
+        Some(Self { range, step })
+    }
+
+    /// Extract range and step from this object.
+    pub fn into_parts(&self) -> (RangeInclusive<WeekNum>, u8) {
+        (self.range.clone(), self.step)
+    }
 }
 
 impl Display for WeekRange {

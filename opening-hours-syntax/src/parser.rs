@@ -467,19 +467,22 @@ fn build_week(pair: Pair<Rule>) -> Result<ds::WeekRange> {
     debug_assert_eq!(pair.as_rule(), Rule::week);
     let mut rules = pair.into_inner();
 
-    let start = build_weeknum(rules.next().expect("empty weeknum range"));
-    let end = rules.next().map(build_weeknum);
+    let start = WeekNum(build_weeknum(rules.next().expect("empty weeknum range")));
+
+    let end = rules
+        .next()
+        .map(build_weeknum)
+        .map(WeekNum)
+        .unwrap_or(start);
 
     let step = rules.next().map(build_positive_number).transpose()?;
+
     let step = step.unwrap_or(1).try_into().map_err(|_| Error::Overflow {
         value: format!("{}", step.unwrap()),
         expected: "an integer in [0, 255]".to_string(),
     })?;
 
-    Ok(ds::WeekRange {
-        range: WeekNum(start)..=WeekNum(end.unwrap_or(start)),
-        step,
-    })
+    ds::WeekRange::new(start..=end, step).ok_or(Error::InvertedWeekRange { start, end, step })
 }
 
 // ---
