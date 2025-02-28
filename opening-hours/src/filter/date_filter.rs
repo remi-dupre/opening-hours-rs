@@ -1,10 +1,9 @@
-use std::convert::TryInto;
 use std::ops::RangeInclusive;
 
 use chrono::prelude::Datelike;
-use chrono::{Duration, NaiveDate, Weekday};
+use chrono::{Duration, NaiveDate};
 
-use opening_hours_syntax::rules::day::{self as ds, Date, Month, Year};
+use opening_hours_syntax::rules::day::{self as ds, Date, Month};
 
 use crate::localization::Localize;
 use crate::opening_hours::{DATE_END, DATE_START};
@@ -131,19 +130,36 @@ fn next_change_from_intervals(
         return DATE_END.date();
     };
 
-    if *first_interval.start() <= date {
-        first_interval.end().succ_opt().unwrap_or(DATE_END.date())
-    } else {
-        *first_interval.start()
+    // Before the interval
+    if *first_interval.start() > date {
+        return *first_interval.start();
     }
+
+    let mut intervals = intervals.peekable();
+
+    let mut res = (first_interval.into_inner().1)
+        .succ_opt()
+        .unwrap_or(DATE_END.date());
+
+    // Merge with following overlapping intervals
+    while let Some(overlapping) = intervals.next_if(|next| *next.start() <= res) {
+        res = std::cmp::max(
+            res,
+            (overlapping.into_inner().1)
+                .succ_opt()
+                .unwrap_or(DATE_END.date()),
+        )
+    }
+
+    res
 }
 
 pub trait NewDateFilter {
-    fn intervals<L>(
-        &self,
+    fn intervals<'a, L>(
+        &'a self,
         date: NaiveDate,
-        ctx: &Context<L>,
-    ) -> impl Iterator<Item = RangeInclusive<NaiveDate>>
+        ctx: &'a Context<L>,
+    ) -> impl Iterator<Item = RangeInclusive<NaiveDate>> + 'a
     where
         L: Localize;
 }
@@ -228,38 +244,29 @@ impl DateFilter for ds::DaySelector {
 }
 
 impl NewDateFilter for ds::YearRange {
-    fn intervals<L>(
-        &self,
-        _date: NaiveDate,
+    fn intervals<'a, L>(
+        &'a self,
+        date: NaiveDate,
         _ctx: &Context<L>,
-    ) -> impl Iterator<Item = RangeInclusive<NaiveDate>>
+    ) -> impl Iterator<Item = RangeInclusive<NaiveDate>> + 'a
     where
         L: Localize,
     {
         let (range, step) = self.into_parts();
-        let start = **range.start();
-        let end = **range.end();
+        let (start, end) = range.into_inner();
+        let [mut start, end, step] = [*start, *end, step].map(i32::from);
 
-        if step == 1 {
-            Box::new(
-                NaiveDate::from_ymd_opt(start.into(), 1, 1)
-                    .and_then(|start| {
-                        NaiveDate::from_ymd_opt(end.into(), 12, 31).map(|end| start..=end)
-                    })
-                    .into_iter(),
-            ) as Box<dyn Iterator<Item = RangeInclusive<NaiveDate>>>
-        } else {
-            Box::new(
-                (start..=end)
-                    .step_by(step.into())
-                    .map(Into::into)
-                    .filter_map(|y| {
-                        let start = NaiveDate::from_ymd_opt(y, 1, 1)?;
-                        let end = NaiveDate::from_ymd_opt(y, 12, 31)?;
-                        Some(start..=end)
-                    }),
-            ) as _
+        if date.year() > start {
+            // Find the first matching year in range start..=date.year()
+            let nb_steps_skipped = (date.year() - start) / step;
+            start += nb_steps_skipped * step;
         }
+
+        (start..=end).step_by(step as _).filter_map(|y| {
+            let start = NaiveDate::from_ymd_opt(y, 1, 1)?;
+            let end = NaiveDate::from_ymd_opt(y, 12, 31)?;
+            Some(start..=end)
+        })
     }
 }
 
@@ -282,11 +289,11 @@ fn date_on_year(
 }
 
 impl NewDateFilter for ds::MonthdayRange {
-    fn intervals<L>(
-        &self,
+    fn intervals<'a, L>(
+        &'a self,
         date: NaiveDate,
-        _ctx: &Context<L>,
-    ) -> impl Iterator<Item = RangeInclusive<NaiveDate>>
+        _ctx: &'a Context<L>,
+    ) -> impl Iterator<Item = RangeInclusive<NaiveDate>> + 'a
     where
         L: Localize,
     {
@@ -367,80 +374,74 @@ impl NewDateFilter for ds::MonthdayRange {
     }
 }
 
-impl DateFilter for ds::WeekDayRange {
-    fn filter<L>(&self, date: NaiveDate, ctx: &Context<L>) -> bool
+impl NewDateFilter for ds::WeekDayRange {
+    fn intervals<'a, L>(
+        &'a self,
+        date: NaiveDate,
+        ctx: &'a Context<L>,
+    ) -> impl Iterator<Item = RangeInclusive<NaiveDate>> + 'a
     where
         L: Localize,
     {
         match self {
-            ds::WeekDayRange::Fixed { range, offset, nth_from_start, nth_from_end } => {
-                if *range.start() as u8 > *range.end() as u8 {
-                    // Handle wrapping ranges
-                    return ds::WeekDayRange::Fixed {
-                        range: *range.start()..=Weekday::Sun,
-                        offset: *offset,
-                        nth_from_start: *nth_from_start,
-                        nth_from_end: *nth_from_end,
-                    }
-                    .filter(date, ctx)
-                        || ds::WeekDayRange::Fixed {
-                            range: Weekday::Mon..=*range.end(),
-                            offset: *offset,
-                            nth_from_start: *nth_from_start,
-                            nth_from_end: *nth_from_end,
+            ds::WeekDayRange::Fixed { range, offset, nth_from_start, nth_from_end } => Box::new({
+                let (start, end) = range.clone().into_inner();
+
+                let filter_by_position = |date: NaiveDate| -> bool {
+                    let pos_from_start = (date.day() as u8 - 1) / 7;
+                    let pos_from_end = (count_days_in_month(date) - date.day() as u8) / 7;
+
+                    nth_from_start[usize::from(pos_from_start)]
+                        || nth_from_end[usize::from(pos_from_end)]
+                };
+
+                let years_and_week = [(date.year() - 1, 52), (date.year() - 1, 53)]
+                    .into_iter()
+                    .chain(
+                        (date.year()..DATE_END.year())
+                            .flat_map(|year| (1..=53).map(move |weeknum| (year, weeknum))),
+                    );
+
+                intervals_from_bounds(
+                    years_and_week.clone().filter_map(move |(year, weeknum)| {
+                        NaiveDate::from_isoywd_opt(year, weeknum, start)
+                    }),
+                    years_and_week.filter_map(move |(year, weeknum)| {
+                        NaiveDate::from_isoywd_opt(year, weeknum, end)
+                    }),
+                )
+                .flat_map(|rg| {
+                    let (mut curr, end) = rg.into_inner();
+
+                    std::iter::from_fn(move || {
+                        if curr > end {
+                            return None;
                         }
-                        .filter(date, ctx);
-                }
 
-                let date = date - Duration::days(*offset);
-                let pos_from_start = (date.day() as u8 - 1) / 7;
-                let pos_from_end = (count_days_in_month(date) - date.day() as u8) / 7;
-                let range_u8 = (*range.start() as u8)..=(*range.end() as u8);
-
-                range_u8.wrapping_contains(&(date.weekday() as u8))
-                    && (nth_from_start[usize::from(pos_from_start)]
-                        || nth_from_end[usize::from(pos_from_end)])
-            }
+                        let day = curr;
+                        curr += Duration::days(1);
+                        Some(day)
+                    })
+                })
+                .filter(move |day| filter_by_position(*day))
+                .map(|day| day + Duration::days(*offset))
+                .map(|day| day..=day)
+            })
+                as _,
             ds::WeekDayRange::Holiday { kind, offset } => {
                 let calendar = match kind {
                     ds::HolidayKind::Public => &ctx.holidays.public,
                     ds::HolidayKind::School => &ctx.holidays.school,
                 };
 
-                let date = date - Duration::days(*offset);
-                calendar.contains(date)
-            }
-        }
-    }
-
-    fn next_change_hint<L>(&self, date: NaiveDate, ctx: &Context<L>) -> Option<NaiveDate>
-    where
-        L: Localize,
-    {
-        match self {
-            ds::WeekDayRange::Holiday { kind, offset } => Some({
-                let calendar = match kind {
-                    ds::HolidayKind::Public => &ctx.holidays.public,
-                    ds::HolidayKind::School => &ctx.holidays.school,
-                };
-
-                let date_with_offset = date - Duration::days(*offset);
-
-                if calendar.contains(date_with_offset) {
-                    date.succ_opt()?
-                } else {
+                // TODO: jump to current year
+                Box::new(
                     calendar
-                        .first_after(date_with_offset)
-                        .map(|following| following + Duration::days(*offset))
-                        .unwrap_or_else(|| DATE_END.date())
-                }
-            }),
-            ds::WeekDayRange::Fixed {
-                range: _,
-                offset: _,
-                nth_from_start: _,
-                nth_from_end: _,
-            } => None,
+                        .iter()
+                        .map(|d| d + Duration::days(*offset))
+                        .map(|d| d..=d),
+                ) as Box<dyn Iterator<Item = _>>
+            }
         }
     }
 }
