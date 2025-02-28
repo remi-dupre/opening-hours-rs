@@ -83,13 +83,12 @@ fn outside_date_bounds() -> Result<(), Error> {
         datetime!("3000-01-01 00:00")
     );
 
-    // TODO
-    // assert_eq!(
-    //     OpeningHours::parse("24/7")?
-    //         .next_change(before_bounds)
-    //         .unwrap(),
-    //     datetime!("1900-01-01 00:00")
-    // );
+    assert_eq!(
+        OpeningHours::parse("24/7")?
+            .next_change(before_bounds)
+            .unwrap(),
+        datetime!("1900-01-01 00:00")
+    );
 
     assert!(OpeningHours::parse("24/7")?
         .next_change(after_bounds)
@@ -99,22 +98,22 @@ fn outside_date_bounds() -> Result<(), Error> {
 }
 
 #[test]
-// TODO?
-// fn with_max_interval_size() {
-//     let ctx = Context::default().approx_bound_interval_size(chrono::TimeDelta::days(366));
-//
-//     let oh = OpeningHours::parse("2024-2030Jun open")
-//         .unwrap()
-//         .with_context(ctx);
-//
-//     assert_eq!(
-//         oh.next_change(datetime!("2025-05-01 12:00")).unwrap(),
-//         datetime!("2025-06-01 00:00"),
-//     );
-//
-//     assert!(oh.next_change(datetime!("2000-05-01 12:00")).is_none());
-//     assert!(oh.next_change(datetime!("2030-07-01 12:00")).is_none());
-// }
+fn with_max_interval_size() {
+    let ctx = Context::default().approx_bound_interval_size(chrono::TimeDelta::days(366));
+
+    let oh = OpeningHours::parse("2024-2030Jun open")
+        .unwrap()
+        .with_context(ctx);
+
+    assert_eq!(
+        oh.next_change(datetime!("2025-05-01 12:00")).unwrap(),
+        datetime!("2025-06-01 00:00"),
+    );
+
+    assert!(oh.next_change(datetime!("2000-05-01 12:00")).is_none());
+    assert!(oh.next_change(datetime!("2030-07-01 12:00")).is_none());
+}
+
 #[test]
 fn only_comment_changes_time() {
     let oh: OpeningHours = r#"00:00-14:00 "may open earlier", 14:00-24:00"#.parse().unwrap();

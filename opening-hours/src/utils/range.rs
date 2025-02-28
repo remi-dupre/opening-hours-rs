@@ -1,5 +1,5 @@
 use std::cmp::{max, min};
-use std::ops::{Range, RangeInclusive};
+use std::ops::Range;
 use std::sync::Arc;
 
 use chrono::NaiveDateTime;
@@ -20,22 +20,6 @@ impl<D> DateTimeRange<D> {
     /// of an expression.
     pub fn into_state(self) -> (RuleKind, Arc<str>) {
         (self.kind, self.comment)
-    }
-}
-
-// WrappingRange
-
-pub(crate) trait WrappingRange<T> {
-    fn wrapping_contains(&self, elt: &T) -> bool;
-}
-
-impl<T: PartialOrd> WrappingRange<T> for RangeInclusive<T> {
-    fn wrapping_contains(&self, elt: &T) -> bool {
-        if self.start() <= self.end() {
-            self.contains(elt)
-        } else {
-            self.start() <= elt || elt <= self.end()
-        }
     }
 }
 

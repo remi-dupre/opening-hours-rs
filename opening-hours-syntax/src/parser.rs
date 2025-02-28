@@ -466,19 +466,22 @@ fn build_week(pair: Pair<Rule>) -> Result<ds::WeekRange> {
     debug_assert_eq!(pair.as_rule(), Rule::week);
     let mut rules = pair.into_inner();
 
-    let start = build_weeknum(rules.next().expect("empty weeknum range"));
-    let end = rules.next().map(build_weeknum);
+    let start = WeekNum(build_weeknum(rules.next().expect("empty weeknum range")));
+
+    let end = rules
+        .next()
+        .map(build_weeknum)
+        .map(WeekNum)
+        .unwrap_or(start);
 
     let step = rules.next().map(build_positive_number).transpose()?;
+
     let step = step.unwrap_or(1).try_into().map_err(|_| Error::Overflow {
         value: format!("{}", step.unwrap()),
         expected: "an integer in [0, 255]".to_string(),
     })?;
 
-    Ok(ds::WeekRange {
-        range: WeekNum(start)..=WeekNum(end.unwrap_or(start)),
-        step,
-    })
+    ds::WeekRange::new(start..=end, step).ok_or(Error::InvertedWeekRange { start, end, step })
 }
 
 // ---
@@ -525,8 +528,8 @@ fn build_monthday_range(pair: Pair<Rule>) -> Result<ds::MonthdayRange> {
                 Some(Rule::monthday_range_plus) => {
                     pairs.next();
 
-                    if start.has_year() {
-                        ds::Date::ymd(31, ds::Month::December, 9999)
+                    if start.year().is_some() {
+                        ds::Date::ymd(31, ds::Month::December, Year(9999))
                     } else {
                         ds::Date::md(31, ds::Month::December)
                     }
@@ -625,7 +628,7 @@ fn build_date_to(pair: Pair<Rule>, from: ds::Date) -> Result<ds::Date> {
 
                         if month == ds::Month::January {
                             if let Some(x) = year.as_mut() {
-                                *x += 1
+                                **x += 1
                             }
                         }
                     }
@@ -656,7 +659,7 @@ fn build_year_range(pair: Pair<Rule>) -> Result<ds::YearRange> {
         .next()
         .map(|pair| match pair.as_rule() {
             Rule::year => build_year(pair),
-            Rule::year_range_plus => 9999,
+            Rule::year_range_plus => Year(9999),
             other => unexpected_token(other, Rule::year_range),
         })
         .unwrap_or(start);
@@ -668,11 +671,7 @@ fn build_year_range(pair: Pair<Rule>) -> Result<ds::YearRange> {
         expected: "an integer in [0, 2**16[".to_string(),
     })?;
 
-    ds::YearRange::new(Year(start)..=Year(end), step).ok_or(Error::InvertedYearRange {
-        start: Year(start),
-        end: Year(end),
-        step,
-    })
+    ds::YearRange::new(start..=end, step).ok_or(Error::InvertedYearRange { start, end, step })
 }
 
 // ---
@@ -819,9 +818,10 @@ fn build_month(pair: Pair<Rule>) -> ds::Month {
     }
 }
 
-fn build_year(pair: Pair<Rule>) -> u16 {
+fn build_year(pair: Pair<Rule>) -> Year {
     debug_assert_eq!(pair.as_rule(), Rule::year);
-    pair.as_str().parse().expect("invalid year format")
+    let year = pair.as_str().parse().expect("invalid year format");
+    Year(year)
 }
 
 fn build_positive_number(pair: Pair<Rule>) -> Result<u64> {

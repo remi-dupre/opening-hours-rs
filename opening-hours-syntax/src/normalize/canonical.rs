@@ -134,18 +134,17 @@ impl MakeCanonical for WeekRange {
     type CanonicalType = Frame<WeekNum>;
 
     fn try_make_canonical(&self) -> Option<Range<Self::CanonicalType>> {
-        if self.step != 1 {
+        let (range, step) = self.into_parts();
+
+        if step != 1 {
             return None;
         }
 
-        Some(Frame::to_range_strict(self.range.clone()))
+        Some(Frame::to_range_strict(range))
     }
 
     fn into_type(canonical: Range<Self::CanonicalType>) -> Option<Self> {
-        Some(WeekRange {
-            range: Frame::to_range_inclusive(canonical)?,
-            step: 1,
-        })
+        WeekRange::new(Frame::to_range_inclusive(canonical)?, 1)
     }
 }
 

@@ -1,7 +1,7 @@
 use std::fmt;
 
 use crate::parser::Rule;
-use crate::rules::day::{Year, YearRange};
+use crate::rules::day::{WeekNum, WeekRange, Year, YearRange};
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -9,9 +9,24 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub enum Error {
     Parser(Box<pest::error::Error<Rule>>),
     Unsupported(&'static str),
-    Overflow { value: String, expected: String },
-    InvalidExtendTime { hour: u8, minutes: u8 },
-    InvertedYearRange { start: Year, end: Year, step: u16 },
+    Overflow {
+        value: String,
+        expected: String,
+    },
+    InvalidExtendTime {
+        hour: u8,
+        minutes: u8,
+    },
+    InvertedYearRange {
+        start: Year,
+        end: Year,
+        step: u16,
+    },
+    InvertedWeekRange {
+        start: WeekNum,
+        end: WeekNum,
+        step: u8,
+    },
 }
 
 impl From<pest::error::Error<Rule>> for Error {
@@ -37,6 +52,13 @@ impl fmt::Display for Error {
                     f,
                     "Inverted year ranges are ambiguous, do you mean '{}'?",
                     YearRange::new(end..=start, step).unwrap(),
+                )
+            }
+            &Self::InvertedWeekRange { start, end, step } => {
+                write!(
+                    f,
+                    "Inverted week ranges are ambiguous, do you mean '{}'?",
+                    WeekRange::new(end..=start, step).unwrap(),
                 )
             }
         }

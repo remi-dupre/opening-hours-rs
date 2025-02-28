@@ -181,7 +181,9 @@ impl<L: Localize> OpeningHours<L> {
             prev_eval = new_eval;
         }
 
-        prev_eval.unwrap_or_else(Schedule::new)
+        prev_eval
+            .map(Schedule::filter_closed_ranges)
+            .unwrap_or_else(Schedule::new)
     }
 
     /// Same as [`iter_range`], but with naive date input and outputs.
