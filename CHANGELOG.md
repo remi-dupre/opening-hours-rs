@@ -10,6 +10,8 @@
   open or remains closed if the comment changes.
 - **(breaking)** `state()` now returns the current comment together with the
   rule kind.
+- **(breaking)** Year and week ranges cannot be defined in inverted order,
+  which is similarly to the JS library's behavior.
 
 ### Python
 
