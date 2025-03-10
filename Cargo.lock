@@ -729,7 +729,7 @@ dependencies = [
  "log",
  "opening-hours-syntax",
  "rustc_version",
- "sunrise-next",
+ "sunrise",
  "tzf-rs",
 ]
 
@@ -1288,10 +1288,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "56199f7ddabf13fe5074ce809e7d3f42b42ae711800501b5b16ea82ad029c39d"
 
 [[package]]
-name = "sunrise-next"
-version = "1.2.4"
+name = "sunrise"
+version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8452cee9bbdb70d30684c5cf06082a5a09f477a8f3ab91a2e79c4cedcf9b2d3"
+checksum = "ae9103c11df35c145a7faa215c7af11343b6b4f26374b89b288ad9da0ea9042d"
 dependencies = [
  "chrono",
 ]
