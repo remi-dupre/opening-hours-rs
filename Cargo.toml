@@ -1,6 +1,6 @@
 [package]
 name = "opening-hours"
-version = "1.1.1"
+version = "1.1.2"
 authors = ["Rémi Dupré <remi@dupre.io>"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
@@ -29,9 +29,9 @@ log = ["opening-hours-syntax/log", "dep:log"]
 
 [dependencies]
 chrono = "0.4"
-compact-calendar = { path = "compact-calendar", version = "1.1.1" }
+compact-calendar = { path = "compact-calendar", version = "1.1.2" }
 flate2 = "1.0"
-opening-hours-syntax = { path = "opening-hours-syntax", version = "1.1.1" }
+opening-hours-syntax = { path = "opening-hours-syntax", version = "1.1.2" }
 sunrise = "1.2"
 
 # Feature: log (default)
@@ -46,7 +46,7 @@ tzf-rs = { version = "0.4", default-features = false, optional = true }
 
 [build-dependencies]
 chrono = "0.4"
-compact-calendar = { path = "compact-calendar", version = "1.1.1" }
+compact-calendar = { path = "compact-calendar", version = "1.1.2" }
 country-boundaries = { version = "1.2", optional = true }
 flate2 = "1.0"
 rustc_version = "0.4.0"

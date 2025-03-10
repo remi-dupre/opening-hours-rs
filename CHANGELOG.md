@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.2
+
+### Rust
+
+- Switch from `sunrise-next` dependency back to `sunrise` as all changes
+  have been upstreamed.
+
 ## 1.1.1
 
 ### Rust
