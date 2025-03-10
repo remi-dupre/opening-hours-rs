@@ -1,6 +1,7 @@
 use std::fmt;
 
 use crate::parser::Rule;
+use crate::rules::day::{Year, YearRange};
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -10,6 +11,7 @@ pub enum Error {
     Unsupported(&'static str),
     Overflow { value: String, expected: String },
     InvalidExtendTime { hour: u8, minutes: u8 },
+    InvertedYearRange { start: Year, end: Year, step: u16 },
 }
 
 impl From<pest::error::Error<Rule>> for Error {
@@ -29,6 +31,13 @@ impl fmt::Display for Error {
             }
             Self::Overflow { value, expected } => {
                 write!(f, "{value} is too large: expected {expected}")
+            }
+            &Self::InvertedYearRange { start, end, step } => {
+                write!(
+                    f,
+                    "Inverted year ranges are ambiguous, do you mean '{}'?",
+                    YearRange::new(end..=start, step).unwrap(),
+                )
             }
         }
     }

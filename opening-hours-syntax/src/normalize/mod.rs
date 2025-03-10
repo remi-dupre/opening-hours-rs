@@ -36,12 +36,11 @@ pub(crate) fn canonical_to_seq(mut canonical: Canonical) -> impl Iterator<Item =
 
     std::iter::from_fn(move || {
         // Extract open periods first, then unknowns
-        let ((kind, comments), selector) = [RuleKind::Open, RuleKind::Unknown, RuleKind::Closed]
+        let ((kind, comment), selector) = [RuleKind::Open, RuleKind::Unknown, RuleKind::Closed]
             .into_iter()
             .find_map(|target_kind| {
-                canonical.pop_filter(|(kind, comments)| {
-                    *kind == target_kind
-                        && (target_kind != RuleKind::Closed || !comments.is_empty())
+                canonical.pop_filter(|(kind, comment)| {
+                    *kind == target_kind && (target_kind != RuleKind::Closed || !comment.is_empty())
                 })
             })?;
 
@@ -77,7 +76,7 @@ pub(crate) fn canonical_to_seq(mut canonical: Canonical) -> impl Iterator<Item =
             time_selector,
             kind,
             operator,
-            comments,
+            comment,
         })
     })
 }
