@@ -124,6 +124,14 @@ impl Schedule {
             .all(|rg| rg.kind == RuleKind::Closed && rg.comment.is_empty())
     }
 
+    /// Remove closed with no comment sections
+    pub fn filter_closed_ranges(mut self) -> Self {
+        self.inner
+            .retain(|rg| rg.kind != RuleKind::Closed || !rg.comment.is_empty());
+
+        self
+    }
+
     /// Merge two schedules together.
     pub fn addition(self, mut other: Self) -> Self {
         // TODO (optimisation): this is implemented with quadratic time where it could probably be

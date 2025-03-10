@@ -9,7 +9,7 @@ use opening_hours_syntax::extended_time::ExtendedTime;
 use opening_hours_syntax::rules::{OpeningHoursExpression, RuleKind, RuleOperator, RuleSequence};
 use opening_hours_syntax::Error as ParserError;
 
-use crate::filter::date_filter::DateFilter;
+use crate::filter::date_filter::{dates_with_potential_change, DateFilter};
 use crate::filter::time_filter::{
     time_selector_intervals_at, time_selector_intervals_at_next_day, TimeFilter,
 };
@@ -105,34 +105,9 @@ impl<L: Localize> OpeningHours<L> {
     // This means that performances matters a lot for these functions and it
     // would be relevant to focus on optimisations to this regard.
 
-    /// Provide a lower bound to the next date when a different set of rules
-    /// could match.
-    fn next_change_hint(&self, date: NaiveDate) -> Option<NaiveDate> {
-        if date < DATE_START.date() {
-            return Some(DATE_START.date());
-        }
-
-        if self.expr.is_constant() {
-            return Some(DATE_END.date());
-        }
-
-        (self.expr.rules)
-            .iter()
-            .map(|rule| {
-                if rule.time_selector.is_immutable_full_day()
-                    || !rule.day_selector.filter(date, &self.ctx)
-                {
-                    rule.day_selector.next_change_hint(date, &self.ctx)
-                } else {
-                    date.succ_opt()
-                }
-            })
-            .min()
-            .flatten()
-    }
-
     /// Get the schedule at a given day.
     pub fn schedule_at(&self, date: NaiveDate) -> Schedule {
+        // eprintln!("Schedule at {date}");
         #[cfg(test)]
         crate::tests::stats::notify::generated_schedule();
 
@@ -181,7 +156,9 @@ impl<L: Localize> OpeningHours<L> {
             prev_eval = new_eval;
         }
 
-        prev_eval.unwrap_or_else(Schedule::new)
+        prev_eval
+            .unwrap_or_else(Schedule::new)
+            .filter_closed_ranges()
     }
 
     /// Same as [`iter_range`], but with naive date input and outputs.
@@ -371,6 +348,8 @@ pub struct TimeDomainIterator<L: Clone + Localize> {
     curr_date: NaiveDate,
     curr_schedule: Peekable<crate::schedule::IntoIter>,
     end_datetime: NaiveDateTime,
+
+    dates_with_schedule: Box<dyn Iterator<Item = NaiveDate> + Send + Sync + 'static>,
 }
 
 impl<L: Localize> TimeDomainIterator<L> {
@@ -383,6 +362,15 @@ impl<L: Localize> TimeDomainIterator<L> {
         let start_date = start_datetime.date();
         let start_time = start_datetime.time().into();
         let mut curr_schedule = opening_hours.schedule_at(start_date).into_iter().peekable();
+
+        let dates_with_schedule = Box::new(
+            dates_with_potential_change(
+                &opening_hours.expr,
+                &opening_hours.ctx,
+                start_datetime.date(),
+                end_datetime.date(),
+            ), // .inspect(|x| eprintln!("Jump to {x}")),
+        );
 
         if start_datetime >= end_datetime {
             (&mut curr_schedule).for_each(|_| {});
@@ -401,6 +389,7 @@ impl<L: Localize> TimeDomainIterator<L> {
             curr_date: start_date,
             curr_schedule,
             end_datetime,
+            dates_with_schedule,
         }
     }
 
@@ -423,13 +412,19 @@ impl<L: Localize> TimeDomainIterator<L> {
             self.curr_schedule.next();
 
             if self.curr_schedule.peek().is_none() {
-                let next_change_hint = self
-                    .opening_hours
-                    .next_change_hint(self.curr_date)
-                    .unwrap_or_else(|| self.curr_date.succ_opt().expect("reached invalid date"));
+                let mut next_change = self.dates_with_schedule.next().unwrap_or(DATE_END.date());
 
-                assert!(next_change_hint > self.curr_date, "infinite loop detected");
-                self.curr_date = next_change_hint;
+                while next_change <= self.curr_date {
+                    next_change = self.dates_with_schedule.next().unwrap_or(DATE_END.date());
+                }
+
+                // let next_change_hint = self
+                //     .opening_hours
+                //     .next_change_hint(self.curr_date)
+                //     .unwrap_or_else(|| self.curr_date.succ_opt().expect("reached invalid date"));
+                //
+                // assert!(next_change_hint > self.curr_date, "infinite loop detected");
+                self.curr_date = next_change;
 
                 if self.curr_date > self.end_datetime.date() || self.curr_date >= DATE_END.date() {
                     break;

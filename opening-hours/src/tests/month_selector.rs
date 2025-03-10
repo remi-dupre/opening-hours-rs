@@ -165,7 +165,7 @@ fn year_on_bound_start() {
         datetime!("2021-04-17 00:00"),
     );
 
-    assert!(oh.next_change(datetime!("2021-04-17 12:00")).is_none());
+    assert_eq!(oh.next_change(datetime!("2021-04-17 12:00")), None);
 }
 
 #[test]

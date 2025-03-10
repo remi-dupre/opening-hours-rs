@@ -89,12 +89,12 @@ fn gh56_only_close_when_no_day_filter() -> Result<(), Error> {
     let mut intervals = oh.iter_range(date_start, date_end);
 
     assert_eq!(
-        intervals.next(),
-        Some(DateTimeRange {
+        intervals.next().unwrap(),
+        DateTimeRange {
             range: date_start..datetime!("2024-11-26 00:30"),
             kind: RuleKind::Closed,
             comment: Default::default(),
-        })
+        }
     );
 
     Ok(())

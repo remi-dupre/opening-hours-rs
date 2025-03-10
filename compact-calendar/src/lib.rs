@@ -554,6 +554,18 @@ impl Default for CompactYear {
     }
 }
 
+impl IntoIterator for CompactYear {
+    type Item = (u32, u32);
+    type IntoIter = Box<dyn Iterator<Item = (u32, u32)> + Send + Sync + 'static>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        Box::new(
+            ((1u32..=12).zip(self.0))
+                .flat_map(|(month_i, month)| month.iter().map(move |day| (month_i, day))),
+        ) as _
+    }
+}
+
 impl fmt::Debug for CompactYear {
     /// ```
     /// use compact_calendar::CompactYear;
