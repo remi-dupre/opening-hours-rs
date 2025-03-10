@@ -2,6 +2,7 @@ name: Deploy Docs
 
 on:
   - push
+  - pull_request
 
 jobs:
   deploy-python-doc:
