@@ -32,7 +32,7 @@ chrono = "0.4"
 compact-calendar = { path = "compact-calendar", version = "1.1.2" }
 flate2 = "1.0"
 opening-hours-syntax = { path = "opening-hours-syntax", version = "1.1.2" }
-sunrise = "1.2"
+sunrise = "1.2.1"
 
 # Feature: log (default)
 log = { version = "0.4", features = [ "kv" ], optional = true }
