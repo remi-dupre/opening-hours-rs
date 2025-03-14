@@ -210,7 +210,7 @@ checksum = "f46ad14479a25103f283c0f10005961cf086d8dc42205bb44c46ac563475dca6"
 
 [[package]]
 name = "compact-calendar"
-version = "1.1.1"
+version = "1.1.2"
 dependencies = [
  "chrono",
 ]
@@ -718,7 +718,7 @@ checksum = "b410bbe7e14ab526a0e86877eb47c6996a2bd7746f027ba551028c925390e4e9"
 
 [[package]]
 name = "opening-hours"
-version = "1.1.1"
+version = "1.1.2"
 dependencies = [
  "chrono",
  "chrono-tz",
@@ -729,13 +729,13 @@ dependencies = [
  "log",
  "opening-hours-syntax",
  "rustc_version",
- "sunrise-next",
+ "sunrise",
  "tzf-rs",
 ]
 
 [[package]]
 name = "opening-hours-py"
-version = "1.1.1"
+version = "1.1.2"
 dependencies = [
  "chrono",
  "chrono-tz",
@@ -748,7 +748,7 @@ dependencies = [
 
 [[package]]
 name = "opening-hours-syntax"
-version = "1.1.1"
+version = "1.1.2"
 dependencies = [
  "chrono",
  "log",
@@ -1288,10 +1288,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "56199f7ddabf13fe5074ce809e7d3f42b42ae711800501b5b16ea82ad029c39d"
 
 [[package]]
-name = "sunrise-next"
-version = "1.2.4"
+name = "sunrise"
+version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8452cee9bbdb70d30684c5cf06082a5a09f477a8f3ab91a2e79c4cedcf9b2d3"
+checksum = "08871f1db1390f915b7bb2ab2f1ac7370e8c78667857a15ae5cfea25da3262f2"
 dependencies = [
  "chrono",
 ]
