@@ -2,6 +2,7 @@ name: Deploy Crates
 
 on:
   - push
+  - pull_request
 
 jobs:
   deploy-rust:
