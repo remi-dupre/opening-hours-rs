@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Display;
 use std::iter::Peekable;
 use std::ops::RangeInclusive;
@@ -191,7 +191,7 @@ impl<L: Localize> OpeningHours<L> {
     ) -> Schedule {
         debug_assert_eq!(self.expr.rules.len(), matching_on_date.len());
         debug_assert_eq!(self.expr.rules.len(), matching_on_prev_date.len());
-        eprintln!("Generate schedule at {date}");
+        // eprintln!("Generate schedule at {date}");
 
         #[cfg(test)]
         crate::tests::stats::notify::generated_schedule();
@@ -484,7 +484,7 @@ impl<L: Localize> TimeDomainIterator<L> {
         let dates_and_schedules = Box::new({
             let opening_hours = opening_hours.clone();
             let mut curr = start_datetime.date();
-            let mut _schedule_cache: HashMap<Vec<bool>, Schedule> = HashMap::new();
+            let mut schedule_cache: HashMap<[Vec<bool>; 2], Schedule> = HashMap::new();
 
             let mut iter_schedule_starts = opening_hours
                 .iter_matching_rules(start_date, end_datetime.date())
@@ -496,6 +496,20 @@ impl<L: Localize> TimeDomainIterator<L> {
                 .unwrap_or_else(|| (DATE_END.date(), Vec::new(), Vec::new()));
 
             std::iter::from_fn(move || {
+                let mut get_schedule =
+                    |curr, start_eval_prev: &Vec<bool>, start_eval: &Vec<bool>| {
+                        schedule_cache
+                            .entry([start_eval_prev.clone(), start_eval.clone()])
+                            .or_insert_with(|| {
+                                opening_hours.schedule_from_matching_rules(
+                                    curr,
+                                    start_eval_prev,
+                                    start_eval,
+                                )
+                            })
+                            .clone()
+                    };
+
                 if curr > end_datetime.date() {
                     return None;
                 }
@@ -510,13 +524,9 @@ impl<L: Localize> TimeDomainIterator<L> {
 
                 let schedule = {
                     if curr == start {
-                        opening_hours.schedule_from_matching_rules(
-                            curr,
-                            &start_eval_prev,
-                            &start_eval,
-                        )
+                        get_schedule(curr, &start_eval_prev, &start_eval)
                     } else {
-                        opening_hours.schedule_from_matching_rules(curr, &start_eval, &start_eval)
+                        get_schedule(curr, &start_eval, &start_eval)
                     }
                 };
 
