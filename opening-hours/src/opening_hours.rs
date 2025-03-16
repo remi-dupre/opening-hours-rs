@@ -1,5 +1,7 @@
+use std::collections::HashMap;
 use std::fmt::Display;
 use std::iter::Peekable;
+use std::ops::RangeInclusive;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -9,10 +11,8 @@ use opening_hours_syntax::extended_time::ExtendedTime;
 use opening_hours_syntax::rules::{OpeningHoursExpression, RuleKind, RuleOperator, RuleSequence};
 use opening_hours_syntax::Error as ParserError;
 
-use crate::filter::date_filter::{dates_with_potential_change, DateFilter};
-use crate::filter::time_filter::{
-    time_selector_intervals_at, time_selector_intervals_at_next_day, TimeFilter,
-};
+use crate::filter::date_filter::DateFilter;
+use crate::filter::time_filter::{time_selector_intervals_at, time_selector_intervals_at_next_day};
 use crate::localization::{Localize, NoLocation};
 use crate::schedule::Schedule;
 use crate::Context;
@@ -105,9 +105,94 @@ impl<L: Localize> OpeningHours<L> {
     // This means that performances matters a lot for these functions and it
     // would be relevant to focus on optimisations to this regard.
 
-    /// Get the schedule at a given day.
-    pub fn schedule_at(&self, date: NaiveDate) -> Schedule {
-        // eprintln!("Schedule at {date}");
+    /// TODO: explain
+    fn iter_matching_rules(
+        &self,
+        start: NaiveDate,
+        end: NaiveDate,
+    ) -> Box<dyn Iterator<Item = (NaiveDate, Vec<bool>, Vec<bool>)> + Send + Sync + 'static> {
+        // Evaluate which rules belong to current iterator
+        let iter_rules_eval = move |iterators: &mut [Peekable<_>], date| -> Vec<bool> {
+            for it in iterators.iter_mut() {
+                while it
+                    .next_if(|x: &RangeInclusive<NaiveDate>| *x.end() < date)
+                    .is_some()
+                {}
+            }
+
+            iterators
+                .iter_mut()
+                .map(|it| {
+                    it.peek()
+                        .map(|rg: &RangeInclusive<NaiveDate>| rg.contains(&date))
+                        .unwrap_or(false)
+                })
+                .collect()
+        };
+
+        // Start by evaluating date before start
+        let mut curr = start.pred_opt().unwrap_or(start);
+
+        let mut iterators: Vec<_> = self
+            .expr
+            .rules
+            .iter()
+            .map(|r| r.day_selector.intervals(&self.ctx, curr, end).peekable())
+            .collect();
+
+        // Initialise first evaluation
+        let mut first_iter = true;
+        let mut prev_eval = iter_rules_eval(&mut iterators, curr);
+
+        let res = std::iter::from_fn(move || {
+            if curr >= end {
+                return None;
+            }
+
+            if first_iter {
+                curr = curr.succ_opt()?;
+                first_iter = false;
+            } else if prev_eval.contains(&true) {
+                // Currently matching an interval, jump to next interval end or start
+                curr = iterators
+                    .iter_mut()
+                    .enumerate()
+                    .filter_map(|(idx, it)| {
+                        if prev_eval[idx] {
+                            it.peek()?.end().succ_opt()
+                        } else {
+                            Some(*it.peek()?.start())
+                        }
+                    })
+                    .min()
+                    .unwrap_or(DATE_END.date());
+            } else {
+                // Not matching an interval, jump to next interval start
+                curr = iterators
+                    .iter_mut()
+                    .filter_map(|it| Some(*it.peek()?.start()))
+                    .min()
+                    .unwrap_or(DATE_END.date());
+            }
+
+            let eval = iter_rules_eval(&mut iterators, curr);
+            Some((curr, std::mem::replace(&mut prev_eval, eval.clone()), eval))
+        });
+
+        // TODO: wtf is this issue?
+        Box::new(res) as _
+    }
+
+    fn schedule_from_matching_rules(
+        &self,
+        date: NaiveDate,
+        matching_on_prev_date: &[bool],
+        matching_on_date: &[bool],
+    ) -> Schedule {
+        debug_assert_eq!(self.expr.rules.len(), matching_on_date.len());
+        debug_assert_eq!(self.expr.rules.len(), matching_on_prev_date.len());
+        eprintln!("Generate schedule at {date}");
+
         #[cfg(test)]
         crate::tests::stats::notify::generated_schedule();
 
@@ -115,44 +200,52 @@ impl<L: Localize> OpeningHours<L> {
             return Schedule::default();
         }
 
-        let mut prev_match = false;
+        let mut prev_match_on_date = false;
         let mut prev_eval = None;
 
-        for rules_seq in &self.expr.rules {
-            let curr_match = rules_seq.day_selector.filter(date, &self.ctx);
-            let curr_eval = rule_sequence_schedule_at(rules_seq, date, &self.ctx);
+        for (idx, rules_seq) in self.expr.rules.iter().enumerate() {
+            let curr_match_on_date = matching_on_date[idx];
+            let curr_match_on_prev_date = matching_on_prev_date[idx];
+
+            let curr_eval = rule_sequence_schedule_at(
+                rules_seq,
+                date,
+                &self.ctx,
+                curr_match_on_prev_date,
+                curr_match_on_date,
+            );
 
             let (new_match, new_eval) = match (rules_seq.operator, rules_seq.kind) {
                 // The normal rule acts like the additional rule when the kind is "closed".
                 (RuleOperator::Normal, RuleKind::Open | RuleKind::Unknown) => (
-                    curr_match || prev_match,
-                    if curr_match {
+                    curr_match_on_date || prev_match_on_date,
+                    if curr_match_on_date {
                         curr_eval
                     } else {
                         prev_eval.or(curr_eval)
                     },
                 ),
                 (RuleOperator::Additional, _) | (RuleOperator::Normal, RuleKind::Closed) => (
-                    prev_match || curr_match,
+                    prev_match_on_date || curr_match_on_date,
                     match (prev_eval, curr_eval) {
                         (Some(prev), Some(curr)) => Some(prev.addition(curr)),
                         (prev, curr) => prev.or(curr),
                     },
                 ),
                 (RuleOperator::Fallback, _) => {
-                    if prev_match
+                    if prev_match_on_date
                         && !(prev_eval.as_ref())
                             .map(Schedule::is_always_closed_with_no_comments)
                             .unwrap_or(false)
                     {
-                        (prev_match, prev_eval)
+                        (prev_match_on_date, prev_eval)
                     } else {
-                        (curr_match, curr_eval)
+                        (curr_match_on_date, curr_eval)
                     }
                 }
             };
 
-            prev_match = new_match;
+            prev_match_on_date = new_match;
             prev_eval = new_eval;
         }
 
@@ -187,6 +280,17 @@ impl<L: Localize> OpeningHours<L> {
     // --
     // -- High level implementations / Syntactic sugar
     // --
+
+    /// Get the schedule at a given day.
+    pub fn schedule_at(&self, date: NaiveDate) -> Schedule {
+        self.iter_matching_rules(date, date)
+            .take_while(|(found, _, _)| *found <= date)
+            .last()
+            .map(|(_, matching_prev, matching)| {
+                self.schedule_from_matching_rules(date, &matching_prev, &matching)
+            })
+            .unwrap_or_default()
+    }
 
     /// Iterate over disjoint intervals of different state restricted to the
     /// time interval `from..to`.
@@ -324,14 +428,28 @@ fn rule_sequence_schedule_at<L: Localize>(
     rule_sequence: &RuleSequence,
     date: NaiveDate,
     ctx: &Context<L>,
+    matching_on_prev_date: bool,
+    matching_on_date: bool,
 ) -> Option<Schedule> {
+    debug_assert_eq!(
+        matching_on_date,
+        rule_sequence.day_selector.filter(date, ctx)
+    );
+
+    debug_assert_eq!(
+        matching_on_prev_date,
+        rule_sequence
+            .day_selector
+            .filter(date.pred_opt().unwrap(), ctx)
+    );
+
     let from_today = Some(date)
-        .filter(|date| rule_sequence.day_selector.filter(*date, ctx))
+        .filter(|_| matching_on_date)
         .map(|date| time_selector_intervals_at(ctx, &rule_sequence.time_selector, date))
         .map(|rgs| Schedule::from_ranges(rgs, rule_sequence.kind, rule_sequence.comment.clone()));
 
     let from_yesterday = (date.pred_opt())
-        .filter(|prev| rule_sequence.day_selector.filter(*prev, ctx))
+        .filter(|_| matching_on_prev_date)
         .map(|prev| time_selector_intervals_at_next_day(ctx, &rule_sequence.time_selector, prev))
         .map(|rgs| Schedule::from_ranges(rgs, rule_sequence.kind, rule_sequence.comment.clone()));
 
@@ -349,7 +467,7 @@ pub struct TimeDomainIterator<L: Clone + Localize> {
     curr_schedule: Peekable<crate::schedule::IntoIter>,
     end_datetime: NaiveDateTime,
 
-    dates_with_schedule: Box<dyn Iterator<Item = NaiveDate> + Send + Sync + 'static>,
+    dates_and_schedules: Box<dyn Iterator<Item = (NaiveDate, Schedule)> + Send + Sync + 'static>,
 }
 
 impl<L: Localize> TimeDomainIterator<L> {
@@ -363,14 +481,70 @@ impl<L: Localize> TimeDomainIterator<L> {
         let start_time = start_datetime.time().into();
         let mut curr_schedule = opening_hours.schedule_at(start_date).into_iter().peekable();
 
-        let dates_with_schedule = Box::new(
-            dates_with_potential_change(
-                &opening_hours.expr,
-                &opening_hours.ctx,
-                start_datetime.date(),
-                end_datetime.date(),
-            ), // .inspect(|x| eprintln!("Jump to {x}")),
-        );
+        let dates_and_schedules = Box::new({
+            let opening_hours = opening_hours.clone();
+            let mut curr = start_datetime.date();
+            let mut _schedule_cache: HashMap<Vec<bool>, Schedule> = HashMap::new();
+
+            let mut iter_schedule_starts = opening_hours
+                .iter_matching_rules(start_date, end_datetime.date())
+                // .inspect(|x| eprintln!("{x:?}"))
+                .peekable();
+
+            let (mut start, mut start_eval_prev, mut start_eval) = iter_schedule_starts
+                .next()
+                .unwrap_or_else(|| (DATE_END.date(), Vec::new(), Vec::new()));
+
+            std::iter::from_fn(move || {
+                if curr > end_datetime.date() {
+                    return None;
+                }
+
+                while iter_schedule_starts
+                    .peek()
+                    .map(|(date, _, _)| *date <= curr)
+                    .unwrap_or(false)
+                {
+                    (start, start_eval_prev, start_eval) = iter_schedule_starts.next().unwrap();
+                }
+
+                let schedule = {
+                    if curr == start {
+                        opening_hours.schedule_from_matching_rules(
+                            curr,
+                            &start_eval_prev,
+                            &start_eval,
+                        )
+                    } else {
+                        opening_hours.schedule_from_matching_rules(curr, &start_eval, &start_eval)
+                    }
+                };
+
+                let can_long_jump = schedule.is_constant()
+                    && curr > start
+                    && (opening_hours.expr.rules)
+                        .iter()
+                        .enumerate()
+                        .all(|(idx, rule)| !start_eval[idx] || rule.time_selector.is_immutable());
+
+                let res = (curr, schedule);
+
+                if can_long_jump {
+                    let next_curr = std::cmp::max(
+                        iter_schedule_starts.peek().map(|(d, _, _)| *d),
+                        curr.succ_opt(),
+                    )?;
+
+                    debug_assert!(next_curr > curr);
+                    curr = next_curr;
+                } else {
+                    curr = curr.succ_opt()?;
+                }
+
+                Some(res)
+            })
+            // .inspect(|x| eprintln!("{x:?}"))
+        });
 
         if start_datetime >= end_datetime {
             (&mut curr_schedule).for_each(|_| {});
@@ -389,7 +563,7 @@ impl<L: Localize> TimeDomainIterator<L> {
             curr_date: start_date,
             curr_schedule,
             end_datetime,
-            dates_with_schedule,
+            dates_and_schedules,
         }
     }
 
@@ -412,28 +586,17 @@ impl<L: Localize> TimeDomainIterator<L> {
             self.curr_schedule.next();
 
             if self.curr_schedule.peek().is_none() {
-                let mut next_change = self.dates_with_schedule.next().unwrap_or(DATE_END.date());
+                let (next_change, next_schedule) = self
+                    .dates_and_schedules
+                    .find(|(date, _)| *date > self.curr_date)
+                    .unwrap_or_else(|| (DATE_END.date(), Schedule::default()));
 
-                while next_change <= self.curr_date {
-                    next_change = self.dates_with_schedule.next().unwrap_or(DATE_END.date());
-                }
-
-                // let next_change_hint = self
-                //     .opening_hours
-                //     .next_change_hint(self.curr_date)
-                //     .unwrap_or_else(|| self.curr_date.succ_opt().expect("reached invalid date"));
-                //
-                // assert!(next_change_hint > self.curr_date, "infinite loop detected");
                 self.curr_date = next_change;
+                self.curr_schedule = next_schedule.into_iter().peekable();
 
                 if self.curr_date > self.end_datetime.date() || self.curr_date >= DATE_END.date() {
                     break;
                 }
-
-                self.curr_schedule = (self.opening_hours)
-                    .schedule_at(self.curr_date)
-                    .into_iter()
-                    .peekable();
             }
         }
     }

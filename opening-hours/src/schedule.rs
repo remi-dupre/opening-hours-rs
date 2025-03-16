@@ -117,6 +117,13 @@ impl Schedule {
         self.inner.is_empty()
     }
 
+    /// Check if a schedule is constant from 00:00 to 24:00.
+    pub(crate) fn is_constant(&self) -> bool {
+        self.inner.is_empty()
+            || self.inner.len() == 1
+                && self.inner[0].range == (ExtendedTime::MIDNIGHT_00..ExtendedTime::MIDNIGHT_24)
+    }
+
     /// Check if a schedule is always closed with no comments.
     pub(crate) fn is_always_closed_with_no_comments(&self) -> bool {
         self.inner

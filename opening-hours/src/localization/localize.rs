@@ -9,7 +9,7 @@ use crate::localization::Coordinates;
 /// Specifies how dates should be localized while evaluating opening hours. No
 /// localisation is available by default but this can be used to specify a
 /// timezone and coordinates (which affect sun events).
-pub trait Localize: Clone + Send + Sync {
+pub trait Localize: Clone + Send + Sync + 'static {
     /// The type for localized date & time.
     type DateTime: Clone + Add<Duration, Output = Self::DateTime>;
 
@@ -128,7 +128,7 @@ impl TzLocation<chrono_tz::Tz> {
 
 impl<Tz> Localize for TzLocation<Tz>
 where
-    Tz: TimeZone + Send + Sync,
+    Tz: TimeZone + Send + Sync + 'static,
     Tz::Offset: Send + Sync,
 {
     type DateTime = chrono::DateTime<Tz>;

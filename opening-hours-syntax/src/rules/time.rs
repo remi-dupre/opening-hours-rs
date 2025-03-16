@@ -24,6 +24,13 @@ impl TimeSelector {
                     ExtendedTime::MIDNIGHT_24,
                 ))
     }
+
+    /// TODO: doc
+    pub fn is_immutable(&self) -> bool {
+        self.time.iter().all(|t| {
+            matches!(t.range.start, Time::Fixed(_)) && matches!(t.range.end, Time::Fixed(_))
+        })
+    }
 }
 
 impl TimeSelector {

@@ -11,30 +11,6 @@ use crate::opening_hours::{DATE_END, DATE_START};
 use crate::utils::dates::{count_days_in_month, easter};
 use crate::Context;
 
-pub(crate) fn dates_with_potential_change<L: Localize>(
-    expr: &OpeningHoursExpression,
-    ctx: &Context<L>,
-    hint_start: NaiveDate,
-    hint_end: NaiveDate,
-) -> Box<dyn Iterator<Item = NaiveDate> + Send + Sync + 'static> {
-    let res = expr.intervals(ctx, hint_start, hint_end).flat_map(|rg| {
-        let (mut curr, end) = rg.into_inner();
-
-        std::iter::from_fn(move || {
-            if curr <= end {
-                let res = curr;
-                curr = curr.succ_opt()?;
-                Some(res)
-            } else {
-                None
-            }
-        })
-        .chain(end.succ_opt())
-    });
-
-    Box::new(ensure_increasing_iter(res)) as _
-}
-
 /// Get the first valid date before given "yyyy/mm/dd", for example if 2021/02/30 is given, this
 /// will return february 28th as 2021 is not a leap year.
 fn valid_ymd_before(year: i32, month: u32, day: u32) -> NaiveDate {
@@ -67,23 +43,7 @@ fn valid_ymd_after(year: i32, month: u32, day: u32) -> NaiveDate {
         .unwrap_or(DATE_END.date())
 }
 
-// /// Find next change from iterators of "starting of an interval" to "end of an
-// /// interval".
-// fn next_change_from_bounds(
-//     date: NaiveDate,
-//     bounds_start: impl IntoIterator<Item = NaiveDate>,
-//     bounds_end: impl IntoIterator<Item = NaiveDate>,
-// ) -> NaiveDate {
-//     next_change_from_intervals(date, intervals_from_bounds(bounds_start, bounds_end))
-// }
-//
-// fn is_open_from_bounds(
-//     date: NaiveDate,
-//     bounds_start: impl IntoIterator<Item = NaiveDate>,
-//     bounds_end: impl IntoIterator<Item = NaiveDate>,
-// ) -> bool {
-//     is_open_from_intervals(date, intervals_from_bounds(bounds_start, bounds_end))
-// }
+// TODO: cleanup in utils
 
 fn ensure_increasing_iter<T: Ord>(iter: impl Iterator<Item = T>) -> impl Iterator<Item = T> {
     let mut iter = iter.peekable();

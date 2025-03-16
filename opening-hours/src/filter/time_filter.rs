@@ -45,11 +45,6 @@ pub(crate) trait TimeFilter {
     where
         Self: 'a;
 
-    /// Check if this filter is always matching the full day.
-    fn is_immutable_full_day(&self) -> bool {
-        false
-    }
-
     /// Project a time representation to its naive representation at a given date.
     fn as_naive<'a, L: 'a + Localize>(
         &'a self,
@@ -60,10 +55,6 @@ pub(crate) trait TimeFilter {
 
 impl TimeFilter for ts::TimeSelector {
     type Output<'a, L: 'a + Localize> = NaiveTimeSelectorIterator<'a, L>;
-
-    fn is_immutable_full_day(&self) -> bool {
-        self.time.iter().all(|span| span.is_immutable_full_day())
-    }
 
     fn as_naive<'a, L: 'a + Localize>(
         &'a self,
@@ -76,10 +67,6 @@ impl TimeFilter for ts::TimeSelector {
 
 impl TimeFilter for ts::TimeSpan {
     type Output<'a, L: 'a + Localize> = Range<ExtendedTime>;
-
-    fn is_immutable_full_day(&self) -> bool {
-        *self == Self::fixed_range(ExtendedTime::MIDNIGHT_00, ExtendedTime::MIDNIGHT_24)
-    }
 
     fn as_naive<'a, L: 'a + Localize>(
         &'a self,
