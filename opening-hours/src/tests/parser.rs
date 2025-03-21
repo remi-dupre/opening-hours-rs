@@ -29,6 +29,11 @@ fn parse_invalid() {
         OpeningHours::parse("2020-2010/3").unwrap_err(),
         Error::InvertedYearRange { .. }
     ));
+
+    assert!(matches!(
+        OpeningHours::parse("week15-10/3").unwrap_err(),
+        Error::InvertedWeekRange { .. }
+    ));
 }
 
 #[test]

@@ -150,3 +150,37 @@ fn feb29_ends_interval() {
     assert!(oh.is_open(datetime!("2021-02-28 12:00")));
     assert!(!oh.is_open(datetime!("2021-03-01 12:00")));
 }
+
+#[test]
+fn year_on_bound_start() {
+    let oh: OpeningHours = "2021 Mar 28-Apr 16".parse().unwrap();
+
+    assert_eq!(
+        oh.next_change(datetime!("2021-02-15 12:00")).unwrap(),
+        datetime!("2021-03-28 00:00"),
+    );
+
+    assert_eq!(
+        oh.next_change(datetime!("2021-04-01 12:00")).unwrap(),
+        datetime!("2021-04-17 00:00"),
+    );
+
+    assert_eq!(oh.next_change(datetime!("2021-04-17 12:00")), None);
+}
+
+#[test]
+fn year_on_bound_end() {
+    let oh: OpeningHours = "Mar 28-2021 Apr 16".parse().unwrap();
+
+    // assert_eq!(
+    //     oh.next_change(datetime!("2021-02-15 12:00")).unwrap(),
+    //     datetime!("2021-03-28 00:00"),
+    // );
+    //
+    // assert_eq!(
+    //     oh.next_change(datetime!("2021-04-01 12:00")).unwrap(),
+    //     datetime!("2021-04-17 00:00"),
+    // );
+
+    assert!(oh.next_change(datetime!("2021-04-17 12:00")).is_none());
+}

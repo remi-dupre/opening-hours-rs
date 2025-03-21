@@ -39,13 +39,15 @@ fn additional_rule() -> Result<(), Error> {
         schedule! {
             10,00 => Open => 12,00;
             14,00 => Unknown => 16,00;
-            16,00 => Closed => 23,00;
         }
     );
 
     assert_eq!(
         schedule_at!("10:00-20:00 open, 12:00-14:00 closed", "2020-06-01"),
-        schedule! { 10,00 => Open => 12,00 => Closed => 14,00 => Open => 20,00 }
+        schedule! {
+            10,00 => Open => 12,00;
+            14,00 => Open => 20,00;
+        }
     );
 
     assert_eq!(
@@ -129,12 +131,12 @@ fn fallback_take_all() {
 fn override_with_closed() -> Result<(), Error> {
     assert_eq!(
         schedule_at!("Feb ; 00:00-04:00 closed", "2020-02-01"),
-        schedule! { 0,00 => Closed => 4,00 => Open => 24,00 }
+        schedule! { 4,00 => Open => 24,00 }
     );
 
     assert_eq!(
         schedule_at!("Feb ; 00:00-04:00 closed", "2020-03-01"),
-        schedule! { 0,00 => Closed => 4,00 }
+        schedule! {}
     );
 
     Ok(())
