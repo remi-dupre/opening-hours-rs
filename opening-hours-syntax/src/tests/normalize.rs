@@ -18,7 +18,7 @@ const EXAMPLES: &[(&str, u32, &str, &str)] = &[
     ex!("Mo,Tu,We,Th,Fr,Sa,Su 10:00-21:00", "10:00-21:00"),
     ex!("5554Mo;5555", "5554-5555 Mo ; 5555 Tu-Su"),
     ex!("Jun24:00+", "Jun 24:00+"),
-    ex!("week02-02/7", "week02-02/7"),
+    ex!("week02-02/7", "week02"),
     ex!("24/7 ; Su closed", "Mo-Sa"),
     ex!("Tu off ; off ; Jun", "Jun"),
     ex!("off ; Jun unknown", "Jun unknown"),
