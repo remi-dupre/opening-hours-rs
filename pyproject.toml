@@ -15,7 +15,7 @@ python = "^3.11"
 [tool.poetry.dev-dependencies]
 maturin = ">=1"
 pdoc = "^15"
-ruff = "^0.9"
+ruff = "^0.11"
 
 [build-system]
 requires = ["poetry>=0.12", "maturin>=1,<2"]
