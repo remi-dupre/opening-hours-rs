@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.3
+
+### General
+
+- Fix crashes when a repetition is defined in a time span (eg.
+  "10:00-18:00/01:30")
+- Update dependencies (PyO3 0.24.1)
+
 ## 1.1.2
 
 ### Rust

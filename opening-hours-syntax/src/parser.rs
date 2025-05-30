@@ -244,8 +244,9 @@ fn build_timespan(pair: Pair<Rule>) -> Result<ts::TimeSpan> {
     assert_eq!(pair.as_rule(), Rule::timespan);
     let mut pairs = pair.into_inner();
     let start = build_time(pairs.next().expect("empty timespan"))?;
+    let mut repeats = None;
 
-    let (open_end, end) = match pairs.next() {
+    let (mut open_end, end) = match pairs.next() {
         None => {
             return Err(Error::Unsupported("point in time"));
         }
@@ -257,16 +258,14 @@ fn build_timespan(pair: Pair<Rule>) -> Result<ts::TimeSpan> {
         Some(pair) => (false, build_extended_time(pair)?),
     };
 
-    let (open_end, repeats) = match pairs.next().map(|x| x.as_rule()) {
-        None => (open_end, None),
-        Some(Rule::timespan_plus) => (true, None),
-        Some(Rule::minute) => (open_end, Some(build_minute(pairs.next().unwrap()))),
-        Some(Rule::hour_minutes) => (
-            open_end,
-            Some(build_hour_minutes_as_duration(pairs.next().unwrap())),
-        ),
-        Some(other) => unexpected_token(other, Rule::timespan),
-    };
+    if let Some(pair_repetition) = pairs.next() {
+        match pair_repetition.as_rule() {
+            Rule::timespan_plus => open_end = true,
+            Rule::minute => repeats = Some(build_minute(pair_repetition)),
+            Rule::hour_minutes => repeats = Some(build_hour_minutes_as_duration(pair_repetition)),
+            other => return Err(unexpected_token(other, Rule::timespan)),
+        }
+    }
 
     assert!(pairs.next().is_none());
     Ok(ts::TimeSpan { range: start..end, repeats, open_end })

@@ -99,3 +99,9 @@ fn gh56_only_close_when_no_day_filter() -> Result<(), Error> {
 
     Ok(())
 }
+
+/// https://github.com/remi-dupre/opening-hours-rs/issues/77
+#[test]
+fn gh77_invalid_time_step_panics() {
+    OpeningHours::parse("Mo-Sa 09:00-20:00/21:00").unwrap();
+}
