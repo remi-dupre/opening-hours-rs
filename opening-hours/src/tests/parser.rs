@@ -81,8 +81,14 @@ fn with_24_00() {
 }
 
 #[test]
-
 fn comments() {
     assert!(OpeningHours::parse(r#"Mo-Fr open "ring the bell""#).is_ok());
     assert!(OpeningHours::parse(r#"Mo-Fr open "ring "the bell"""#).is_err());
+}
+
+#[test]
+fn timespan_with_repetition() {
+    OpeningHours::parse("10:00-18:00+").unwrap();
+    OpeningHours::parse("10:00-18:00/30").unwrap();
+    OpeningHours::parse("10:00-18:00/01:30").unwrap();
 }
