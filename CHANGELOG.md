@@ -17,6 +17,10 @@
 
 - **(breaking)** `State` has been renamed to `RuleKind`.
 
+### Rust
+
+- Add `OpeningHours::get_context(&self)`.
+
 ## 1.1.3
 
 ### General
