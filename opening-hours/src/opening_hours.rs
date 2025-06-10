@@ -66,6 +66,11 @@ impl<L: Localize> OpeningHours<L> {
     // -- Builder Methods
     // --
 
+    /// Get the evaluation context for this expression.
+    pub fn get_context(&self) -> &Context<L> {
+        &self.ctx
+    }
+
     /// Set a new evaluation context for this expression.
     ///
     /// ```
