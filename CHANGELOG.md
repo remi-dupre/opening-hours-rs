@@ -20,6 +20,8 @@
 ### Rust
 
 - Add `OpeningHours::get_context(&self)`.
+- Fixed: holidays database may be unreadable when cross compiled to platforms
+  with different integer representations.
 
 ## 1.1.3
 
