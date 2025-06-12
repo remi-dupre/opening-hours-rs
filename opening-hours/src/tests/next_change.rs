@@ -113,3 +113,75 @@ fn with_max_interval_size() {
     assert!(oh.next_change(datetime!("2000-05-01 12:00")).is_none());
     assert!(oh.next_change(datetime!("2030-07-01 12:00")).is_none());
 }
+
+#[test]
+fn only_comment_changes_time() {
+    let oh: OpeningHours = r#"00:00-14:00 "may open earlier", 14:00-24:00"#.parse().unwrap();
+
+    assert_eq!(
+        oh.next_change(datetime!("2024-01-01 12:00")).unwrap(),
+        datetime!("2024-01-01 14:00")
+    );
+
+    assert_eq!(
+        oh.next_change(datetime!("2024-01-01 16:00")).unwrap(),
+        datetime!("2024-01-02 00:00")
+    );
+}
+
+#[test]
+fn only_comment_changes_date() {
+    let oh: OpeningHours = r#"24/7 "aaa" ; Mar "bbb""#.parse().unwrap();
+
+    assert_eq!(
+        oh.next_change(datetime!("2024-01-01 12:00")).unwrap(),
+        datetime!("2024-03-01 00:00")
+    );
+
+    assert_eq!(
+        oh.next_change(datetime!("2024-03-15 12:00")).unwrap(),
+        datetime!("2024-04-01 00:00")
+    );
+}
+
+#[test]
+fn single_closed_comment() -> Result<(), Error> {
+    let expr = r#"01:00-03:00 closed "aaa""#;
+
+    assert_eq!(
+        OpeningHours::parse(expr)?
+            .next_change(datetime!("2024-01-01 02:00"))
+            .unwrap(),
+        datetime!("2024-01-01 03:00"),
+    );
+
+    assert_eq!(
+        OpeningHours::parse(expr)?
+            .next_change(datetime!("2024-01-01 12:00"))
+            .unwrap(),
+        datetime!("2024-01-02 01:00"),
+    );
+
+    Ok(())
+}
+
+#[test]
+fn open_comment_full_day() -> Result<(), Error> {
+    let expr = r#""aaa" ; Mar"#;
+
+    assert_eq!(
+        OpeningHours::parse(expr)?
+            .next_change(datetime!("2024-01-01 12:00"))
+            .unwrap(),
+        datetime!("2024-03-01 00:00"),
+    );
+
+    assert_eq!(
+        OpeningHours::parse(expr)?
+            .next_change(datetime!("2024-03-15 12:00"))
+            .unwrap(),
+        datetime!("2024-04-01 00:00"),
+    );
+
+    Ok(())
+}

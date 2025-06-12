@@ -7,7 +7,6 @@ use std::sync::Arc;
 use crate::normalize::frame::Bounded;
 use crate::normalize::paving::{Paving, Paving5D};
 use crate::normalize::{canonical_to_seq, ruleseq_to_selector};
-use crate::sorted_vec::UniqueSortedVec;
 
 // OpeningHoursExpression
 
@@ -31,20 +30,20 @@ impl OpeningHoursExpression {
     /// assert!(!parse("24/7 ; PH off").unwrap().is_constant());
     /// ```
     pub fn is_constant(&self) -> bool {
-        let Some(kind) = self.rules.last().map(|rs| rs.kind) else {
+        let Some(state) = self.rules.last().map(|rs| rs.as_state()) else {
             return true;
         };
 
         // Ignores rules from the end as long as they are all evaluated to the same kind.
         let search_tail_full = self.rules.iter().rev().find(|rs| {
-            rs.day_selector.is_empty() || !rs.time_selector.is_00_24() || rs.kind != kind
+            rs.day_selector.is_empty() || !rs.time_selector.is_00_24() || rs.as_state() != state
         });
 
         let Some(tail) = search_tail_full else {
-            return kind == RuleKind::Closed;
+            return state == Default::default();
         };
 
-        tail.kind == kind && tail.is_constant()
+        tail.as_state() == state && tail.is_constant()
     }
 
     /// Convert the expression into a normalized form. It will not affect the meaning of the
@@ -77,7 +76,7 @@ impl OpeningHoursExpression {
                 paving.set(&full_day_selector, &Default::default());
             }
 
-            paving.set(&selector, &(rule.kind, rule.comments));
+            paving.set(&selector, &(rule.kind, rule.comment));
         }
 
         Self {
@@ -116,7 +115,7 @@ pub struct RuleSequence {
     pub time_selector: time::TimeSelector,
     pub kind: RuleKind,
     pub operator: RuleOperator,
-    pub comments: UniqueSortedVec<Arc<str>>,
+    pub comment: Arc<str>,
 }
 
 impl RuleSequence {
@@ -124,6 +123,12 @@ impl RuleSequence {
     /// can't detect all cases.
     pub fn is_constant(&self) -> bool {
         self.day_selector.is_empty() && self.time_selector.is_00_24()
+    }
+
+    /// Extract the kind and comment from the range, which are the values that define current state
+    /// of an expression.
+    pub fn as_state(&self) -> (RuleKind, &str) {
+        (self.kind, &self.comment)
     }
 }
 
@@ -157,12 +162,12 @@ impl Display for RuleSequence {
             write!(f, "{}", self.kind)?;
         }
 
-        if !self.comments.is_empty() {
+        if !self.comment.is_empty() {
             if !is_empty {
                 write!(f, " ")?;
             }
 
-            write!(f, "\"{}\"", self.comments.join(", "))?;
+            write!(f, "\"{}\"", self.comment)?;
         }
 
         Ok(())

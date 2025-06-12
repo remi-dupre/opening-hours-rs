@@ -13,7 +13,7 @@ fn holidays() -> Result<(), Error> {
             "2020-07-14",
             region = Country::FR
         ),
-        schedule! { 00,00 => Closed => 24,00 }
+        schedule! {}
     );
 
     assert_eq!(
@@ -33,7 +33,7 @@ fn holidays() -> Result<(), Error> {
             "2020-07-03",
             region = Country::US
         ),
-        schedule! { 00,00 => Closed => 24,00 }
+        schedule! {}
     );
 
     assert_eq!(

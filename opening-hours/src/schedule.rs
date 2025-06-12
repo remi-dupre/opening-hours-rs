@@ -1,10 +1,8 @@
 use std::cmp::{max, min};
 use std::iter::Peekable;
-use std::mem::take;
 use std::ops::Range;
 use std::sync::Arc;
 
-use opening_hours_syntax::sorted_vec::UniqueSortedVec;
 use opening_hours_syntax::{ExtendedTime, RuleKind};
 
 /// An period of time in a schedule annotated with a state and comments.
@@ -14,18 +12,20 @@ pub struct TimeRange {
     pub range: Range<ExtendedTime>,
     /// State of the schedule while this period is active
     pub kind: RuleKind,
-    /// Comments raised while this period is active
-    pub comments: UniqueSortedVec<Arc<str>>,
+    /// Comment raised while this period is active
+    pub comment: Arc<str>,
 }
 
 impl TimeRange {
     /// Small helper to create a new range.
-    pub fn new(
-        range: Range<ExtendedTime>,
-        kind: RuleKind,
-        comments: UniqueSortedVec<Arc<str>>,
-    ) -> Self {
-        TimeRange { range, kind, comments }
+    pub fn new(range: Range<ExtendedTime>, kind: RuleKind, comment: Arc<str>) -> Self {
+        TimeRange { range, kind, comment }
+    }
+
+    /// Extract the kind and comment from the range, which are the values that define current state
+    /// of an expression.
+    pub fn as_state(&self) -> (RuleKind, &str) {
+        (self.kind, &self.comment)
     }
 }
 
@@ -64,13 +64,13 @@ impl Schedule {
     ///         ExtendedTime::new(12, 0).unwrap()..ExtendedTime::new(16, 0).unwrap(),
     ///     ],
     ///     RuleKind::Open,
-    ///     &Default::default(),
+    ///     Default::default(),
     /// );
     ///
     /// let sch2 = Schedule::from_ranges(
     ///     [ExtendedTime::new(10, 0).unwrap()..ExtendedTime::new(16, 0).unwrap()],
     ///     RuleKind::Open,
-    ///     &Default::default(),
+    ///     Default::default(),
     /// );
     ///
     /// assert_eq!(sch1, sch2);
@@ -78,27 +78,29 @@ impl Schedule {
     pub fn from_ranges(
         ranges: impl IntoIterator<Item = Range<ExtendedTime>>,
         kind: RuleKind,
-        comments: &UniqueSortedVec<Arc<str>>,
+        comment: Arc<str>,
     ) -> Self {
         let mut inner: Vec<_> = ranges
             .into_iter()
             .filter(|range| range.start < range.end)
-            .map(|range| TimeRange { range, kind, comments: comments.clone() })
+            .map(|range| TimeRange { range, kind, comment: comment.clone() })
             .collect();
 
         // Ensure ranges are disjoint and in increasing order
-        inner.sort_unstable_by_key(|rng| rng.range.start);
-        let mut i = 0;
+        if inner.len() > 1 {
+            inner.sort_unstable_by_key(|rng| rng.range.start);
+            let mut i_kept = 0; // the last element to be kept
 
-        while i + 1 < inner.len() {
-            if inner[i].range.end >= inner[i + 1].range.start {
-                inner[i].range.end = inner[i + 1].range.end;
-                let comments_left = std::mem::take(&mut inner[i].comments);
-                let comments_right = inner.remove(i + 1).comments;
-                inner[i].comments = comments_left.union(comments_right);
-            } else {
-                i += 1;
+            for i_next in 1..inner.len() {
+                if inner[i_kept].range.end >= inner[i_next].range.start {
+                    inner[i_kept].range.end = inner[i_next].range.end;
+                } else {
+                    i_kept += 1;
+                    inner.swap(i_kept, i_next);
+                }
             }
+
+            inner.truncate(i_kept + 1);
         }
 
         Self { inner }
@@ -115,9 +117,19 @@ impl Schedule {
         self.inner.is_empty()
     }
 
-    /// Check if a schedule is always closed.
-    pub(crate) fn is_always_closed(&self) -> bool {
-        self.inner.iter().all(|rg| rg.kind == RuleKind::Closed)
+    /// Check if a schedule is always closed with no comments.
+    pub(crate) fn is_always_closed_with_no_comments(&self) -> bool {
+        self.inner
+            .iter()
+            .all(|rg| rg.kind == RuleKind::Closed && rg.comment.is_empty())
+    }
+
+    /// Remove closed with no comment sections
+    pub fn filter_closed_ranges(mut self) -> Self {
+        self.inner
+            .retain(|rg| rg.kind != RuleKind::Closed || !rg.comment.is_empty());
+
+        self
     }
 
     /// Merge two schedules together.
@@ -148,7 +160,6 @@ impl Schedule {
                 if tr.range.start < tr.range.end {
                     Some(tr)
                 } else {
-                    ins_tr.comments = take(&mut ins_tr.comments).union(tr.comments);
                     None
                 }
             })
@@ -164,7 +175,6 @@ impl Schedule {
                 if tr.range.start < tr.range.end {
                     Some(tr)
                 } else {
-                    ins_tr.comments = take(&mut ins_tr.comments).union(tr.comments);
                     None
                 }
             })
@@ -176,22 +186,20 @@ impl Schedule {
 
         while before
             .last()
-            .map(|tr| tr.range.end == ins_tr.range.start && tr.kind == ins_tr.kind)
+            .map(|tr| tr.range.end == ins_tr.range.start && tr.as_state() == ins_tr.as_state())
             .unwrap_or(false)
         {
             let tr = before.pop().unwrap();
             ins_tr.range.start = tr.range.start;
-            ins_tr.comments = tr.comments.union(ins_tr.comments);
         }
 
         while after
             .peek()
-            .map(|tr| ins_tr.range.end == tr.range.start && tr.kind == ins_tr.kind)
+            .map(|tr| ins_tr.range.end == tr.range.start && tr.as_state() == ins_tr.as_state())
             .unwrap_or(false)
         {
             let tr = after.next().unwrap();
             ins_tr.range.end = tr.range.end;
-            ins_tr.comments = tr.comments.union(ins_tr.comments);
         }
 
         // Build final set of intervals
@@ -221,7 +229,7 @@ pub struct IntoIter {
 
 impl IntoIter {
     /// The value that will fill holes
-    const HOLES_STATE: RuleKind = RuleKind::Closed;
+    const HOLES_STATE: (RuleKind, &str) = (RuleKind::Closed, "");
 
     /// Create a new iterator from a schedule.
     fn new(schedule: Schedule) -> Self {
@@ -262,15 +270,15 @@ impl Iterator for IntoIter {
                 // Start from a hole
                 TimeRange::new(
                     self.last_end..next_start.unwrap_or(self.last_end),
-                    Self::HOLES_STATE,
-                    UniqueSortedVec::new(),
+                    Self::HOLES_STATE.0,
+                    Default::default(),
                 )
             }
         };
 
         while let Some(next_range) = self.ranges.peek() {
             if next_range.range.start > yielded_range.range.end {
-                if yielded_range.kind == Self::HOLES_STATE {
+                if yielded_range.as_state() == Self::HOLES_STATE {
                     // Just extend the closed range with this hole
                     yielded_range.range.end = next_range.range.start;
                 } else {
@@ -279,17 +287,16 @@ impl Iterator for IntoIter {
                 }
             }
 
-            if yielded_range.kind != next_range.kind {
+            if yielded_range.as_state() != next_range.as_state() {
                 // The next range has a different state
                 return self.pre_yield(yielded_range);
             }
 
             let next_range = self.ranges.next().unwrap();
             yielded_range.range.end = next_range.range.end;
-            yielded_range.comments = yielded_range.comments.union(next_range.comments);
         }
 
-        if yielded_range.kind == Self::HOLES_STATE {
+        if yielded_range.as_state() == Self::HOLES_STATE {
             // Extend with the last hole
             yielded_range.range.end = ExtendedTime::MIDNIGHT_24;
         }
@@ -326,7 +333,7 @@ impl std::iter::FusedIterator for IntoIter {}
 #[macro_export]
 macro_rules! schedule {
     (
-        $( $hh1:expr,$mm1:expr $( => $kind:expr $( , $comment:expr )* => $hh2:expr,$mm2:expr )+ );*
+        $( $hh1:expr,$mm1:expr $( => $kind:expr $( , $comment:expr )? => $hh2:expr,$mm2:expr )+ );*
         $( ; )?
     ) => {{
         #[allow(unused_imports)]
@@ -346,8 +353,8 @@ macro_rules! schedule {
                 let curr = ExtendedTime::new($hh2, $mm2)
                     .expect("Invalid interval end");
 
-                let comments = vec![$(std::sync::Arc::from($comment)),*].into();
-                let next_schedule = Schedule::from_ranges([prev..curr], $kind, &comments);
+                let comment = [$(std::sync::Arc::from($comment))?].into_iter().next().unwrap_or_default();
+                let next_schedule = Schedule::from_ranges([prev..curr], $kind, comment);
                 schedule = schedule.addition(next_schedule);
 
                 #[allow(unused_assignments)]
