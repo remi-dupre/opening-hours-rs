@@ -1,4 +1,4 @@
-# 🦀 Rust implementation for OSM Opening Hours
+# ![][demo-favicon] Rust implementation for OSM Opening Hours
 
 [![](https://img.shields.io/crates/v/opening-hours)][opening-hours]
 [![](https://img.shields.io/pypi/v/opening-hours-py)][pypy]
@@ -8,6 +8,8 @@
 [![](https://img.shields.io/crates/d/opening-hours)][opening-hours]
 
 **🐍 Python bindings can be found [here](https://github.com/remi-dupre/opening-hours-rs/tree/master/opening-hours-py)**
+
+[![][demo-button]][demo-website]
 
 A Rust library for parsing and working with OSM's opening hours field. You can
 find its specification [here][grammar] and the reference JS library
@@ -113,6 +115,9 @@ cargo run --bin stub_gen
 
 [codecov]: https://app.codecov.io/gh/remi-dupre/opening-hours-rs "Code coverage"
 [crate-log]: https://crates.io/crates/log "crates.io page for 'log'"
+[demo-button]: https://raw.githubusercontent.com/remi-dupre/opening-hours-demo/refs/heads/main/static/demo-button.svg
+[demo-favicon]: https://raw.githubusercontent.com/remi-dupre/opening-hours-demo/refs/heads/main/static/favicon.ico "icon"
+[demo-website]: https://remi-dupre.github.io/opening-hours-demo/ "Demonstration website"
 [docs]: https://docs.rs/opening-hours "Documentation"
 [grammar]: https://wiki.openstreetmap.org/wiki/Key:opening_hours/specification "OSM specification for opening hours"
 [nager]: https://date.nager.at/api/v3 "Worldwide holidays (REST API)"
