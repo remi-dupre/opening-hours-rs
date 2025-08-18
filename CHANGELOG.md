@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.4
+
+### Rust
+
+- Use `docsrs` cfg to enable `doc_auto_cfg` feature instead of checking for rustc nightly channel
+
 ## 1.1.3
 
 ### General

@@ -7,20 +7,8 @@ use std::path::{Path, PathBuf};
 use chrono::NaiveDate;
 use flate2::write::DeflateEncoder;
 use flate2::Compression;
-use rustc_version::{version_meta, Channel};
 
 use compact_calendar::CompactCalendar;
-
-fn detect_build_channel() {
-    let channel = match version_meta().unwrap().channel {
-        Channel::Stable => "CHANNEL_STABLE",
-        Channel::Beta => "CHANNEL_BETA",
-        Channel::Nightly => "CHANNEL_NIGHTLY",
-        Channel::Dev => "CHANNEL_DEV",
-    };
-
-    println!("cargo:rustc-cfg={}", channel)
-}
 
 fn generate_holiday_database(out_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
     const PATH_ENV_IN_OUT: [[&str; 3]; 2] = [
@@ -119,7 +107,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     generate_coutry_bounds_database(&out_dir)?;
 
     generate_holiday_database(&out_dir)?;
-    detect_build_channel();
     println!("cargo::rerun-if-changed=opening-hours/build.rs");
     Ok(())
 }
