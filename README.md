@@ -27,7 +27,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-opening-hours = "0"
+opening-hours = "1"
 ```
 
 Here's a simple example that parse an opening hours description and displays
