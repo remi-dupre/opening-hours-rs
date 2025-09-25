@@ -242,8 +242,16 @@ impl CompactCalendar {
     /// assert_ne!(buf1, buf2);
     /// ```
     pub fn serialize(&self, mut writer: impl io::Write) -> io::Result<()> {
-        writer.write_all(&self.first_year.to_ne_bytes())?;
-        writer.write_all(&self.calendar.len().to_ne_bytes())?;
+        writer.write_all(&self.first_year.to_le_bytes())?;
+
+        let len = self.calendar.len();
+        let Ok(len32) = u32::try_from(len) else {
+            return Err(io::Error::other(format!(
+                "compact-calendar contains {len} years but serializing only supports {}",
+                u32::MAX
+            )));
+        };
+        writer.write_all(&len32.to_le_bytes())?;
 
         for year in &self.calendar {
             year.serialize(&mut writer)?;
@@ -272,13 +280,20 @@ impl CompactCalendar {
         let first_year = {
             let mut buf = [0; std::mem::size_of::<i32>()];
             reader.read_exact(&mut buf)?;
-            i32::from_ne_bytes(buf)
+            i32::from_le_bytes(buf)
         };
 
         let length = {
-            let mut buf = [0; std::mem::size_of::<usize>()];
+            let mut buf = [0; std::mem::size_of::<u32>()];
             reader.read_exact(&mut buf)?;
-            usize::from_ne_bytes(buf)
+            let len = u32::from_le_bytes(buf);
+            if isize::try_from(len).is_err() {
+                return Err(io::Error::other(format!(
+                    "compact-calendar contains {len} years but this platform only supports {}",
+                    isize::MAX
+                )));
+            };
+            len
         };
 
         let calendar = (0..length)
@@ -730,7 +745,7 @@ impl CompactMonth {
     /// assert_ne!(buf1, buf2);
     /// ```
     pub fn serialize(self, mut writer: impl io::Write) -> io::Result<()> {
-        writer.write_all(&self.0.to_ne_bytes())
+        writer.write_all(&self.0.to_le_bytes())
     }
 
     /// Deserialize a month from a reader.
@@ -751,7 +766,7 @@ impl CompactMonth {
     pub fn deserialize(mut reader: impl io::Read) -> io::Result<Self> {
         let mut buf = [0; std::mem::size_of::<u32>()];
         reader.read_exact(&mut buf)?;
-        Ok(Self(u32::from_ne_bytes(buf)))
+        Ok(Self(u32::from_le_bytes(buf)))
     }
 }
 
