@@ -79,7 +79,9 @@ impl Display for TimeSpan {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.range.start)?;
 
-        if !self.open_end || self.range.end != Time::Fixed(ExtendedTime::MIDNIGHT_24) {
+        if self.range.start != self.range.end
+            && (!self.open_end || self.range.end != Time::Fixed(ExtendedTime::MIDNIGHT_24))
+        {
             write!(f, "-{}", self.range.end)?;
         }
 
@@ -88,6 +90,8 @@ impl Display for TimeSpan {
         }
 
         if let Some(repeat) = self.repeats {
+            write!(f, "/")?;
+
             if repeat.num_hours() > 0 {
                 write!(f, "{:02}:", repeat.num_hours())?;
             }

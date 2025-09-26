@@ -87,6 +87,7 @@ timespan = {
     | time ~ space? ~ "-" ~ space? ~ extended_time ~ timespan_plus
     | time ~ space? ~ "-" ~ space? ~ extended_time
     | time ~ timespan_plus
+    | time
 }
 
 timespan_plus = @{ "+" }

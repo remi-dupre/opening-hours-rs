@@ -247,9 +247,7 @@ fn build_timespan(pair: Pair<Rule>) -> Result<ts::TimeSpan> {
     let mut repeats = None;
 
     let (mut open_end, end) = match pairs.next() {
-        None => {
-            return Err(Error::Unsupported("point in time"));
-        }
+        None => (false, start),
         Some(pair) if pair.as_rule() == Rule::timespan_plus => {
             // TODO: opening_hours.js handles this better: it will set the
             //       state to unknown and add a warning comment.

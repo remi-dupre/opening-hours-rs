@@ -91,7 +91,7 @@ impl TimeFilter for ts::TimeSpan {
 
         // If end < start, it actually wraps to next day
         let end = {
-            if start < end {
+            if start <= end {
                 end
             } else {
                 end.add_hours(24)
