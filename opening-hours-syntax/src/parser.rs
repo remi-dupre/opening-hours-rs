@@ -266,7 +266,10 @@ fn build_timespan(pair: Pair<Rule>) -> Result<ts::TimeSpan> {
     }
 
     assert!(pairs.next().is_none());
-    Ok(ts::TimeSpan { range: start..end, repeats, open_end })
+    Ok(match repeats {
+        None => ts::TimeSpan::Range { range: start..end, open_end },
+        Some(repeats) => ts::TimeSpan::Repeat { range: start..=end, repeats },
+    })
 }
 
 fn build_time(pair: Pair<Rule>) -> Result<ts::Time> {

@@ -189,7 +189,7 @@ impl MakeCanonical for TimeSpan {
 
     fn try_make_canonical(&self) -> Option<Range<Self::CanonicalType>> {
         match self {
-            TimeSpan { range, open_end: false, repeats: None } => {
+            TimeSpan::Range { range, open_end: false } => {
                 let Time::Fixed(start) = range.start else {
                     return None;
                 };
@@ -209,10 +209,6 @@ impl MakeCanonical for TimeSpan {
     }
 
     fn into_type(canonical: Range<Self::CanonicalType>) -> Option<Self> {
-        Some(TimeSpan {
-            range: Time::Fixed(canonical.start)..Time::Fixed(canonical.end),
-            open_end: false,
-            repeats: None,
-        })
+        Some(TimeSpan::fixed_range(canonical.start, canonical.end))
     }
 }

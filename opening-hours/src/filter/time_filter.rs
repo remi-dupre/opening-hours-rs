@@ -91,8 +91,8 @@ impl TimeFilter for ts::TimeSpan {
         ctx: &'a Context<L>,
         date: NaiveDate,
     ) -> Self::Output<'a, L> {
-        let start = self.range.start.as_naive(ctx, date);
-        let end = self.range.end.as_naive(ctx, date);
+        let start = self.start().as_naive(ctx, date);
+        let end = self.end().as_naive(ctx, date);
 
         // If end < start, it actually wraps to next day
         let end = {
@@ -105,7 +105,12 @@ impl TimeFilter for ts::TimeSpan {
         };
         assert!(start <= end);
 
-        NaiveTimeSpanIterator { time: Some(start), end, repeats: self.repeats }
+        match self {
+            Self::Range { .. } => NaiveTimeSpanIterator::Range { range: Some(start..end) },
+            Self::Repeat { range: _, repeats } => {
+                NaiveTimeSpanIterator::Repeat { time: start, end, repeats: *repeats }
+            }
+        }
     }
 }
 
@@ -151,36 +156,40 @@ impl TimeFilter for ts::TimeEvent {
     }
 }
 
-pub(crate) struct NaiveTimeSpanIterator {
-    time: Option<ExtendedTime>,
-    end: ExtendedTime,
-    repeats: Option<Duration>,
+pub(crate) enum NaiveTimeSpanIterator {
+    Range {
+        range: Option<Range<ExtendedTime>>,
+    },
+    Repeat {
+        time: ExtendedTime,
+        end: ExtendedTime,
+        repeats: Duration,
+    },
 }
 
 impl Iterator for NaiveTimeSpanIterator {
     type Item = Range<ExtendedTime>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(repeats) = self.repeats {
-            let time = self.time?;
+        match self {
+            Self::Range { range } => range.take(),
+            Self::Repeat { time, end, repeats } => {
+                if time > end {
+                    return None;
+                }
 
-            let next_time = time
-                .add_minutes(
-                    repeats
-                        .num_minutes()
-                        .try_into()
-                        .expect("repeats duration too long"),
-                )
-                .expect("overflow during TimeSpan repetition");
-            if next_time <= self.end {
-                self.time = Some(next_time);
-            } else {
-                self.time = None;
+                let this_time = *time;
+                *time = this_time
+                    .add_minutes(
+                        repeats
+                            .num_minutes()
+                            .try_into()
+                            .expect("repeats duration too long"),
+                    )
+                    .expect("overflow during TimeSpan repetition");
+
+                Some(this_time..this_time)
             }
-
-            Some(time..time)
-        } else {
-            Some(self.time.take()?..self.end)
         }
     }
 }
