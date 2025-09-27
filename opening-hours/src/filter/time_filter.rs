@@ -1,6 +1,6 @@
 use std::ops::Range;
 
-use chrono::NaiveDate;
+use chrono::{Duration, NaiveDate};
 
 use opening_hours_syntax::extended_time::ExtendedTime;
 use opening_hours_syntax::rules::time as ts;
@@ -70,12 +70,17 @@ impl TimeFilter for ts::TimeSelector {
         ctx: &'a Context<L>,
         date: NaiveDate,
     ) -> Self::Output<'a, L> {
-        NaiveTimeSelectorIterator { date, ctx, inner: self.time.iter() }
+        NaiveTimeSelectorIterator {
+            date,
+            ctx,
+            spans: self.time.iter(),
+            span_iter: None,
+        }
     }
 }
 
 impl TimeFilter for ts::TimeSpan {
-    type Output<'a, L: 'a + Localize> = Range<ExtendedTime>;
+    type Output<'a, L: 'a + Localize> = NaiveTimeSpanIterator;
 
     fn is_immutable_full_day(&self) -> bool {
         *self == Self::fixed_range(ExtendedTime::MIDNIGHT_00, ExtendedTime::MIDNIGHT_24)
@@ -98,9 +103,9 @@ impl TimeFilter for ts::TimeSpan {
                     .expect("overflow during TimeSpan resolution")
             }
         };
-
         assert!(start <= end);
-        start..end
+
+        NaiveTimeSpanIterator { time: Some(start), end, repeats: self.repeats }
     }
 }
 
@@ -146,18 +151,57 @@ impl TimeFilter for ts::TimeEvent {
     }
 }
 
+pub(crate) struct NaiveTimeSpanIterator {
+    time: Option<ExtendedTime>,
+    end: ExtendedTime,
+    repeats: Option<Duration>,
+}
+
+impl Iterator for NaiveTimeSpanIterator {
+    type Item = Range<ExtendedTime>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(repeats) = self.repeats {
+            let time = self.time?;
+
+            let next_time = time
+                .add_minutes(
+                    repeats
+                        .num_minutes()
+                        .try_into()
+                        .expect("repeats duration too long"),
+                )
+                .expect("overflow during TimeSpan repetition");
+            if next_time <= self.end {
+                self.time = Some(next_time);
+            } else {
+                self.time = None;
+            }
+
+            Some(time..time)
+        } else {
+            Some(self.time.take()?..self.end)
+        }
+    }
+}
+
 /// Output type for [`TimeSelector::as_naive`].
 pub(crate) struct NaiveTimeSelectorIterator<'a, L: 'a + Localize> {
     date: NaiveDate,
     ctx: &'a Context<L>,
-    inner: std::slice::Iter<'a, ts::TimeSpan>,
+    spans: std::slice::Iter<'a, ts::TimeSpan>,
+    span_iter: Option<NaiveTimeSpanIterator>,
 }
 
 impl<'a, L: 'a + Localize> Iterator for NaiveTimeSelectorIterator<'a, L> {
-    type Item = <ts::TimeSpan as TimeFilter>::Output<'a, L>;
+    type Item = Range<ExtendedTime>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let span = self.inner.next()?;
-        Some(span.as_naive(self.ctx, self.date))
+        loop {
+            if let Some(range) = self.span_iter.as_mut().and_then(|iter| iter.next()) {
+                return Some(range);
+            }
+            self.span_iter = Some(self.spans.next()?.as_naive(self.ctx, self.date));
+        }
     }
 }
