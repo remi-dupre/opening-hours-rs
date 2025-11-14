@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.5
+
+### General
+
+- Fix generated calendar not being platform agnostic.
+
 ## 1.1.4
 
 ### Rust
