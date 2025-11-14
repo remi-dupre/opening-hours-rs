@@ -244,7 +244,7 @@ impl DateFilter for ds::YearRange {
             } else if self.step == 1 {
                 // 3. time is in the range and step is naive
                 *range.end() + 1
-            } else if (curr_year - range.start()) % self.step == 0 {
+            } else if (curr_year - range.start()).is_multiple_of(self.step) {
                 // 4. time matches the range with step >= 2
                 curr_year + 1
             } else {
@@ -512,7 +512,7 @@ impl DateFilter for ds::WeekRange {
 
         range.wrapping_contains(&week)
             // TODO: what happens when week < range.start ?
-            && week.saturating_sub(*range.start()) % self.step == 0
+            && week.saturating_sub(*range.start()).is_multiple_of(self.step)
     }
 
     fn next_change_hint<L>(&self, date: NaiveDate, _ctx: &Context<L>) -> Option<NaiveDate>
@@ -531,7 +531,7 @@ impl DateFilter for ds::WeekRange {
             if range.wrapping_contains(&week) {
                 if self.step == 1 {
                     *range.end() % 54 + 1
-                } else if (week - range.start()) % self.step == 0 {
+                } else if (week - range.start()).is_multiple_of(self.step) {
                     (date.iso_week().week() as u8 % 54) + 1
                 } else {
                     return None;

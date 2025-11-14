@@ -171,9 +171,10 @@ impl Display for RuleSequence {
 
 // RuleKind
 
-#[derive(Copy, Clone, Debug, Hash, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Copy, Clone, Debug, Default, Hash, Eq, Ord, PartialEq, PartialOrd)]
 pub enum RuleKind {
     Open,
+    #[default]
     Closed,
     Unknown,
 }
@@ -185,12 +186,6 @@ impl RuleKind {
             Self::Closed => "closed",
             Self::Unknown => "unknown",
         }
-    }
-}
-
-impl Default for RuleKind {
-    fn default() -> Self {
-        Self::Closed
     }
 }
 
