@@ -5,6 +5,12 @@
 ### Rust
 
 - Use `docsrs` cfg to enable `doc_cfg` feature instead of checking for rustc nightly channel
+- Update dependencies
+
+### Python
+
+- Only build for Python >= 3.10
+- Update dependencies
 
 ## 1.1.3
 

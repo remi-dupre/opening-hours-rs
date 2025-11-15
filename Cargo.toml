@@ -32,7 +32,7 @@ chrono = "0.4"
 compact-calendar = { path = "compact-calendar", version = "1.1.4" }
 flate2 = "1.0"
 opening-hours-syntax = { path = "opening-hours-syntax", version = "1.1.4" }
-sunrise = "1.2.1"
+sunrise = "2.1"
 
 # Feature: log (default)
 log = { version = "0.4", features = [ "kv" ], optional = true }
@@ -42,7 +42,7 @@ country-boundaries = { version = "1.2", optional = true }
 
 # Feature: auto-timezone
 chrono-tz = { version = "0.10", optional = true }
-tzf-rs = { version = "0.4", default-features = false, optional = true }
+tzf-rs = { version = "1.1", default-features = false, optional = true }
 
 [build-dependencies]
 chrono = "0.4"
@@ -52,7 +52,7 @@ flate2 = "1.0"
 
 [dev-dependencies]
 chrono-tz = "0.10"
-criterion = "0.5"
+criterion = "0.7"
 
 [[bin]]
 name = "schedule"

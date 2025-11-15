@@ -17,8 +17,8 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 chrono-tz = { version = "0.10", default-features = false }
 chrono = { version = "0.4", default-features = false }
-pyo3-log = "0.12"
-pyo3-stub-gen = "0.7"
+pyo3-log = "0.13"
+pyo3-stub-gen = "0.17"
 
 [dependencies.opening-hours-rs]
 package = "opening-hours"
@@ -32,10 +32,11 @@ version = "1.1.4"
 features = ["log"]
 
 [dependencies.pyo3]
-version = "0.24"
+version = "0.27"
 features = [
     "chrono", "chrono-tz", "generate-import-lib",
-    # This ensures that the package is only built with Python >=3.9, which is
-    # the first version supporting chrono-tz conversion.
-    "abi3-py39",
+    # This ensures that the package is only built with Python >=3.10, which is
+    # the first version supported by pyo3-stub-gen:
+    # https://github.com/Jij-Inc/pyo3-stub-gen/pull/297
+    "abi3-py310",
 ]
