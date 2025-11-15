@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.1.4
+
+### Rust
+
+- Use `docsrs` cfg to enable `doc_cfg` feature instead of checking for rustc nightly channel
+- Update dependencies
+
+### Python
+
+- Only build for Python >= 3.10
+- Update dependencies
+- Build on Ubuntu 24.04 LTS (from 22.04)
+
 ## 1.1.3
 
 ### General

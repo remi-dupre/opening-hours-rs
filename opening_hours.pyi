@@ -3,10 +3,11 @@
 
 import builtins
 import datetime
+import enum
 import typing
 import zoneinfo
-from enum import Enum, auto
 
+@typing.final
 class OpeningHours:
     r"""
     Parse input opening hours description.
@@ -52,7 +53,7 @@ class OpeningHours:
         coords: typing.Optional[tuple[builtins.float, builtins.float]] = None,
         auto_country: typing.Optional[builtins.bool] = True,
         auto_timezone: typing.Optional[builtins.bool] = True,
-    ): ...
+    ) -> OpeningHours: ...
     def normalize(self) -> OpeningHours:
         r"""
         Convert the expression into a normalized form. It will not affect the meaning of the
@@ -63,8 +64,6 @@ class OpeningHours:
         >>> OpeningHours("24/7 ; Su closed").normalize()
         OpeningHours("Mo-Sa")
         """
-        ...
-
     def state(self, time: typing.Optional[datetime.datetime] = None) -> State:
         r"""
         Get current state of the time domain, the state can be either "open",
@@ -79,8 +78,6 @@ class OpeningHours:
         >>> OpeningHours("24/7 off").state()
         State.CLOSED
         """
-        ...
-
     def is_open(self, time: typing.Optional[datetime.datetime] = None) -> builtins.bool:
         r"""
         Check if current state is open.
@@ -94,8 +91,6 @@ class OpeningHours:
         >>> OpeningHours("24/7").is_open()
         True
         """
-        ...
-
     def is_closed(
         self, time: typing.Optional[datetime.datetime] = None
     ) -> builtins.bool:
@@ -111,8 +106,6 @@ class OpeningHours:
         >>> OpeningHours("24/7 off").is_closed()
         True
         """
-        ...
-
     def is_unknown(
         self, time: typing.Optional[datetime.datetime] = None
     ) -> builtins.bool:
@@ -128,8 +121,6 @@ class OpeningHours:
         >>> OpeningHours("24/7 unknown").is_unknown()
         True
         """
-        ...
-
     def next_change(
         self, time: typing.Optional[datetime.datetime] = None
     ) -> typing.Optional[datetime.datetime]:
@@ -147,8 +138,6 @@ class OpeningHours:
         >>> OpeningHours("2099Mo-Su 12:30-17:00").next_change()
         datetime.datetime(2099, 1, 1, 12, 30)
         """
-        ...
-
     def intervals(
         self,
         start: typing.Optional[datetime.datetime] = None,
@@ -174,19 +163,27 @@ class OpeningHours:
         >>> next(intervals)
         (datetime.datetime(2099, 1, 1, 12, 30), datetime.datetime(2099, 1, 1, 17, 0), State.OPEN, [])
         """
-        ...
-
     def __str__(self) -> builtins.str: ...
     def __repr__(self) -> builtins.str: ...
 
-class State(Enum):
+@typing.final
+class State(enum.Enum):
     r"""
     Specify the state of an opening hours interval.
     """
 
-    OPEN = auto()
-    CLOSED = auto()
-    UNKNOWN = auto()
+    OPEN = ...
+    r"""
+    Currently open
+    """
+    CLOSED = ...
+    r"""
+    Currently closed
+    """
+    UNKNOWN = ...
+    r"""
+    May be open depending on context
+    """
 
 def validate(oh: builtins.str) -> builtins.bool:
     r"""
@@ -199,4 +196,3 @@ def validate(oh: builtins.str) -> builtins.bool:
     >>> opening_hours.validate("24/24")
     False
     """
-    ...

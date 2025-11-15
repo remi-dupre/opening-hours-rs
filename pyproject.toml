@@ -4,7 +4,7 @@ dynamic = ["version"]
 
 [tool.poetry]
 name = "opening_hours_py"
-version = "1.1.3"
+version = "1.1.4"
 description = "A parser for the opening_hours fields from OpenStreetMap."
 authors = ["Rémi Dupré <remi@dupre.io>"]
 package-mode = false
@@ -14,8 +14,8 @@ python = "^3.11"
 
 [tool.poetry.dev-dependencies]
 maturin = ">=1"
-pdoc = "^15"
-ruff = "^0.11"
+pdoc = "^16"
+ruff = "^0.14"
 
 [build-system]
 requires = ["poetry>=0.12", "maturin>=1,<2"]

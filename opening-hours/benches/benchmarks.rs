@@ -1,8 +1,10 @@
+use std::hint::black_box;
+
 use opening_hours::localization::{Coordinates, Country};
 use opening_hours::{Context, OpeningHours};
 
 use chrono::NaiveDateTime;
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main, Criterion};
 
 const SAMPLES: &[[&str; 2]] = &[
     ["24_7", "24/7"],
