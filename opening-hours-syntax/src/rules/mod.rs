@@ -101,7 +101,13 @@ impl Display for OpeningHoursExpression {
                 RuleOperator::Fallback => " || ",
             };
 
-            write!(f, "{separator}{rule}")?;
+            write!(f, "{separator}")?;
+
+            // If the rule operatior is an addition, we need to make sure that the time selector is
+            // prefixed with a day selector to avoid ambiguous syntax. For eg. "Mo 10:00-12:00,
+            // 13:00-14:00" is parsed as a single rule while "Mo 10:00-12:00, Mo-Su 13:00-14:00"
+            // isn't.
+            rule.display(f, rule.operator == RuleOperator::Additional)?;
         }
 
         Ok(())
@@ -125,10 +131,12 @@ impl RuleSequence {
     pub fn is_constant(&self) -> bool {
         self.day_selector.is_empty() && self.time_selector.is_00_24()
     }
-}
 
-impl Display for RuleSequence {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    pub(crate) fn display(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        force_day_selector: bool,
+    ) -> std::fmt::Result {
         let mut is_empty = true;
 
         if self.is_constant() {
@@ -136,7 +144,7 @@ impl Display for RuleSequence {
             write!(f, "24/7")?;
         } else {
             is_empty = is_empty && self.day_selector.is_empty();
-            write!(f, "{}", self.day_selector)?;
+            self.day_selector.display(f, force_day_selector)?;
 
             if !self.time_selector.is_00_24() {
                 if !is_empty {
@@ -166,6 +174,12 @@ impl Display for RuleSequence {
         }
 
         Ok(())
+    }
+}
+
+impl Display for RuleSequence {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.display(f, false)
     }
 }
 

@@ -154,7 +154,12 @@ where
             return NoLocation.event_time(date, event);
         };
 
-        let dt = coords.event_time(date, event).with_timezone(&self.tz);
-        self.naive(dt).time()
+        let Some(dt) = coords.event_time(date, event) else {
+            // If the event never happens (eg. at the poles), fallback to
+            // naïve algorithm.
+            return NoLocation.event_time(date, event);
+        };
+
+        self.naive(dt.with_timezone(&self.tz)).time()
     }
 }
