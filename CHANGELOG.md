@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.6
+
+### General
+
+- Fix [#88](https://github.com/remi-dupre/opening-hours-rs/issues/88):
+  allow space inside of time blocks.
+
 ## 1.1.5
 
 ### General

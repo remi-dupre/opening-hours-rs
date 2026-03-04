@@ -105,3 +105,19 @@ fn gh56_only_close_when_no_day_filter() -> Result<(), Error> {
 fn gh77_invalid_time_step_panics() {
     OpeningHours::parse("Mo-Sa 09:00-20:00/21:00").unwrap();
 }
+
+/// https://github.com/remi-dupre/opening-hours-rs/issues/88
+///
+/// A comma separator in a time block should have precedence over a additional
+/// rule separator, even when there is a space (source: JS library).
+#[test]
+fn gh88_allow_space_in_time_block() {
+    let oh_1 =
+        OpeningHours::parse("Mo 11:45-14:30; Tu-Fr 11:45-14:30, 19:00-21:45; Sa 19:00-21:45")
+            .unwrap();
+
+    let oh_2 = OpeningHours::parse("Mo 11:45-14:30; Tu-Fr 11:45-14:30,19:00-21:45; Sa 19:00-21:45")
+        .unwrap();
+
+    assert_eq!(oh_1.normalize(), oh_2.normalize());
+}

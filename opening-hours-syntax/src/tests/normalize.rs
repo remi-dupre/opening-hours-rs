@@ -31,7 +31,7 @@ const EXAMPLES: &[(&str, u32, &str, &str)] = &[
     ex!("Sep24:00-04:20", "Sep 24:00-04:20"),
     ex!(
         "10:00-12:00 open ; 14:00-16:00 closed \"on demand\"",
-        "10:00-12:00, 14:00-16:00 closed \"on demand\"",
+        "10:00-12:00, Mo-Su 14:00-16:00 closed \"on demand\"",
     ),
     ex!(
         "10:00-16:00, We 15:00-20:00 unknown",

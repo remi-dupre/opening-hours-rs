@@ -47,10 +47,8 @@ impl DaySelector {
             && self.week.is_empty()
             && self.weekday.is_empty()
     }
-}
 
-impl Display for DaySelector {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    pub(crate) fn display(&self, f: &mut std::fmt::Formatter<'_>, force: bool) -> std::fmt::Result {
         if !(self.year.is_empty() && self.monthday.is_empty() && self.week.is_empty()) {
             write_selector(f, &self.year)?;
             write_selector(f, &self.monthday)?;
@@ -69,7 +67,17 @@ impl Display for DaySelector {
             }
         }
 
-        write_selector(f, &self.weekday)
+        if force && self.weekday.is_empty() {
+            write!(f, "Mo-Su ")
+        } else {
+            write_selector(f, &self.weekday)
+        }
+    }
+}
+
+impl Display for DaySelector {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.display(f, false)
     }
 }
 

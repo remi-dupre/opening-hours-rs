@@ -24,7 +24,7 @@ any_rule_separator = {
 // Relaxed: the space is normally mandatory
 normal_rule_separator = @{ space? ~ ";" ~ space? }
 
-additional_rule_separator = @{ "," ~ space }
+additional_rule_separator = @{ space? ~ "," ~ space }
 
 // NOTE: the specification actually enforces to prefix this with a space,
 //        however it could have been already consumed by `rule_sequence`.
@@ -78,7 +78,8 @@ separator_for_readability = _{ " " | ": " | ":" }
 
 // Time selector
 
-time_selector = { timespan ~ ( "," ~ timespan )* }
+// Relaxed: space is not allowed in the specification.
+time_selector = { timespan ~ ( "," ~ space? ~ timespan )* }
 
 // Relaxed: spaces are normally not allowed.
 timespan = {
