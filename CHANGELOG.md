@@ -6,6 +6,8 @@
 
 - Fix [#88](https://github.com/remi-dupre/opening-hours-rs/issues/88):
   allow space inside of time blocks.
+- Chore (CI): bump x86 runners for MacOS to version 14
+- Chore: update dependencies
 
 ## 1.1.5
 

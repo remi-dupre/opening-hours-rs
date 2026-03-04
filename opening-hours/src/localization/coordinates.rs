@@ -21,7 +21,11 @@ impl Coordinates {
     }
 
     /// Get the time for a sun event at a given date.
-    pub fn event_time(&self, date: NaiveDate, event: TimeEvent) -> chrono::DateTime<chrono::Utc> {
+    pub fn event_time(
+        &self,
+        date: NaiveDate,
+        event: TimeEvent,
+    ) -> Option<chrono::DateTime<chrono::Utc>> {
         let solar_event = match event {
             TimeEvent::Dawn => SolarEvent::Dawn(DawnType::Civil),
             TimeEvent::Sunrise => SolarEvent::Sunrise,
