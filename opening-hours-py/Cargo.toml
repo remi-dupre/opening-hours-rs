@@ -38,5 +38,5 @@ features = [
     # This ensures that the package is only built with Python >=3.10, which is
     # the first version supported by pyo3-stub-gen:
     # https://github.com/Jij-Inc/pyo3-stub-gen/pull/297
-    "abi3-py310",
+    "abi3", "abi3-py310",
 ]
