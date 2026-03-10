@@ -2,6 +2,11 @@
 
 ## 1.1.7
 
+### General
+
+- Update holidays database from nagger. Support for new contries: DR Congo,
+  Congo, Ghana Seychelles and Türkiye.
+
 ### Python
 
 - Bump Maturin to 1.12 (build system) & update generated CI

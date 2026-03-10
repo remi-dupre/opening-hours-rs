@@ -53,6 +53,10 @@ pub enum Country {
     BZ,
     /// Canada
     CA,
+    /// DR Congo
+    CD,
+    /// Congo
+    CG,
     /// Switzerland
     CH,
     /// Chile
@@ -99,6 +103,8 @@ pub enum Country {
     GE,
     /// Guernsey
     GG,
+    /// Ghana
+    GH,
     /// Gibraltar
     GI,
     /// Greenland
@@ -137,6 +143,8 @@ pub enum Country {
     JM,
     /// Japan
     JP,
+    /// Kenya
+    KE,
     /// South Korea
     KR,
     /// Kazakhstan
@@ -209,6 +217,8 @@ pub enum Country {
     RS,
     /// Russia
     RU,
+    /// Seychelles
+    SC,
     /// Sweden
     SE,
     /// Singapore
@@ -227,7 +237,7 @@ pub enum Country {
     SV,
     /// Tunisia
     TN,
-    /// Turkey
+    /// Türkiye
     TR,
     /// Ukraine
     UA,
@@ -248,7 +258,7 @@ pub enum Country {
 }
 
 impl Country {
-    pub const ALL: [Self; 115] = [
+    pub const ALL: [Self; 120] = [
         Self::AD,
         Self::AL,
         Self::AM,
@@ -268,6 +278,8 @@ impl Country {
         Self::BY,
         Self::BZ,
         Self::CA,
+        Self::CD,
+        Self::CG,
         Self::CH,
         Self::CL,
         Self::CN,
@@ -291,6 +303,7 @@ impl Country {
         Self::GD,
         Self::GE,
         Self::GG,
+        Self::GH,
         Self::GI,
         Self::GL,
         Self::GM,
@@ -310,6 +323,7 @@ impl Country {
         Self::JE,
         Self::JM,
         Self::JP,
+        Self::KE,
         Self::KR,
         Self::KZ,
         Self::LI,
@@ -346,6 +360,7 @@ impl Country {
         Self::RO,
         Self::RS,
         Self::RU,
+        Self::SC,
         Self::SE,
         Self::SG,
         Self::SI,
@@ -394,6 +409,8 @@ impl Country {
             Self::BY => "Belarus",
             Self::BZ => "Belize",
             Self::CA => "Canada",
+            Self::CD => "DR Congo",
+            Self::CG => "Congo",
             Self::CH => "Switzerland",
             Self::CL => "Chile",
             Self::CN => "China",
@@ -417,6 +434,7 @@ impl Country {
             Self::GD => "Grenada",
             Self::GE => "Georgia",
             Self::GG => "Guernsey",
+            Self::GH => "Ghana",
             Self::GI => "Gibraltar",
             Self::GL => "Greenland",
             Self::GM => "Gambia",
@@ -436,6 +454,7 @@ impl Country {
             Self::JE => "Jersey",
             Self::JM => "Jamaica",
             Self::JP => "Japan",
+            Self::KE => "Kenya",
             Self::KR => "South Korea",
             Self::KZ => "Kazakhstan",
             Self::LI => "Liechtenstein",
@@ -472,6 +491,7 @@ impl Country {
             Self::RO => "Romania",
             Self::RS => "Serbia",
             Self::RU => "Russia",
+            Self::SC => "Seychelles",
             Self::SE => "Sweden",
             Self::SG => "Singapore",
             Self::SI => "Slovenia",
@@ -481,7 +501,7 @@ impl Country {
             Self::SR => "Suriname",
             Self::SV => "El Salvador",
             Self::TN => "Tunisia",
-            Self::TR => "Turkey",
+            Self::TR => "Türkiye",
             Self::UA => "Ukraine",
             Self::US => "United States",
             Self::UY => "Uruguay",
@@ -521,6 +541,8 @@ impl Country {
             Self::BY => "BY",
             Self::BZ => "BZ",
             Self::CA => "CA",
+            Self::CD => "CD",
+            Self::CG => "CG",
             Self::CH => "CH",
             Self::CL => "CL",
             Self::CN => "CN",
@@ -544,6 +566,7 @@ impl Country {
             Self::GD => "GD",
             Self::GE => "GE",
             Self::GG => "GG",
+            Self::GH => "GH",
             Self::GI => "GI",
             Self::GL => "GL",
             Self::GM => "GM",
@@ -563,6 +586,7 @@ impl Country {
             Self::JE => "JE",
             Self::JM => "JM",
             Self::JP => "JP",
+            Self::KE => "KE",
             Self::KR => "KR",
             Self::KZ => "KZ",
             Self::LI => "LI",
@@ -599,6 +623,7 @@ impl Country {
             Self::RO => "RO",
             Self::RS => "RS",
             Self::RU => "RU",
+            Self::SC => "SC",
             Self::SE => "SE",
             Self::SG => "SG",
             Self::SI => "SI",
@@ -651,6 +676,8 @@ impl FromStr for Country {
             "BY" => Ok(Self::BY),
             "BZ" => Ok(Self::BZ),
             "CA" => Ok(Self::CA),
+            "CD" => Ok(Self::CD),
+            "CG" => Ok(Self::CG),
             "CH" => Ok(Self::CH),
             "CL" => Ok(Self::CL),
             "CN" => Ok(Self::CN),
@@ -674,6 +701,7 @@ impl FromStr for Country {
             "GD" => Ok(Self::GD),
             "GE" => Ok(Self::GE),
             "GG" => Ok(Self::GG),
+            "GH" => Ok(Self::GH),
             "GI" => Ok(Self::GI),
             "GL" => Ok(Self::GL),
             "GM" => Ok(Self::GM),
@@ -693,6 +721,7 @@ impl FromStr for Country {
             "JE" => Ok(Self::JE),
             "JM" => Ok(Self::JM),
             "JP" => Ok(Self::JP),
+            "KE" => Ok(Self::KE),
             "KR" => Ok(Self::KR),
             "KZ" => Ok(Self::KZ),
             "LI" => Ok(Self::LI),
@@ -729,6 +758,7 @@ impl FromStr for Country {
             "RO" => Ok(Self::RO),
             "RS" => Ok(Self::RS),
             "RU" => Ok(Self::RU),
+            "SC" => Ok(Self::SC),
             "SE" => Ok(Self::SE),
             "SG" => Ok(Self::SG),
             "SI" => Ok(Self::SI),
