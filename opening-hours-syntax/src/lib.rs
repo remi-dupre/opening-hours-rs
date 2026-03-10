@@ -10,7 +10,6 @@ mod parser;
 pub mod error;
 pub mod extended_time;
 pub mod rules;
-pub mod sorted_vec;
 
 pub use error::{Error, Result};
 pub use extended_time::ExtendedTime;

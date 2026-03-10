@@ -66,6 +66,11 @@ where
         Self { tz, coords: None }
     }
 
+    /// Extract the coordinates for this location.
+    pub fn get_coords(&self) -> Option<Coordinates> {
+        self.coords
+    }
+
     /// Extract the timezone for this location.
     pub fn get_timezone(&self) -> &Tz {
         &self.tz

@@ -1,10 +1,9 @@
 use std::cmp::{max, min};
-use std::ops::{Range, RangeInclusive};
+use std::ops::Range;
 use std::sync::Arc;
 
 use chrono::NaiveDateTime;
 use opening_hours_syntax::rules::RuleKind;
-use opening_hours_syntax::sorted_vec::UniqueSortedVec;
 
 // DateTimeRange
 
@@ -13,32 +12,14 @@ use opening_hours_syntax::sorted_vec::UniqueSortedVec;
 pub struct DateTimeRange<D = NaiveDateTime> {
     pub range: Range<D>,
     pub kind: RuleKind,
-    pub comments: UniqueSortedVec<Arc<str>>,
+    pub comment: Arc<str>,
 }
 
 impl<D> DateTimeRange<D> {
-    pub(crate) fn new_with_sorted_comments(
-        range: Range<D>,
-        kind: RuleKind,
-        comments: UniqueSortedVec<Arc<str>>,
-    ) -> Self {
-        Self { range, kind, comments }
-    }
-}
-
-// WrappingRange
-
-pub(crate) trait WrappingRange<T> {
-    fn wrapping_contains(&self, elt: &T) -> bool;
-}
-
-impl<T: PartialOrd> WrappingRange<T> for RangeInclusive<T> {
-    fn wrapping_contains(&self, elt: &T) -> bool {
-        if self.start() <= self.end() {
-            self.contains(elt)
-        } else {
-            self.start() <= elt || elt <= self.end()
-        }
+    /// Extract the kind and comment from the range, which are the values that define current state
+    /// of an expression.
+    pub fn into_state(self) -> (RuleKind, Arc<str>) {
+        (self.kind, self.comment)
     }
 }
 
