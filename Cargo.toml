@@ -52,7 +52,7 @@ flate2 = "1.0"
 
 [dev-dependencies]
 chrono-tz = "0.10"
-criterion = "0.7"
+criterion = "0.8"
 
 [[bin]]
 name = "schedule"
