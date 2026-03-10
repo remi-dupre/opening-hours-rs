@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.7
+
+### Python
+
+- Bump Maturin to 1.12 (build system) & update generated CI
+- Add missing README to PyPI
+
 ## 1.1.6
 
 ### General
