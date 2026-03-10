@@ -5,3 +5,5 @@ __pycache__
 tarpaulin-report.html
 
 **/target
+.envrc
+.direnv/

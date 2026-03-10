@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.2.0
+
+### General
+
+- Fix [#91](https://github.com/remi-dupre/opening-hours-rs/issues/91):
+  normalization does not prefix normal separators with a space anymore.
+- Update holidays database from nagger. Support for new contries: DR Congo,
+  Congo, Ghana Seychelles and Türkiye.
+
+### Python
+
+- Fix [#92](https://github.com/remi-dupre/opening-hours-rs/issues/92):
+  missing wheels on Linux
+- Fix [#90](https://github.com/remi-dupre/opening-hours-rs/issues/90):
+  missing README to PyPI
+- Bump Maturin to 1.12 (build system) & update generated CI
+
 ## 1.1.6
 
 ### General

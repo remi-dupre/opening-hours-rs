@@ -32,6 +32,7 @@ const PARIS_COORDS: Coordinates = Coordinates::new(48.8535, 2.34839).unwrap();
 fn bench_context(c: &mut Criterion) {
     let mut group = c.benchmark_group("context");
 
+    #[cfg(feature = "auto-country")]
     group.bench_function("infer_from_coords", |b| {
         b.iter(|| Context::from_coords(black_box(PARIS_COORDS)))
     });

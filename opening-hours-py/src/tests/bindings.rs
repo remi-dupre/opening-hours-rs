@@ -128,7 +128,7 @@ fn normalize() {
         r#"
         from opening_hours import OpeningHours
 
-        expr = "24/7 ; Su closed"
+        expr = "24/7; Su closed"
         oh = OpeningHours(expr)
         assert str(oh) == expr
         assert str(oh.normalize()) == "Mo-Sa"

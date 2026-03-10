@@ -49,7 +49,7 @@ pub(crate) fn run_python(source: &str) {
     static INIT_PYTHON_GIL: Once = Once::new();
 
     // Capture stdout into a buffer
-    #[pyclass]
+    #[pyclass(skip_from_py_object)]
     #[derive(Clone)]
     struct CaptureStdout(Arc<Mutex<String>>);
 
@@ -71,11 +71,11 @@ pub(crate) fn run_python(source: &str) {
     // Start GIL once per session
     INIT_PYTHON_GIL.call_once(|| {
         pyo3::append_to_inittab!(opening_hours);
-        pyo3::prepare_freethreaded_python();
+        Python::initialize();
     });
 
     // Run test
-    Python::with_gil(|py| {
+    Python::attach(|py| {
         let sys = py.import("sys").expect("could not import sys");
         let buffer: Arc<Mutex<String>> = Arc::default();
 

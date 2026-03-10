@@ -96,7 +96,7 @@ impl Display for OpeningHoursExpression {
 
         for rule in &self.rules[1..] {
             let separator = match rule.operator {
-                RuleOperator::Normal => " ; ",
+                RuleOperator::Normal => "; ",
                 RuleOperator::Additional => ", ",
                 RuleOperator::Fallback => " || ",
             };
