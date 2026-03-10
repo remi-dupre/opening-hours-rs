@@ -1,7 +1,12 @@
 [project]
 name = "opening_hours_py"
-dynamic = ["version"]
-readme = "README.md"
+keywords = ["openstreetmap", "parser", "time", "schedule"]
+homepage = "https://github.com/remi-dupre/opening-hours-rs/tree/master/opening-hours-py"
+documentation = "https://remi-dupre.github.io/opening-hours-rs/opening_hours.html"
+repository = "https://github.com/remi-dupre/opening-hours-rs"
+changelog = "https://github.com/remi-dupre/opening-hours-rs/blob/master/CHANGELOG.md"
+readme = "opening-hours-py/README.md"
+dynamic = ["authors", "description", "version", "license", "license-files", "requires-python"]
 
 [tool.poetry]
 name = "opening_hours_py"
