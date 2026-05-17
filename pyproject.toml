@@ -10,7 +10,7 @@ dynamic = ["authors", "description", "version", "license", "license-files", "req
 
 [tool.poetry]
 name = "opening_hours_py"
-version = "1.2.0"
+version = "1.2.1"
 description = "A parser for the opening_hours fields from OpenStreetMap."
 authors = ["Rémi Dupré <remi@dupre.io>"]
 package-mode = false
