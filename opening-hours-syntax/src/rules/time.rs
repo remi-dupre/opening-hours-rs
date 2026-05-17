@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 use std::fmt::Display;
-use std::ops::Range;
+use std::ops::{Range, RangeInclusive};
 
 use chrono::Duration;
 
@@ -58,41 +58,70 @@ impl Display for TimeSelector {
 // TimeSpan
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
-pub struct TimeSpan {
-    pub range: Range<Time>,
-    pub open_end: bool,
-    pub repeats: Option<Duration>,
+pub enum TimeSpan {
+    Range {
+        range: Range<Time>,
+        open_end: bool,
+    },
+    Repeat {
+        range: RangeInclusive<Time>,
+        repeats: Duration,
+    },
 }
 
 impl TimeSpan {
     #[inline]
     pub const fn fixed_range(start: ExtendedTime, end: ExtendedTime) -> Self {
-        Self {
+        Self::Range {
             range: Time::Fixed(start)..Time::Fixed(end),
             open_end: false,
-            repeats: None,
+        }
+    }
+
+    pub fn start(&self) -> Time {
+        match self {
+            Self::Range { range, open_end: _ } => range.start,
+            Self::Repeat { range, repeats: _ } => *range.start(),
+        }
+    }
+
+    pub fn end(&self) -> Time {
+        match self {
+            Self::Range { range, open_end: _ } => range.end,
+            Self::Repeat { range, repeats: _ } => *range.end(),
+        }
+    }
+
+    fn open_end(&self) -> bool {
+        match self {
+            Self::Range { range: _, open_end } => *open_end,
+            Self::Repeat { .. } => false,
         }
     }
 }
 
 impl Display for TimeSpan {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.range.start)?;
+        write!(f, "{}", self.start())?;
 
-        if !self.open_end || self.range.end != Time::Fixed(ExtendedTime::MIDNIGHT_24) {
-            write!(f, "-{}", self.range.end)?;
+        if self.start() != self.end()
+            && !(self.open_end() && self.end() == Time::Fixed(ExtendedTime::MIDNIGHT_24))
+        {
+            write!(f, "-{}", self.end())?;
         }
 
-        if self.open_end {
+        if self.open_end() {
             write!(f, "+")?;
         }
 
-        if let Some(repeat) = self.repeats {
-            if repeat.num_hours() > 0 {
-                write!(f, "{:02}:", repeat.num_hours())?;
+        if let Self::Repeat { range: _, repeats } = self {
+            write!(f, "/")?;
+
+            if repeats.num_hours() > 0 {
+                write!(f, "{:02}:", repeats.num_hours())?;
             }
 
-            write!(f, "{:02}", repeat.num_minutes() % 60)?;
+            write!(f, "{:02}", repeats.num_minutes() % 60)?;
         }
 
         Ok(())

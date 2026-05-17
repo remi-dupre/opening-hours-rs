@@ -80,7 +80,7 @@ pub(crate) fn ranges_union<T: Ord>(
 pub(crate) fn range_intersection<T: Ord>(range_1: Range<T>, range_2: Range<T>) -> Option<Range<T>> {
     let result = max(range_1.start, range_2.start)..min(range_1.end, range_2.end);
 
-    if result.start < result.end {
+    if result.start <= result.end {
         Some(result)
     } else {
         None

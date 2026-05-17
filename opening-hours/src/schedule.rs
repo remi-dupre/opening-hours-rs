@@ -82,7 +82,7 @@ impl Schedule {
     ) -> Self {
         let mut inner: Vec<_> = ranges
             .into_iter()
-            .filter(|range| range.start < range.end)
+            .filter(|range| range.start <= range.end)
             .map(|range| TimeRange { range, kind, comments: comments.clone() })
             .collect();
 
@@ -234,7 +234,7 @@ impl IntoIter {
     /// Must be called before a value is yielded.
     fn pre_yield(&mut self, value: TimeRange) -> Option<TimeRange> {
         assert!(
-            value.range.start < value.range.end,
+            value.range.start <= value.range.end,
             "infinite loop detected"
         );
 
