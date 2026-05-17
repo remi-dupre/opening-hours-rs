@@ -49,7 +49,7 @@ pub(crate) struct PavingSelector<T, U> {
     tail: U,
 }
 
-impl<T: Debug, U: Debug> PavingSelector<T, U> {
+impl<T, U> PavingSelector<T, U> {
     pub(crate) fn dim_front<V>(self, range: impl Into<Vec<Range<V>>>) -> PavingSelector<V, Self> {
         PavingSelector { range: range.into(), tail: self }
     }
@@ -60,6 +60,108 @@ impl<T: Debug, U: Debug> PavingSelector<T, U> {
 
     pub(crate) fn into_unpack_front(self) -> (Vec<Range<T>>, U) {
         (self.range, self.tail)
+    }
+}
+
+// --
+// -- Compression
+// --
+
+pub(crate) trait SelectorCompression: Sized {
+    /// Attempt to merge consecutive intervals from the front dimension as
+    /// long as this preserves the input predicate.
+    fn fill_holes_front(&mut self, _predicate: impl FnMut(&Self) -> bool);
+
+    /// Recursively merge consecutive intervals from tail dimensions as
+    /// long as this preserves the input predicate.
+    fn fill_holes_back(&mut self, _predicate: impl FnMut(&Self) -> bool);
+
+    /// Recursively merge intervals as long as it preserves the input
+    /// predicate.
+    fn fill_holes(&mut self, mut predicate: impl FnMut(&Self) -> bool) {
+        self.fill_holes_front(&mut predicate);
+        self.fill_holes_back(predicate);
+    }
+}
+
+impl SelectorCompression for EmptyPavingSelector {
+    fn fill_holes_front(&mut self, _predicate: impl FnMut(&Self) -> bool) {}
+    fn fill_holes_back(&mut self, _predicate: impl FnMut(&Self) -> bool) {}
+}
+
+impl<T: Clone, U: Clone + SelectorCompression> SelectorCompression for PavingSelector<T, U> {
+    fn fill_holes_front(&mut self, mut predicate: impl FnMut(&Self) -> bool) {
+        for idx in (0..self.range.len() - 1).rev() {
+            // Backup the two intervals we attempt to merge
+            let rg_left = self.range.remove(idx);
+            let rg_right = self.range[idx].clone();
+
+            // Apply compression in-place
+            self.range[idx].start = rg_left.start.clone();
+
+            // If the predicate is true with current compression, keep in-place
+            // modifications. Otherwise restore previous value.
+            if !predicate(self) {
+                self.range[idx] = rg_right;
+                self.range.insert(idx, rg_left);
+            }
+        }
+    }
+
+    fn fill_holes_back(&mut self, mut predicate: impl FnMut(&Self) -> bool) {
+        self.tail.fill_holes(|tail_attempt| {
+            let attempt = PavingSelector {
+                range: self.range.clone(),
+                tail: tail_attempt.clone(),
+            };
+
+            predicate(&attempt)
+        })
+    }
+}
+
+// --
+// -- Unpack from the back
+// --
+
+/// Allows to pop selector from the back with no clone. Note that it is still
+/// slower than popping from the front.
+pub(crate) trait UnpackFromBack {
+    type Head;
+    type BackVal;
+
+    /// Pop back value
+    fn into_unpack_back(self) -> (Self::Head, Self::BackVal);
+
+    /// Modify back value in place
+    fn substitute_back(&mut self, ranges: impl Into<Self::BackVal>);
+}
+
+impl<T> UnpackFromBack for PavingSelector<T, EmptyPavingSelector> {
+    type Head = EmptyPavingSelector;
+    type BackVal = Vec<Range<T>>;
+
+    fn into_unpack_back(self) -> (Self::Head, Self::BackVal) {
+        (EmptyPavingSelector, self.range)
+    }
+
+    fn substitute_back(&mut self, ranges: impl Into<Self::BackVal>) {
+        self.range = ranges.into();
+    }
+}
+
+impl<T, U: UnpackFromBack> UnpackFromBack for PavingSelector<T, U> {
+    type Head = PavingSelector<T, U::Head>;
+    type BackVal = U::BackVal;
+
+    fn into_unpack_back(self) -> (Self::Head, Self::BackVal) {
+        let (new_tail, back_val) = self.tail.into_unpack_back();
+        let head = PavingSelector { range: self.range, tail: new_tail };
+        (head, back_val)
+    }
+
+    fn substitute_back(&mut self, ranges: impl Into<Self::BackVal>) {
+        self.tail.substitute_back(ranges)
     }
 }
 

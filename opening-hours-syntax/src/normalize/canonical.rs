@@ -13,16 +13,16 @@ use crate::{ExtendedTime, RuleKind};
 use super::frame::{Bounded, Frame};
 
 pub(crate) type Canonical = Paving5D<
-    ExtendedTime,
-    Frame<Year>,
-    Frame<Month>,
-    Frame<WeekNum>,
     Frame<OrderedWeekday>,
+    Frame<WeekNum>,
+    Frame<Month>,
+    Frame<Year>,
+    ExtendedTime,
     (RuleKind, UniqueSortedVec<Arc<str>>),
 >;
 
 pub(crate) type CanonicalSelector =
-    Selector5D<ExtendedTime, Frame<Year>, Frame<Month>, Frame<WeekNum>, Frame<OrderedWeekday>>;
+    Selector5D<Frame<OrderedWeekday>, Frame<WeekNum>, Frame<Month>, Frame<Year>, ExtendedTime>;
 
 // --
 // -- OrderedWeekday

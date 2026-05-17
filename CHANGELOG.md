@@ -5,7 +5,10 @@
 ### General
 
 - Fix: normalization used a normal rule operator instead of additional rule
-  operator in some case ([#97](https://github.com/remi-dupre/opening-hours-rs/issues/97))
+  operator in some case
+  (Issue [#97](https://github.com/remi-dupre/opening-hours-rs/issues/97))
+- Fix: normalization prioritize full time ranges for a more natural result.
+  (Issue [#98](https://github.com/remi-dupre/opening-hours-rs/issues/98))
 - Chore: Update dependencies
 
 ## 1.2.0
