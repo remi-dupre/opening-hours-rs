@@ -2,6 +2,10 @@
 
 ## 1.2.1
 
+### General
+
+- Fix: normalization used a normal rule operator instead of additional rule
+  operator in some case ([#97](https://github.com/remi-dupre/opening-hours-rs/issues/97))
 - Chore: Update dependencies
 
 ## 1.2.0

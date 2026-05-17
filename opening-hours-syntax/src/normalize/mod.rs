@@ -30,8 +30,8 @@ pub(crate) fn ruleseq_to_selector(rs: &RuleSequence) -> Option<CanonicalSelector
 
 /// Convert a canonical paving back into a rules sequence.
 pub(crate) fn canonical_to_seq(mut canonical: Canonical) -> impl Iterator<Item = RuleSequence> {
-    // Keep track of the days that have already been outputed. This allows to use an additional
-    // rule if it is absolutly required only.
+    // Keep track of the days that have already been outputed. This allows to
+    // use an additional rule only when necessary.
     let mut days_covered = Paving4D::default();
 
     std::iter::from_fn(move || {
@@ -47,8 +47,14 @@ pub(crate) fn canonical_to_seq(mut canonical: Canonical) -> impl Iterator<Item =
 
         let (rgs_time, day_selector) = selector.into_unpack_front();
 
+        // If the current sequence doesn't cover any day with any time range
+        // already defined, we can use a normal rule operator which is more
+        // common. Otherwise, fallback to an additional rule operator, which
+        // has a more predictable semantic.
         let operator = {
-            if days_covered.is_val(&day_selector, &false) {
+            let no_day_overlap = days_covered.is_val(&day_selector, &false);
+
+            if no_day_overlap {
                 RuleOperator::Normal
             } else {
                 RuleOperator::Additional

@@ -49,7 +49,7 @@ pub(crate) struct PavingSelector<T, U> {
     tail: U,
 }
 
-impl<T, U> PavingSelector<T, U> {
+impl<T: Debug, U: Debug> PavingSelector<T, U> {
     pub(crate) fn dim_front<V>(self, range: impl Into<Vec<Range<V>>>) -> PavingSelector<V, Self> {
         PavingSelector { range: range.into(), tail: self }
     }
@@ -69,7 +69,7 @@ impl<T, U> PavingSelector<T, U> {
 
 /// Interface over a n-dim paving.
 pub(crate) trait Paving: Clone + Default {
-    type Selector;
+    type Selector: Debug;
     type Value: Clone + Default + Eq + Ord;
     fn set(&mut self, selector: &Self::Selector, val: &Self::Value);
     fn is_val(&self, selector: &Self::Selector, val: &Self::Value) -> bool;
@@ -118,7 +118,11 @@ impl<Val: Clone + Default + Eq + Ord> Paving for Cell<Val> {
 // -- Dim
 // --
 
-/// Add a dimension over a lower dimension paving.
+/// Add a dimension over a lower dimension paving. It consists of a sequence
+/// of n cuts which delimits n-1 cols, as follows:
+///
+///   cut 0    cut 1    cut 2 ... cut n
+///     |  col1  |  col2  |   ...   |
 #[derive(Clone)]
 pub(crate) struct Dim<T: Clone + Ord, U: Paving> {
     cuts: Vec<T>, // ordered
@@ -131,7 +135,7 @@ impl<T: Clone + Ord, U: Paving> Default for Dim<T, U> {
     }
 }
 
-impl<T: Clone + Ord + std::fmt::Debug, U: Paving + std::fmt::Debug> std::fmt::Debug for Dim<T, U> {
+impl<T: Clone + Ord + Debug, U: Paving + Debug> Debug for Dim<T, U> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if self.cols.is_empty() {
             f.debug_tuple("Dim::Empty").field(&self.cols).finish()?;
@@ -143,7 +147,7 @@ impl<T: Clone + Ord + std::fmt::Debug, U: Paving + std::fmt::Debug> std::fmt::De
             .zip(self.cuts.iter().skip(1))
             .zip(&self.cols)
         {
-            fmt.field(&format!("[{start:?}, {end:?}["), value);
+            fmt.field(&format!("{start:?}..{end:?}"), value);
         }
 
         fmt.finish()
@@ -178,7 +182,7 @@ impl<T: Clone + Ord, U: Paving> Dim<T, U> {
     }
 }
 
-impl<T: Clone + Ord, U: Paving> Paving for Dim<T, U> {
+impl<T: Clone + Debug + Ord, U: Debug + Paving> Paving for Dim<T, U> {
     type Selector = PavingSelector<T, U::Selector>;
     type Value = U::Value;
 
@@ -197,28 +201,31 @@ impl<T: Clone + Ord, U: Paving> Paving for Dim<T, U> {
         }
     }
 
+    /// Check if the *full* range covered by `selector` is set and equals to `val`.
     fn is_val(&self, selector: &Self::Selector, val: &Self::Value) -> bool {
         let (ranges, selector_tail) = selector.unpack_front();
 
         for range in ranges {
+            // Wrapping ranges are not supported : inverted bounds are
+            // considered an empty interval.
             if range.start >= range.end {
-                // Wrapping ranges are not supported.
                 continue;
             }
 
-            if self.cols.is_empty()
+            // Check if part of the selector covers a part that is outside of
+            // the explicitly set values for this paving.
+            let partialy_outside_bounds = self.cols.is_empty()
                 || range.start < *self.cuts.first().unwrap()
-                || range.end > *self.cuts.last().unwrap()
-            {
-                // There is either no columns either an overlap before the
-                // first column or the last one. In these cases we just need
-                // to ensure the requested value is the default.
-                return *val == Self::Value::default();
+                || range.end > *self.cuts.last().unwrap();
+
+            // If part of the selector is outside of explicitly set values, the
+            // expected value must be the default.
+            if partialy_outside_bounds && *val != Self::Value::default() {
+                return false;
             }
 
-            for ((col_start, col_end), col_val) in self
-                .cuts
-                .iter()
+            // Check value of overlapping columns
+            for ((col_start, col_end), col_val) in (self.cuts.iter())
                 .zip(self.cuts.iter().skip(1))
                 .zip(&self.cols)
             {
@@ -273,7 +280,7 @@ impl<T: Clone + Ord, U: Paving> Paving for Dim<T, U> {
 
 // NOTE: this is heavily unoptimized, so we ensure that it is only used for tests
 #[cfg(test)]
-impl<T: Clone + Ord + std::fmt::Debug, U: Paving + PartialEq> PartialEq for Dim<T, U> {
+impl<T: Clone + Ord + Debug, U: Paving + PartialEq> PartialEq for Dim<T, U> {
     fn eq(&self, other: &Self) -> bool {
         let mut self_cpy = self.clone();
         let mut other_cpy = other.clone();
