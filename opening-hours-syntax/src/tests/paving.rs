@@ -29,18 +29,22 @@ fn test_dim2() {
     // 5 ⋅ C C C C ⋅
     // 6 ⋅ ⋅ ⋅ ⋅ ⋅ ⋅
     let mut grid_2 = grid_empty.clone();
+
     grid_2.set(
         &EmptyPavingSelector.dim_front([1..4]).dim_front([3..4]),
         &true,
     ); // A & #
+
     grid_2.set(
         &EmptyPavingSelector.dim_front([2..5]).dim_front([3..4]),
         &true,
     ); // B & #
+
     grid_2.set(
         &EmptyPavingSelector.dim_front([1..5]).dim_front([4..6]),
         &true,
     ); // C
+
     assert_eq!(grid_1, grid_2);
 }
 
@@ -55,14 +59,17 @@ fn test_pop_trivial() {
     // 5 ⋅ C C C C ⋅
     // 6 ⋅ ⋅ ⋅ ⋅ ⋅ ⋅
     let mut grid = grid_empty.clone();
+
     grid.set(
         &EmptyPavingSelector.dim_front([1..4]).dim_front([3..4]),
         &true,
     ); // A & #
+
     grid.set(
         &EmptyPavingSelector.dim_front([2..5]).dim_front([3..4]),
         &true,
     ); // B & #
+
     grid.set(
         &EmptyPavingSelector.dim_front([1..5]).dim_front([4..6]),
         &true,
@@ -107,6 +114,21 @@ fn test_pop_disjoint() {
     assert_eq!(grid.pop_filter(|x| *x), None);
 }
 
+/// Make sure that Paving::is_val is false when requesting part of the
+/// selector covers a non-default culumn and a part which is out of explicitly
+/// defined columns.
+#[test]
+fn test_is_val_at_border() {
+    let mut grid = Paving1D::default();
+    grid.set(&EmptyPavingSelector.dim_front([1..2, 3..4]), &true);
+    assert!(!grid.is_val(&EmptyPavingSelector.dim_front([0..2]), &true));
+    assert!(!grid.is_val(&EmptyPavingSelector.dim_front([0..2]), &false));
+    assert!(!grid.is_val(&EmptyPavingSelector.dim_front([2..4]), &true));
+    assert!(!grid.is_val(&EmptyPavingSelector.dim_front([2..4]), &false));
+    assert!(!grid.is_val(&EmptyPavingSelector.dim_front([3..5]), &true));
+    assert!(!grid.is_val(&EmptyPavingSelector.dim_front([3..5]), &false));
+}
+
 #[test]
 fn test_debug() {
     //   0 1 2 3 4 5 6 7
@@ -124,5 +146,5 @@ fn test_debug() {
         &true,
     );
 
-    assert_eq!(format!("{grid:?}"), "Dim { [3, 6[: Dim { [1, 2[: Cell { inner: true }, [2, 4[: Cell { inner: false }, [4, 7[: Cell { inner: true } } }")
+    assert_eq!(format!("{grid:?}"), "Dim { 3..6: Dim { 1..2: Cell { inner: true }, 2..4: Cell { inner: false }, 4..7: Cell { inner: true } } }")
 }

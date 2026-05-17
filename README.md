@@ -97,7 +97,7 @@ Feel free to open an issue if you have a use case for extreme dates!
 Tests can be run by running `cargo test`.
 
 A fuzzing can be run using _cargo-fuzz_ by running
-`cargo +nightly fuzz run -j 4 parse_oh`.
+`cargo +nightly fuzz run -j 4 fuzz_oh`.
 
 ### Re-generating Python stub file
 

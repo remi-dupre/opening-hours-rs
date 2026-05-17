@@ -12,7 +12,7 @@ const EXAMPLES: &[(&str, u32, &str, &str)] = &[
     ex!("06:00+;24/7", "06:00+; 24/7"),
     ex!("06:00-24:00;24/7", "24/7"),
     ex!("Tu-Mo", "24/7"),
-    ex!("2022;Fr", "Fr; 2022 Mo-Th,Sa-Su"),
+    ex!("2022;Fr", "2022, Fr"),
     ex!("Mo,Th open; Tu,Fr-Su open", "Mo-Tu,Th-Su"),
     ex!("Mo-Fr 10:00-14:00 ; We-Su 10:00-14:00", "10:00-14:00"),
     ex!("Mo,Tu,We,Th,Fr,Sa,Su 10:00-21:00", "10:00-21:00"),
@@ -35,7 +35,7 @@ const EXAMPLES: &[(&str, u32, &str, &str)] = &[
     ),
     ex!(
         "10:00-16:00, We 15:00-20:00 unknown",
-        "10:00-15:00, Mo-Tu,Th-Su 15:00-16:00, We 15:00-20:00 unknown",
+        "Mo-Tu,Th-Su 10:00-16:00; We 10:00-15:00, We 15:00-20:00 unknown",
     ),
     ex!(
         "Mo 10:00-21:00; Tu,We,Th,Fr,Sa,Su 10:00-21:00",
@@ -43,7 +43,7 @@ const EXAMPLES: &[(&str, u32, &str, &str)] = &[
     ),
     ex!(
         "Nov-Mar Mo-Fr 10:00-16:00; Apr-Nov Mo-Fr 08:00-18:00",
-        "Apr-Nov Mo-Fr 08:00-18:00; Jan-Mar,Dec Mo-Fr 10:00-16:00",
+        "Mo-Fr 10:00-16:00, Apr-Nov Mo-Fr 08:00-18:00",
     ),
     ex!(
         "Apr-Oct Mo-Fr 08:00-18:00; Mo-Fr 10:00-16:00 open",
@@ -51,7 +51,7 @@ const EXAMPLES: &[(&str, u32, &str, &str)] = &[
     ),
     ex!(
         "Mo-Fr 10:00-16:00 open; Apr-Oct Mo-Fr 08:00-18:00",
-        "Apr-Oct Mo-Fr 08:00-18:00; Jan-Mar,Nov-Dec Mo-Fr 10:00-16:00",
+        "Mo-Fr 10:00-16:00, Apr-Oct Mo-Fr 08:00-18:00",
     ),
     ex!(
         "Mo-Su 00:00-01:00, 10:30-24:00; PH off; 2021 Apr 10 00:00-01:00; 2021 Apr 11-16 off; 2021 Apr 17 10:30-24:00",
@@ -59,11 +59,11 @@ const EXAMPLES: &[(&str, u32, &str, &str)] = &[
     ),
     ex!(
         "week2Mo;Jun;Fr",
-        "Fr; week02 Mo; Jun week01,03-53 Mo-Th,Sa-Su; Jun week02 Tu-Th,Sa-Su",
+        "Jun, week02 Mo,Fr, Fr",
     ),
     ex!(
         "week04 Mo; Jul; Jun 5; Sep Fr; 04:00-04:20",
-        "week04 Mo; Jul week01-03,05-53; Jul week04 Tu-Su; Jun 5; Sep Fr; 04:00-04:20",
+        "Jul, week04 Mo; Jun 5; Sep Fr; 04:00-04:20",
     ),
 ];
 
@@ -82,10 +82,10 @@ fn normalize_idempotent() -> Result<()> {
 
 #[test]
 fn normalize() -> Result<()> {
-    for (file, line, expr, simplified) in EXAMPLES {
+    for (file, line, expr, expected) in EXAMPLES {
         assert_eq!(
             parse(expr)?.normalize().to_string(),
-            *simplified,
+            *expected,
             "error with example from {file}:{line}",
         );
     }
