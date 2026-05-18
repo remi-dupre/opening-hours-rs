@@ -132,19 +132,23 @@ impl RuleSequence {
         self.day_selector.is_empty() && self.time_selector.is_00_24()
     }
 
+    /// Format rule sequence into given formatter.
+    ///
+    /// If `force_day_selector` is set to true, the day selector part is guaranteed to yield a
+    /// non-empty string by adding "Mo-Su" as fallback.
     pub(crate) fn display(
         &self,
         f: &mut std::fmt::Formatter<'_>,
         force_day_selector: bool,
     ) -> std::fmt::Result {
-        let mut is_empty = true;
+        let mut is_empty;
 
         if self.is_constant() {
             is_empty = false;
             write!(f, "24/7")?;
         } else {
-            is_empty = is_empty && self.day_selector.is_empty();
             self.day_selector.display(f, force_day_selector)?;
+            is_empty = !force_day_selector && self.day_selector.is_empty();
 
             if !self.time_selector.is_00_24() {
                 if !is_empty {

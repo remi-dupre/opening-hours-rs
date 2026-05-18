@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.2
+
+### General
+
+- Fix: expression stringification was not idempotent in some cases
+
 ## 1.2.1
 
 ### General

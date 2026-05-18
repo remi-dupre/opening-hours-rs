@@ -48,7 +48,15 @@ impl DaySelector {
             && self.weekday.is_empty()
     }
 
+    /// Format this day selector into given formatter.
+    ///
+    /// If `force` is set to true, this is guaranteed to yield a non-empty string by adding "Mo-Su"
+    /// as fallback.
     pub(crate) fn display(&self, f: &mut std::fmt::Formatter<'_>, force: bool) -> std::fmt::Result {
+        if force && self.is_empty() {
+            return write!(f, "Mo-Su");
+        }
+
         if !(self.year.is_empty() && self.monthday.is_empty() && self.week.is_empty()) {
             write_selector(f, &self.year)?;
             write_selector(f, &self.monthday)?;
@@ -67,11 +75,7 @@ impl DaySelector {
             }
         }
 
-        if force && self.weekday.is_empty() {
-            write!(f, "Mo-Su ")
-        } else {
-            write_selector(f, &self.weekday)
-        }
+        write_selector(f, &self.weekday)
     }
 }
 
