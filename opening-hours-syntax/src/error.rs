@@ -1,8 +1,10 @@
-use std::fmt;
+use alloc::boxed::Box;
+use alloc::string::String;
+use core::fmt;
 
 use crate::parser::Rule;
 
-pub type Result<T> = std::result::Result<T, Error>;
+pub type Result<T> = core::result::Result<T, Error>;
 
 #[derive(Clone, Debug)]
 pub enum Error {
@@ -34,6 +36,7 @@ impl fmt::Display for Error {
     }
 }
 
+#[cfg(feature = "std")]
 impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {

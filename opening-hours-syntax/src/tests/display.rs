@@ -1,3 +1,5 @@
+use alloc::string::ToString;
+
 use crate::error::Result;
 use crate::parser::parse;
 use crate::tests::ex;

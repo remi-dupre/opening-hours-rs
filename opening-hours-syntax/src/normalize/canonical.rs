@@ -1,6 +1,7 @@
-use std::cmp::Ordering;
-use std::ops::Range;
-use std::sync::Arc;
+use alloc::sync::Arc;
+use alloc::vec::Vec;
+use core::cmp::Ordering;
+use core::ops::Range;
 
 use chrono::Weekday;
 

@@ -38,7 +38,7 @@ pub(crate) fn canonical_to_seq(canonical: Canonical) -> impl Iterator<Item = Rul
     // Parts of this paving will be removed until it is empty
     let mut canonical_remaining = canonical.clone();
 
-    std::iter::from_fn(move || {
+    core::iter::from_fn(move || {
         // Extract open periods first, then unknowns
         let ((kind, comments), mut selector) =
             [RuleKind::Open, RuleKind::Unknown, RuleKind::Closed]

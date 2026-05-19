@@ -1,6 +1,7 @@
-use std::cmp::Ordering;
-use std::fmt::Display;
-use std::ops::Range;
+use alloc::vec::Vec;
+use core::cmp::Ordering;
+use core::fmt::Display;
+use core::ops::Range;
 
 use chrono::Duration;
 
@@ -50,7 +51,7 @@ impl Default for TimeSelector {
 }
 
 impl Display for TimeSelector {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write_selector(f, &self.time)
     }
 }
@@ -76,7 +77,7 @@ impl TimeSpan {
 }
 
 impl Display for TimeSpan {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.range.start)?;
 
         if !self.open_end || self.range.end != Time::Fixed(ExtendedTime::MIDNIGHT_24) {
@@ -108,7 +109,7 @@ pub enum Time {
 }
 
 impl Display for Time {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::Fixed(time) => write!(f, "{time}"),
             Self::Variable(time) => write!(f, "{time}"),
@@ -125,7 +126,7 @@ pub struct VariableTime {
 }
 
 impl Display for VariableTime {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.event)?;
 
         match self.offset.cmp(&0) {
@@ -158,7 +159,7 @@ impl TimeEvent {
 }
 
 impl Display for TimeEvent {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.as_str())
     }
 }
