@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.3.0
+
+### General
+
+- Fix: expression stringification was not idempotent in some cases
+
+### Rust
+
+- opening-hours-syntax: support for no-std environment (ft. @hosseinpro)
+
 ## 1.2.1
 
 ### General

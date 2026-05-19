@@ -1,5 +1,5 @@
-use std::convert::TryInto;
-use std::fmt::{Debug, Display};
+use core::convert::TryInto;
+use core::fmt::{Debug, Display};
 
 use chrono::{NaiveTime, Timelike};
 
@@ -136,13 +136,13 @@ impl ExtendedTime {
 }
 
 impl Display for ExtendedTime {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{:02}:{:02}", self.hour, self.minute)
     }
 }
 
 impl Debug for ExtendedTime {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::result::Result<(), std::fmt::Error> {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::result::Result<(), core::fmt::Error> {
         write!(f, "{self}")
     }
 }

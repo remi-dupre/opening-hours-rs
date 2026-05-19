@@ -1,11 +1,8 @@
+use alloc::string::ToString;
+
 use crate::error::Result;
 use crate::parser::parse;
-
-macro_rules! ex {
-    ( $( $tt: expr ),* $( , )? ) => {
-        (file!(), line!() $( , $tt )*)
-    };
-}
+use crate::tests::ex;
 
 const EXAMPLES: &[(&str, u32, &str, &str)] = &[
     ex!("Sa; 24/7", "24/7"),
