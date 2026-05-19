@@ -4,8 +4,8 @@
 // -- Framable
 // --
 
-use std::cmp::Ordering;
-use std::ops::{Range, RangeInclusive};
+use core::cmp::Ordering;
+use core::ops::{Range, RangeInclusive};
 
 use chrono::Weekday;
 
@@ -146,9 +146,9 @@ pub(crate) trait Bounded: Ord + Sized {
     fn split_inverted_range(range: Range<Self>) -> impl Iterator<Item = Range<Self>> {
         if range.start >= range.end {
             // start == end when a wrapping range gets expanded from exclusive to inclusive range
-            std::iter::once(Self::BOUND_START..range.end).chain(Some(range.start..Self::BOUND_END))
+            core::iter::once(Self::BOUND_START..range.end).chain(Some(range.start..Self::BOUND_END))
         } else {
-            std::iter::once(range).chain(None)
+            core::iter::once(range).chain(None)
         }
     }
 }

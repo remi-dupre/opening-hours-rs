@@ -1,7 +1,8 @@
-use std::borrow::Borrow;
-use std::cmp::Ordering;
-use std::convert::From;
-use std::ops::Deref;
+use alloc::vec::Vec;
+use core::borrow::Borrow;
+use core::cmp::Ordering;
+use core::convert::From;
+use core::ops::Deref;
 
 /// A wrapper arround a [`Vec`] that is always sorted and with values repeating
 /// at most once.

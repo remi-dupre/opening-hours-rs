@@ -1,8 +1,9 @@
 pub mod day;
 pub mod time;
 
-use std::fmt::Display;
-use std::sync::Arc;
+use alloc::sync::Arc;
+use alloc::vec::Vec;
+use core::fmt::Display;
 
 use crate::normalize::frame::Bounded;
 use crate::normalize::paving::{Paving, Paving5D, UnpackFromBack};
@@ -87,7 +88,7 @@ impl OpeningHoursExpression {
 }
 
 impl Display for OpeningHoursExpression {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let Some(first) = self.rules.first() else {
             return write!(f, "closed");
         };
@@ -138,9 +139,9 @@ impl RuleSequence {
     /// non-empty string by adding "Mo-Su" as fallback.
     pub(crate) fn display(
         &self,
-        f: &mut std::fmt::Formatter<'_>,
+        f: &mut core::fmt::Formatter<'_>,
         force_day_selector: bool,
-    ) -> std::fmt::Result {
+    ) -> core::fmt::Result {
         let mut is_empty;
 
         if self.is_constant() {
@@ -182,7 +183,7 @@ impl RuleSequence {
 }
 
 impl Display for RuleSequence {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         self.display(f, false)
     }
 }
@@ -208,7 +209,7 @@ impl RuleKind {
 }
 
 impl Display for RuleKind {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.as_str())
     }
 }

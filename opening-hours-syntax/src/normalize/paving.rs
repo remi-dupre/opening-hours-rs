@@ -7,8 +7,9 @@
 //! for this problem in two dimensions and for boolean values :
 //! https://dl.acm.org/doi/10.1145/73833.73871
 
-use std::fmt::Debug;
-use std::ops::Range;
+use alloc::vec::Vec;
+use core::fmt::Debug;
+use core::ops::Range;
 
 pub(crate) type Paving1D<T, Val> = Dim<T, Cell<Val>>;
 pub(crate) type Paving2D<T, U, Val> = Dim<T, Paving1D<U, Val>>;
@@ -209,7 +210,7 @@ impl<Val: Clone + Default + Eq + Ord> Paving for Cell<Val> {
         filter: impl Fn(&Self::Value) -> bool,
     ) -> Option<(Self::Value, Self::Selector)> {
         if filter(&self.inner) {
-            Some((std::mem::take(&mut self.inner), EmptyPavingSelector))
+            Some((core::mem::take(&mut self.inner), EmptyPavingSelector))
         } else {
             None
         }
@@ -238,7 +239,7 @@ impl<T: Clone + Ord, U: Paving> Default for Dim<T, U> {
 }
 
 impl<T: Clone + Ord + Debug, U: Paving + Debug> Debug for Dim<T, U> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         if self.cols.is_empty() {
             f.debug_tuple("Dim::Empty").field(&self.cols).finish()?;
         }

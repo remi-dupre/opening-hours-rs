@@ -1,6 +1,9 @@
-use std::fmt::Display;
+use core::fmt::Display;
 
-pub(crate) fn write_days_offset(f: &mut std::fmt::Formatter<'_>, offset: i64) -> std::fmt::Result {
+pub(crate) fn write_days_offset(
+    f: &mut core::fmt::Formatter<'_>,
+    offset: i64,
+) -> core::fmt::Result {
     if offset == 0 {
         return Ok(());
     }
@@ -21,9 +24,9 @@ pub(crate) fn write_days_offset(f: &mut std::fmt::Formatter<'_>, offset: i64) ->
 }
 
 pub(crate) fn write_selector(
-    f: &mut std::fmt::Formatter<'_>,
+    f: &mut core::fmt::Formatter<'_>,
     seq: &[impl Display],
-) -> std::fmt::Result {
+) -> core::fmt::Result {
     let Some(first) = seq.first() else {
         return Ok(());
     };
