@@ -21,8 +21,10 @@ use crate::rules::time as ts;
 #[cfg(feature = "log")]
 use core::sync::atomic::{AtomicBool, Ordering};
 
+/// Keep track of whether a feature warning was emitted for easter support. This ensures that a
+/// warning is not spammed for a single process session.
 #[cfg(feature = "log")]
-static WARN_EASTER: AtomicBool = AtomicBool::new(false);
+static WARNING_EASTER_EMITTED: AtomicBool = AtomicBool::new(false);
 
 #[derive(Parser)]
 #[grammar = "grammar.pest"]
@@ -598,9 +600,10 @@ fn build_date_from(pair: Pair<Rule>) -> ds::Date {
     match pairs.peek().expect("empty date (from)").as_rule() {
         Rule::variable_date => {
             #[cfg(feature = "log")]
-            if !WARN_EASTER.swap(true, Ordering::Relaxed) {
+            if !WARNING_EASTER_EMITTED.swap(true, Ordering::Relaxed) {
                 log::warn!("Easter is not supported yet");
             }
+
             ds::Date::Easter { year }
         }
         Rule::month => ds::Date::Fixed {
