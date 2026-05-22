@@ -14,6 +14,9 @@ const DISPLAY_STABLE: &[(&str, u32, &str)] = &[
 const DISPLAY_MODIFIED: &[(&str, u32, &str, &str)] = &[
     // Doesn't add 'Mo-Su' in an additional rule if a year selector is set
     ex!("2020, 10:00-16:00", "2020, Mo-Su 10:00-16:00"),
+    // Used to display an invalid expression as '/' can only follow ranges
+    ex!("1975-1975/7", "1975"),
+    ex!("week02-02/7", "week02"),
 ];
 
 #[test]
@@ -32,6 +35,8 @@ fn display_stable() -> Result<()> {
 #[test]
 fn display_modified() -> Result<()> {
     for (file, line, example, expected) in DISPLAY_MODIFIED {
+        parse(expected).expect("invalid expected expression");
+
         assert_eq!(
             parse(example)?.to_string(),
             *expected,
