@@ -122,10 +122,10 @@ impl Display for YearRange {
 
         if self.range.start() != self.range.end() {
             write!(f, "-{}", self.range.end().deref())?;
-        }
 
-        if self.step != 1 {
-            write!(f, "/{}", self.step)?;
+            if self.step != 1 {
+                write!(f, "/{}", self.step)?;
+            }
         }
 
         Ok(())
@@ -417,10 +417,14 @@ impl Display for WeekRange {
             return write!(f, "{:02}", **self.range.start());
         }
 
-        write!(f, "{:02}-{:02}", **self.range.start(), **self.range.end())?;
+        write!(f, "{:02}", **self.range.start())?;
 
-        if self.step != 1 {
-            write!(f, "/{}", self.step)?;
+        if self.range.start() != self.range.end() {
+            write!(f, "-{:02}", **self.range.end())?;
+
+            if self.step != 1 {
+                write!(f, "/{}", self.step)?;
+            }
         }
 
         Ok(())

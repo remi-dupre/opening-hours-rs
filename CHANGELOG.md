@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.3.1
+
+### General
+
+- Fix: year ranges of a single value with a step were formatted
+  into an invalid expression.
+
 ## 1.3.0
 
 ### General
