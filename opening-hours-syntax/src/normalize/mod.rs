@@ -2,13 +2,14 @@ pub(crate) mod canonical;
 pub(crate) mod frame;
 pub(crate) mod paving;
 
-use crate::normalize::paving::{EmptyPavingSelector, Paving, Paving4D};
+use crate::normalize::paving::{EmptyPavingSelector, Paving, Paving4D, UnpackFromBack};
 use crate::rules::day::DaySelector;
 use crate::rules::time::TimeSelector;
 use crate::rules::{RuleOperator, RuleSequence};
 use crate::RuleKind;
 
 use self::canonical::{Canonical, CanonicalSelector, MakeCanonical};
+use self::paving::SelectorCompression;
 
 // --
 // -- Normalization Logic
@@ -19,46 +20,67 @@ pub(crate) fn ruleseq_to_selector(rs: &RuleSequence) -> Option<CanonicalSelector
     let ds = &rs.day_selector;
 
     let selector = EmptyPavingSelector
-        .dim_front(MakeCanonical::try_from_iterator(&ds.weekday)?)
-        .dim_front(MakeCanonical::try_from_iterator(&ds.week)?)
-        .dim_front(MakeCanonical::try_from_iterator(&ds.monthday)?)
+        .dim_front(MakeCanonical::try_from_iterator(&rs.time_selector.time)?)
         .dim_front(MakeCanonical::try_from_iterator(&ds.year)?)
-        .dim_front(MakeCanonical::try_from_iterator(&rs.time_selector.time)?);
+        .dim_front(MakeCanonical::try_from_iterator(&ds.monthday)?)
+        .dim_front(MakeCanonical::try_from_iterator(&ds.week)?)
+        .dim_front(MakeCanonical::try_from_iterator(&ds.weekday)?);
 
     Some(selector)
 }
 
 /// Convert a canonical paving back into a rules sequence.
-pub(crate) fn canonical_to_seq(mut canonical: Canonical) -> impl Iterator<Item = RuleSequence> {
-    // Keep track of the days that have already been outputed. This allows to use an additional
-    // rule if it is absolutly required only.
+pub(crate) fn canonical_to_seq(canonical: Canonical) -> impl Iterator<Item = RuleSequence> {
+    // Keep track of the days that have already been outputed. This allows to
+    // use an additional rule only when necessary.
     let mut days_covered = Paving4D::default();
 
-    std::iter::from_fn(move || {
+    // Parts of this paving will be removed until it is empty
+    let mut canonical_remaining = canonical.clone();
+
+    core::iter::from_fn(move || {
         // Extract open periods first, then unknowns
-        let ((kind, comment), selector) = [RuleKind::Open, RuleKind::Unknown, RuleKind::Closed]
+        let ((kind, comment), mut selector) = [RuleKind::Open, RuleKind::Unknown, RuleKind::Closed]
             .into_iter()
             .find_map(|target_kind| {
-                canonical.pop_filter(|(kind, comment)| {
+                canonical_remaining.pop_filter(|(kind, comment)| {
                     *kind == target_kind && (target_kind != RuleKind::Closed || !comment.is_empty())
                 })
             })?;
 
-        let (rgs_time, day_selector) = selector.into_unpack_front();
+        // Merge consecutive intervals as much as possible if the hole between
+        // two consecutive intervals was covered with the same value during a
+        // previous extraction.
+        selector.fill_holes({
+            let canonical = &canonical;
+            let val = (kind, comment.clone());
+            move |candidate| canonical.is_val(candidate, &val)
+        });
 
+        let (day_selector, rgs_time) = selector.into_unpack_back();
+
+        // If the current sequence doesn't cover any day with any time range
+        // already defined, we can use a normal rule operator which is more
+        // common. Otherwise, fallback to an additional rule operator, which
+        // has a more predictable semantic.
         let operator = {
-            if days_covered.is_val(&day_selector, &false) {
+            let no_day_overlap = days_covered.is_val(&day_selector, &false);
+
+            if no_day_overlap {
                 RuleOperator::Normal
             } else {
                 RuleOperator::Additional
             }
         };
 
+        // Mark the days as (partialy) covered
         days_covered.set(&day_selector, &true);
-        let (rgs_year, day_selector) = day_selector.into_unpack_front();
-        let (rgs_monthday, day_selector) = day_selector.into_unpack_front();
+
+        // Extract remaining dimensions
+        let (rgs_weekday, day_selector) = day_selector.into_unpack_front();
         let (rgs_week, day_selector) = day_selector.into_unpack_front();
-        let (rgs_weekday, _) = day_selector.into_unpack_front();
+        let (rgs_monthday, day_selector) = day_selector.into_unpack_front();
+        let (rgs_year, EmptyPavingSelector) = day_selector.into_unpack_front();
 
         let day_selector = DaySelector {
             year: MakeCanonical::into_selector(rgs_year, true),

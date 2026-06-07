@@ -33,6 +33,8 @@ pub enum Country {
     BA,
     /// Barbados
     BB,
+    /// Bangladesh
+    BD,
     /// Belgium
     BE,
     /// Bulgaria
@@ -241,6 +243,8 @@ pub enum Country {
     TR,
     /// Ukraine
     UA,
+    /// Uganda
+    UG,
     /// United States
     US,
     /// Uruguay
@@ -258,7 +262,7 @@ pub enum Country {
 }
 
 impl Country {
-    pub const ALL: [Self; 120] = [
+    pub const ALL: [Self; 122] = [
         Self::AD,
         Self::AL,
         Self::AM,
@@ -268,6 +272,7 @@ impl Country {
         Self::AX,
         Self::BA,
         Self::BB,
+        Self::BD,
         Self::BE,
         Self::BG,
         Self::BJ,
@@ -372,6 +377,7 @@ impl Country {
         Self::TN,
         Self::TR,
         Self::UA,
+        Self::UG,
         Self::US,
         Self::UY,
         Self::VA,
@@ -399,6 +405,7 @@ impl Country {
             Self::AX => "Åland Islands",
             Self::BA => "Bosnia and Herzegovina",
             Self::BB => "Barbados",
+            Self::BD => "Bangladesh",
             Self::BE => "Belgium",
             Self::BG => "Bulgaria",
             Self::BJ => "Benin",
@@ -503,6 +510,7 @@ impl Country {
             Self::TN => "Tunisia",
             Self::TR => "Türkiye",
             Self::UA => "Ukraine",
+            Self::UG => "Uganda",
             Self::US => "United States",
             Self::UY => "Uruguay",
             Self::VA => "Vatican City",
@@ -531,6 +539,7 @@ impl Country {
             Self::AX => "AX",
             Self::BA => "BA",
             Self::BB => "BB",
+            Self::BD => "BD",
             Self::BE => "BE",
             Self::BG => "BG",
             Self::BJ => "BJ",
@@ -635,6 +644,7 @@ impl Country {
             Self::TN => "TN",
             Self::TR => "TR",
             Self::UA => "UA",
+            Self::UG => "UG",
             Self::US => "US",
             Self::UY => "UY",
             Self::VA => "VA",
@@ -666,6 +676,7 @@ impl FromStr for Country {
             "AX" => Ok(Self::AX),
             "BA" => Ok(Self::BA),
             "BB" => Ok(Self::BB),
+            "BD" => Ok(Self::BD),
             "BE" => Ok(Self::BE),
             "BG" => Ok(Self::BG),
             "BJ" => Ok(Self::BJ),
@@ -770,6 +781,7 @@ impl FromStr for Country {
             "TN" => Ok(Self::TN),
             "TR" => Ok(Self::TR),
             "UA" => Ok(Self::UA),
+            "UG" => Ok(Self::UG),
             "US" => Ok(Self::US),
             "UY" => Ok(Self::UY),
             "VA" => Ok(Self::VA),

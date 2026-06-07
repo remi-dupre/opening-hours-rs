@@ -3,6 +3,7 @@ use std::ops::RangeInclusive;
 use chrono::prelude::Datelike;
 use chrono::{Duration, NaiveDate, Weekday};
 
+use compact_calendar::CompactCalendar;
 use opening_hours_syntax::rules::day::{self as ds, Date, Month, WeekNum, Year};
 
 use crate::localization::Localize;
@@ -123,13 +124,28 @@ fn next_change_from_intervals(
     }
 }
 
+// --
+// -- DateFilter
+// --
+
 /// Generic trait to specify the behavior of a selector over dates.
 pub trait DateFilter {
+    /// Check whether current rule applies to the given date.
     fn filter<L>(&self, date: NaiveDate, ctx: &Context<L>) -> bool
     where
         L: Localize;
 
-    /// Provide a lower bound to the next date with a different result to `filter`.
+    /// Check whether the parent rule sequence should be overridden to a `RuleKind::Unknown`. This
+    /// might be true if we can't be sure if the rule filter matches current day.
+    fn overrides_kind_to_unknown<L>(&self, _date: NaiveDate, _ctx: &Context<L>) -> bool
+    where
+        L: Localize,
+    {
+        false
+    }
+
+    /// Provide a lower bound to the next date with a different result to `self.filter(...)` or
+    /// `self.override_unknown(...)`.
     fn next_change_hint<L>(&self, _date: NaiveDate, _ctx: &Context<L>) -> Option<NaiveDate>
     where
         L: Localize;
@@ -141,6 +157,13 @@ impl<T: DateFilter> DateFilter for [T] {
         L: Localize,
     {
         self.is_empty() || self.iter().any(|x| x.filter(date, ctx))
+    }
+
+    fn overrides_kind_to_unknown<L>(&self, date: NaiveDate, ctx: &Context<L>) -> bool
+    where
+        L: Localize,
+    {
+        self.iter().any(|x| x.overrides_kind_to_unknown(date, ctx))
     }
 
     fn next_change_hint<L>(&self, date: NaiveDate, ctx: &Context<L>) -> Option<NaiveDate>
@@ -163,6 +186,16 @@ impl DateFilter for ds::DaySelector {
             && self.monthday.filter(date, ctx)
             && self.week.filter(date, ctx)
             && self.weekday.filter(date, ctx)
+    }
+
+    fn overrides_kind_to_unknown<L>(&self, date: NaiveDate, ctx: &Context<L>) -> bool
+    where
+        L: Localize,
+    {
+        self.year.overrides_kind_to_unknown(date, ctx)
+            || self.monthday.overrides_kind_to_unknown(date, ctx)
+            || self.week.overrides_kind_to_unknown(date, ctx)
+            || self.weekday.overrides_kind_to_unknown(date, ctx)
     }
 
     fn next_change_hint<L>(&self, date: NaiveDate, ctx: &Context<L>) -> Option<NaiveDate>
@@ -389,15 +422,24 @@ impl DateFilter for ds::WeekDayRange {
                         || nth_from_end[usize::from(pos_from_end)])
             }
             ds::WeekDayRange::Holiday { kind, offset } => {
-                let calendar = match kind {
-                    ds::HolidayKind::Public => &ctx.holidays.public,
-                    ds::HolidayKind::School => &ctx.holidays.school,
-                };
-
                 let date = date - Duration::days(*offset);
-                calendar.contains(date)
+
+                ctx.holidays.get_for_kind(*kind).contains(date)
+                    || ctx.holidays_unknown.get_for_kind(*kind).contains(date)
             }
         }
+    }
+
+    fn overrides_kind_to_unknown<L>(&self, date: NaiveDate, ctx: &Context<L>) -> bool
+    where
+        L: Localize,
+    {
+        let ds::WeekDayRange::Holiday { kind, offset } = self else {
+            return false;
+        };
+
+        let date = date - Duration::days(*offset);
+        ctx.holidays_unknown.get_for_kind(*kind).contains(date)
     }
 
     fn next_change_hint<L>(&self, date: NaiveDate, ctx: &Context<L>) -> Option<NaiveDate>
@@ -406,21 +448,21 @@ impl DateFilter for ds::WeekDayRange {
     {
         match self {
             ds::WeekDayRange::Holiday { kind, offset } => Some({
-                let calendar = match kind {
-                    ds::HolidayKind::Public => &ctx.holidays.public,
-                    ds::HolidayKind::School => &ctx.holidays.school,
+                let date_with_offset = date - Duration::days(*offset);
+                let calendar = ctx.holidays.get_for_kind(*kind);
+                let calendar_unknown = ctx.holidays_unknown.get_for_kind(*kind);
+
+                let next_change_for = |cal: &CompactCalendar| {
+                    if cal.contains(date_with_offset) {
+                        date.succ_opt().unwrap_or_else(|| DATE_END.date())
+                    } else {
+                        cal.first_after(date_with_offset)
+                            .map(|following| following + Duration::days(*offset))
+                            .unwrap_or_else(|| DATE_END.date())
+                    }
                 };
 
-                let date_with_offset = date - Duration::days(*offset);
-
-                if calendar.contains(date_with_offset) {
-                    date.succ_opt()?
-                } else {
-                    calendar
-                        .first_after(date_with_offset)
-                        .map(|following| following + Duration::days(*offset))
-                        .unwrap_or_else(|| DATE_END.date())
-                }
+                std::cmp::min(next_change_for(calendar), next_change_for(calendar_unknown))
             }),
             ds::WeekDayRange::Fixed {
                 range: _,

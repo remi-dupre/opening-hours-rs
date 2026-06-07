@@ -1,8 +1,10 @@
-use std::cmp::Ord;
-use std::convert::TryInto;
-use std::fmt::Debug;
-use std::hash::Hash;
-use std::ops::RangeInclusive;
+use alloc::string::{String, ToString};
+use alloc::vec::Vec;
+use core::cmp::Ord;
+use core::convert::TryInto;
+use core::fmt::Debug;
+use core::hash::Hash;
+use core::ops::RangeInclusive;
 
 use chrono::Duration;
 
@@ -16,7 +18,12 @@ use crate::rules::day::{self as ds, WeekNum, Year};
 use crate::rules::time as ts;
 
 #[cfg(feature = "log")]
-static WARN_EASTER: std::sync::Once = std::sync::Once::new();
+use core::sync::atomic::{AtomicBool, Ordering};
+
+/// Keep track of whether a feature warning was emitted for easter support. This ensures that a
+/// warning is not spammed for a single process session.
+#[cfg(feature = "log")]
+static WARNING_EASTER_EMITTED: AtomicBool = AtomicBool::new(false);
 
 #[derive(Parser)]
 #[grammar = "grammar.pest"]
@@ -595,7 +602,10 @@ fn build_date_from(pair: Pair<Rule>) -> ds::Date {
     match pairs.peek().expect("empty date (from)").as_rule() {
         Rule::variable_date => {
             #[cfg(feature = "log")]
-            WARN_EASTER.call_once(|| log::warn!("Easter is not supported yet"));
+            if !WARNING_EASTER_EMITTED.swap(true, Ordering::Relaxed) {
+                log::warn!("Easter is not supported yet");
+            }
+
             ds::Date::Easter { year }
         }
         Rule::month => ds::Date::Fixed {

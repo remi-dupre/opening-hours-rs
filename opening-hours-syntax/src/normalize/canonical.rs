@@ -1,6 +1,7 @@
-use std::cmp::Ordering;
-use std::ops::Range;
-use std::sync::Arc;
+use alloc::sync::Arc;
+use alloc::vec::Vec;
+use core::cmp::Ordering;
+use core::ops::Range;
 
 use chrono::Weekday;
 
@@ -12,16 +13,16 @@ use crate::{ExtendedTime, RuleKind};
 use super::frame::{Bounded, Frame};
 
 pub(crate) type Canonical = Paving5D<
-    ExtendedTime,
-    Frame<Year>,
-    Frame<Month>,
-    Frame<WeekNum>,
     Frame<OrderedWeekday>,
+    Frame<WeekNum>,
+    Frame<Month>,
+    Frame<Year>,
+    ExtendedTime,
     (RuleKind, Arc<str>),
 >;
 
 pub(crate) type CanonicalSelector =
-    Selector5D<ExtendedTime, Frame<Year>, Frame<Month>, Frame<WeekNum>, Frame<OrderedWeekday>>;
+    Selector5D<Frame<OrderedWeekday>, Frame<WeekNum>, Frame<Month>, Frame<Year>, ExtendedTime>;
 
 // --
 // -- OrderedWeekday

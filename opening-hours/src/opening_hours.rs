@@ -350,24 +350,64 @@ impl<L: Localize> Display for OpeningHours<L> {
     }
 }
 
+/// Build the full schedule at a given date from a rule sequence:
+/// - handles overlap with previous day,
+/// - handles unknown kind overrides.
 fn rule_sequence_schedule_at<L: Localize>(
     rule_sequence: &RuleSequence,
     date: NaiveDate,
     ctx: &Context<L>,
 ) -> Option<Schedule> {
-    let from_today = Some(date)
-        .filter(|date| rule_sequence.day_selector.filter(*date, ctx))
-        .map(|date| time_selector_intervals_at(ctx, &rule_sequence.time_selector, date))
-        .map(|rgs| Schedule::from_ranges(rgs, rule_sequence.kind, rule_sequence.comment.clone()));
+    /// Build a schedule at a given date from a list of intervals.
+    fn build_from_rules_at_date<L: Localize>(
+        rule_sequence: &RuleSequence,
+        date: NaiveDate,
+        ctx: &Context<L>,
+        intervals: impl Iterator<Item = std::ops::Range<ExtendedTime>>,
+    ) -> Option<Schedule> {
+        if !rule_sequence.day_selector.filter(date, ctx) {
+            return None;
+        }
 
-    let from_yesterday = (date.pred_opt())
-        .filter(|prev| rule_sequence.day_selector.filter(*prev, ctx))
-        .map(|prev| time_selector_intervals_at_next_day(ctx, &rule_sequence.time_selector, prev))
-        .map(|rgs| Schedule::from_ranges(rgs, rule_sequence.kind, rule_sequence.comment.clone()));
+        let overriden_kind = {
+            if rule_sequence
+                .day_selector
+                .overrides_kind_to_unknown(date, ctx)
+            {
+                RuleKind::Unknown
+            } else {
+                rule_sequence.kind
+            }
+        };
 
-    match (from_today, from_yesterday) {
+        Some(Schedule::from_ranges(
+            intervals,
+            overriden_kind,
+            rule_sequence.comment.clone(),
+        ))
+    }
+
+    let schedule_from_today = build_from_rules_at_date(
+        rule_sequence,
+        date,
+        ctx,
+        time_selector_intervals_at(ctx, &rule_sequence.time_selector, date),
+    );
+
+    // We can't just return the schedule obtained this way for the given date because a rule from
+    // previous day could overlap (extended times can be specified up to 48h).
+    let schedule_from_yesterday = date.pred_opt().and_then(|yesterday| {
+        build_from_rules_at_date(
+            rule_sequence,
+            yesterday,
+            ctx,
+            time_selector_intervals_at_next_day(ctx, &rule_sequence.time_selector, yesterday),
+        )
+    });
+
+    match (schedule_from_today, schedule_from_yesterday) {
         (Some(sched_1), Some(sched_2)) => Some(sched_1.addition(sched_2)),
-        (today, yesterday) => today.or(yesterday),
+        (opt_1, opt_2) => opt_1.or(opt_2),
     }
 }
 

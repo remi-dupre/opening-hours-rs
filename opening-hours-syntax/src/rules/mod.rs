@@ -1,11 +1,12 @@
 pub mod day;
 pub mod time;
 
-use std::fmt::Display;
-use std::sync::Arc;
+use alloc::sync::Arc;
+use alloc::vec::Vec;
+use core::fmt::Display;
 
 use crate::normalize::frame::Bounded;
-use crate::normalize::paving::{Paving, Paving5D};
+use crate::normalize::paving::{Paving, Paving5D, UnpackFromBack};
 use crate::normalize::{canonical_to_seq, ruleseq_to_selector};
 
 // OpeningHoursExpression
@@ -71,8 +72,8 @@ impl OpeningHoursExpression {
             // If the rule is not explicitly targeting a closed kind, then it overrides
             // previous rules for the whole day.
             if rule.operator == RuleOperator::Normal && rule.kind != RuleKind::Closed {
-                let (_, day_selector) = selector.clone().into_unpack_front();
-                let full_day_selector = day_selector.dim_front([Bounded::bounds()]);
+                let mut full_day_selector = selector.clone();
+                full_day_selector.substitute_back([Bounded::bounds()]);
                 paving.set(&full_day_selector, &Default::default());
             }
 
@@ -86,7 +87,7 @@ impl OpeningHoursExpression {
 }
 
 impl Display for OpeningHoursExpression {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let Some(first) = self.rules.first() else {
             return write!(f, "closed");
         };
@@ -137,19 +138,23 @@ impl RuleSequence {
         (self.kind, &self.comment)
     }
 
+    /// Format rule sequence into given formatter.
+    ///
+    /// If `force_day_selector` is set to true, the day selector part is guaranteed to yield a
+    /// non-empty string by adding "Mo-Su" as fallback.
     pub(crate) fn display(
         &self,
-        f: &mut std::fmt::Formatter<'_>,
+        f: &mut core::fmt::Formatter<'_>,
         force_day_selector: bool,
-    ) -> std::fmt::Result {
-        let mut is_empty = true;
+    ) -> core::fmt::Result {
+        let mut is_empty;
 
         if self.is_constant() {
             is_empty = false;
             write!(f, "24/7")?;
         } else {
-            is_empty = is_empty && self.day_selector.is_empty();
             self.day_selector.display(f, force_day_selector)?;
+            is_empty = !force_day_selector && self.day_selector.is_empty();
 
             if !self.time_selector.is_00_24() {
                 if !is_empty {
@@ -183,7 +188,7 @@ impl RuleSequence {
 }
 
 impl Display for RuleSequence {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         self.display(f, false)
     }
 }
@@ -209,7 +214,7 @@ impl RuleKind {
 }
 
 impl Display for RuleKind {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.as_str())
     }
 }

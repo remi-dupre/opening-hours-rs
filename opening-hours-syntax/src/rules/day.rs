@@ -1,6 +1,7 @@
-use std::convert::{TryFrom, TryInto};
-use std::fmt::Display;
-use std::ops::{Deref, DerefMut, RangeInclusive};
+use alloc::vec::Vec;
+use core::convert::{TryFrom, TryInto};
+use core::fmt::Display;
+use core::ops::{Deref, DerefMut, RangeInclusive};
 
 use chrono::prelude::Datelike;
 use chrono::{Duration, NaiveDate};
@@ -10,7 +11,9 @@ pub use chrono::Weekday;
 
 use crate::display::{write_days_offset, write_selector};
 
-// Display
+// --
+// -- Helpers: Display
+// --
 
 fn wday_str(wday: Weekday) -> &'static str {
     match wday {
@@ -24,12 +27,16 @@ fn wday_str(wday: Weekday) -> &'static str {
     }
 }
 
-// Errors
+// --
+// -- Errors
+// --
 
 #[derive(Clone, Debug)]
 pub struct InvalidMonth;
 
-// DaySelector
+// --
+// -- Struct: DaySelector
+// --
 
 #[derive(Clone, Debug, Default, Hash, PartialEq, Eq)]
 pub struct DaySelector {
@@ -48,7 +55,19 @@ impl DaySelector {
             && self.weekday.is_empty()
     }
 
-    pub(crate) fn display(&self, f: &mut std::fmt::Formatter<'_>, force: bool) -> std::fmt::Result {
+    /// Format this day selector into given formatter.
+    ///
+    /// If `force` is set to true, this is guaranteed to yield a non-empty string by adding "Mo-Su"
+    /// as fallback.
+    pub(crate) fn display(
+        &self,
+        f: &mut core::fmt::Formatter<'_>,
+        force: bool,
+    ) -> core::fmt::Result {
+        if force && self.is_empty() {
+            return write!(f, "Mo-Su");
+        }
+
         if !(self.year.is_empty() && self.monthday.is_empty() && self.week.is_empty()) {
             write_selector(f, &self.year)?;
             write_selector(f, &self.monthday)?;
@@ -67,21 +86,19 @@ impl DaySelector {
             }
         }
 
-        if force && self.weekday.is_empty() {
-            write!(f, "Mo-Su ")
-        } else {
-            write_selector(f, &self.weekday)
-        }
+        write_selector(f, &self.weekday)
     }
 }
 
 impl Display for DaySelector {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         self.display(f, false)
     }
 }
 
-// Year (newtype)
+// --
+// -- Struct: Year (newtype)
+// --
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Year(pub i32);
@@ -130,24 +147,27 @@ impl YearRange {
 }
 
 impl Display for YearRange {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let start = **self.range.start();
         let end = **self.range.end();
+
         write!(f, "{start}")?;
 
-        if start != end || self.step != 1 {
+        if start != end {
             write!(f, "-{end}")?;
-        }
 
-        if self.step != 1 {
-            write!(f, "/{}", self.step)?;
+            if self.step != 1 {
+                write!(f, "/{}", self.step)?;
+            }
         }
 
         Ok(())
     }
 }
 
-// MonthdayRange
+// --
+// -- Enum: MonthdayRange
+// --
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub enum MonthdayRange {
@@ -162,7 +182,7 @@ pub enum MonthdayRange {
 }
 
 impl Display for MonthdayRange {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::Month { range, year } => {
                 if let Some(year) = year {
@@ -188,7 +208,9 @@ impl Display for MonthdayRange {
     }
 }
 
-// Date
+// --
+// -- Enum: Date
+// --
 
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub enum Date {
@@ -222,7 +244,7 @@ impl Date {
 }
 
 impl Display for Date {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Date::Fixed { year, month, day } => {
                 if let Some(year) = year {
@@ -244,7 +266,9 @@ impl Display for Date {
     }
 }
 
-// DateOffset
+// --
+// -- Struct: DateOffset
+// --
 
 #[derive(Clone, Copy, Debug, Default, Hash, PartialEq, Eq)]
 pub struct DateOffset {
@@ -282,7 +306,7 @@ impl DateOffset {
 }
 
 impl Display for DateOffset {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.wday_offset)?;
         write_days_offset(f, self.day_offset)?;
         Ok(())
@@ -306,7 +330,7 @@ impl Default for WeekDayOffset {
 }
 
 impl Display for WeekDayOffset {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::None => {}
             Self::Next(wday) => write!(f, "+{}", wday_str(*wday))?,
@@ -317,7 +341,9 @@ impl Display for WeekDayOffset {
     }
 }
 
-// WeekDayRange
+// --
+// -- Enum: WeekDayRange
+// --
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub enum WeekDayRange {
@@ -334,7 +360,7 @@ pub enum WeekDayRange {
 }
 
 impl Display for WeekDayRange {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::Fixed { range, offset, nth_from_start, nth_from_end } => {
                 write!(f, "{}", wday_str(*range.start()))?;
@@ -381,7 +407,9 @@ impl Display for WeekDayRange {
     }
 }
 
-// HolidayKind
+// --
+// -- Enum: HolidayKind
+// --
 
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub enum HolidayKind {
@@ -390,7 +418,7 @@ pub enum HolidayKind {
 }
 
 impl Display for HolidayKind {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::Public => write!(f, "PH"),
             Self::School => write!(f, "SH"),
@@ -398,7 +426,9 @@ impl Display for HolidayKind {
     }
 }
 
-// WeekNum (newtype)
+// --
+// -- Struct: WeekNum (newtype)
+// --
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct WeekNum(pub u8);
@@ -417,7 +447,9 @@ impl DerefMut for WeekNum {
     }
 }
 
-// WeekRange
+// --
+// -- Struct: WeekRange
+// --
 
 // TODO: ensure there can't be wrapping with step
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
@@ -447,22 +479,26 @@ impl WeekRange {
 }
 
 impl Display for WeekRange {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         if self.range.start() == self.range.end() && self.step == 1 {
             return write!(f, "{:02}", **self.range.start());
         }
 
-        write!(f, "{:02}-{:02}", **self.range.start(), **self.range.end())?;
+        write!(f, "{:02}", **self.range.start())?;
 
-        if self.step != 1 {
-            write!(f, "/{}", self.step)?;
+        if self.range.start() != self.range.end() {
+            write!(f, "-{:02}", **self.range.end())?;
+
+            if self.step != 1 {
+                write!(f, "/{}", self.step)?;
+            }
         }
 
         Ok(())
     }
 }
 
-// Month
+// Enum: Month
 
 #[derive(Copy, Clone, Debug, Hash, Eq, Ord, PartialEq, PartialOrd)]
 pub enum Month {
@@ -534,7 +570,7 @@ impl Month {
 }
 
 impl Display for Month {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", &self.as_str()[..3])
     }
 }

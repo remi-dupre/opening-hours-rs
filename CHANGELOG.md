@@ -21,6 +21,40 @@
 
 - Add `OpeningHours::get_context(&self)`.
 
+## 1.4.0
+
+- Regional holidays will now be considered in unknown status.
+- Update holidays database from nagger. Support for new contries: Bangladesh
+  and Uganda.
+
+## 1.3.1
+
+### General
+
+- Fix: year ranges of a single value with a step were formatted
+  into an invalid expression.
+
+## 1.3.0
+
+### General
+
+- Fix: expression stringification was not idempotent in some cases
+
+### Rust
+
+- opening-hours-syntax: support for no-std environment (ft. @hosseinpro)
+
+## 1.2.1
+
+### General
+
+- Fix: normalization used a normal rule operator instead of additional rule
+  operator in some case
+  (Issue [#97](https://github.com/remi-dupre/opening-hours-rs/issues/97))
+- Fix: normalization prioritize full time ranges for a more natural result.
+  (Issue [#98](https://github.com/remi-dupre/opening-hours-rs/issues/98))
+- Chore: Update dependencies
+
 ## 1.2.0
 
 ### General

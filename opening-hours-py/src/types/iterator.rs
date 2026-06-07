@@ -81,6 +81,8 @@ impl PyStubType for RangeIterator {
                 .into_iter()
                 .map(Into::into)
                 .collect(),
+            source_module: None,
+            type_refs: Default::default(),
         }
     }
 }

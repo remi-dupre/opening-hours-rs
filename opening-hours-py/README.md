@@ -77,7 +77,7 @@ $ git clone https://github.com/remi-dupre/opening-hours-rs.git
 $ cd opening-hours-rs
 
 # Install Python dependancies
-$ poetry install
+$ poetry install --with dev
 
 # Enter the virtualenv
 $ poetry shell

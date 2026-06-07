@@ -21,7 +21,7 @@ jobs:
           pip install poetry
 
       - name: Install dependancies
-        run: poetry install
+        run: poetry install --with publish
 
       - name: Check packaging for pypi.org
         run: poetry run maturin develop

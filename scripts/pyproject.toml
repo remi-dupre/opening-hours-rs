@@ -1,19 +1,22 @@
-[tool.poetry]
+[project]
 name = "scripts"
 version = "0.1.0"
 description = ""
-authors = ["Rémi Dupré <remi@dupre.io>"]
+authors = [{name = "Rémi Dupré", email="remi+openinghours@dupre.io"}]
 license = "MIT or Apache 2.0"
-package-mode = false
+requires-python = "~=3.11"
 
-[tool.poetry.dependencies]
-python = "^3.11"
-aiohttp = "^3.10"
-jinja2 = "^3.1"
-semantic-version = "^2.8.5"
-toml = "^0.10.2"
-typed-argument-parser = "^1.6.1"
+dependencies = [
+  "aiohttp (>=3.10,<4)",
+  "jinja2 (>=3.1,<4)",
+  "semantic-version (>=2.8.5,<3)",
+  "toml (>=0.10.2,<1)",
+  "typed-argument-parser (>=1.6.1,<2)",
+]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+package-mode = false

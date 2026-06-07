@@ -1,9 +1,9 @@
+**/target
+.direnv/
+.envrc
+__pycache__
 docs
 fuzz/artifacts
 opening-hours/data/osm_examples.txt
-__pycache__
+shell.nix
 tarpaulin-report.html
-
-**/target
-.envrc
-.direnv/

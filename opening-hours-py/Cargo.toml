@@ -18,7 +18,7 @@ crate-type = ["cdylib", "rlib"]
 chrono-tz = { version = "0.10", default-features = false }
 chrono = { version = "0.4", default-features = false }
 pyo3-log = "0.13"
-pyo3-stub-gen = "0.17"
+pyo3-stub-gen = "0.22"
 
 [dependencies.opening-hours-rs]
 package = "opening-hours"

@@ -4,7 +4,7 @@
 use opening_hours_syntax::error::Error;
 use opening_hours_syntax::rules::RuleKind;
 
-use crate::{datetime, DateTimeRange, OpeningHours};
+use crate::{date, datetime, DateTimeRange, OpeningHours};
 
 /// https://github.com/remi-dupre/opening-hours-rs/issues/23
 #[test]
@@ -120,4 +120,22 @@ fn gh88_allow_space_in_time_block() {
         .unwrap();
 
     assert_eq!(oh_1.normalize(), oh_2.normalize());
+}
+
+/// https://github.com/remi-dupre/opening-hours-rs/issues/97
+#[test]
+fn gh97_normalize_double_overlap() {
+    let oh = OpeningHours::parse("Mo 13:00-15:00; Tu 08:00-10:00; We 08:00-10:00, We 13:00-15:00")
+        .unwrap();
+
+    let normalized = oh.normalize();
+
+    // From monday to sunday
+    let dates: Vec<_> = (11..=17)
+        .map(|day| date!(&format!("2026-05-{day}")))
+        .collect();
+
+    for date in dates {
+        assert_eq!(oh.schedule_at(date), normalized.schedule_at(date));
+    }
 }

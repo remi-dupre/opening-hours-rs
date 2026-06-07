@@ -57,7 +57,8 @@ macro_rules! schedule_at {
         use $crate::{date, Context, OpeningHours};
 
         let ctx = Context::default()
-            $( .with_holidays($region.holidays()) )?
+            $( .with_holidays($region.holidays())
+               .with_holidays_unknown($region.holidays_regional()))?
             $( .with_locale({
                 use $crate::localization::{Coordinates, TzLocation};
                 let coords = Coordinates::new($coord.0, $coord.1).unwrap();
