@@ -11,7 +11,9 @@ pub use chrono::Weekday;
 
 use crate::display::{write_days_offset, write_selector};
 
-// Display
+// --
+// -- Helpers: Display
+// --
 
 fn wday_str(wday: Weekday) -> &'static str {
     match wday {
@@ -25,12 +27,16 @@ fn wday_str(wday: Weekday) -> &'static str {
     }
 }
 
-// Errors
+// --
+// -- Errors
+// --
 
 #[derive(Clone, Debug)]
 pub struct InvalidMonth;
 
-// DaySelector
+// --
+// -- Struct: DaySelector
+// --
 
 #[derive(Clone, Debug, Default, Hash, PartialEq, Eq)]
 pub struct DaySelector {
@@ -90,7 +96,9 @@ impl Display for DaySelector {
     }
 }
 
-// Year (newtype)
+// --
+// -- Struct: Year (newtype)
+// --
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Year(pub u16);
@@ -132,7 +140,9 @@ impl Display for YearRange {
     }
 }
 
-// MonthdayRange
+// --
+// -- Enum: MonthdayRange
+// --
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub enum MonthdayRange {
@@ -173,7 +183,9 @@ impl Display for MonthdayRange {
     }
 }
 
-// Date
+// --
+// -- Enum: Date
+// --
 
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub enum Date {
@@ -230,7 +242,9 @@ impl Display for Date {
     }
 }
 
-// DateOffset
+// --
+// -- Struct: DateOffset
+// --
 
 #[derive(Clone, Copy, Debug, Default, Hash, PartialEq, Eq)]
 pub struct DateOffset {
@@ -303,7 +317,9 @@ impl Display for WeekDayOffset {
     }
 }
 
-// WeekDayRange
+// --
+// -- Enum: WeekDayRange
+// --
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub enum WeekDayRange {
@@ -367,7 +383,9 @@ impl Display for WeekDayRange {
     }
 }
 
-// HolidayKind
+// --
+// -- Enum: HolidayKind
+// --
 
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub enum HolidayKind {
@@ -384,7 +402,9 @@ impl Display for HolidayKind {
     }
 }
 
-// WeekNum (newtype)
+// --
+// -- Struct: WeekNum (newtype)
+// --
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct WeekNum(pub u8);
@@ -403,7 +423,9 @@ impl DerefMut for WeekNum {
     }
 }
 
-// WeekRange
+// --
+// -- Struct: WeekRange
+// --
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct WeekRange {
@@ -431,7 +453,7 @@ impl Display for WeekRange {
     }
 }
 
-// Month
+// Enum: Month
 
 #[derive(Copy, Clone, Debug, Hash, Eq, Ord, PartialEq, PartialOrd)]
 pub enum Month {

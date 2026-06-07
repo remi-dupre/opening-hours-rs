@@ -2,6 +2,7 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 use compact_calendar::CompactCalendar;
+use opening_hours_syntax::rules::day::HolidayKind;
 
 use crate::localization::{Localize, NoLocation};
 
@@ -30,6 +31,14 @@ impl ContextHolidays {
     /// Get the set of school holidays attached to this context.
     pub fn get_school(&self) -> &CompactCalendar {
         &self.school
+    }
+
+    /// Get the set of holidays corresponding to given kind.
+    pub fn get_for_kind(&self, kind: HolidayKind) -> &CompactCalendar {
+        match kind {
+            HolidayKind::Public => &self.public,
+            HolidayKind::School => &self.school,
+        }
     }
 }
 
