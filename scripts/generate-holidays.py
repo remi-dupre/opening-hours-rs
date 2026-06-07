@@ -18,8 +18,7 @@ API_URL = "https://date.nager.at/api/v3"
 CRATE_ROOT = Path(__file__).parent.parent
 CRATE_ROOT_SRC = CRATE_ROOT / "opening-hours"
 
-FILE_PUBLIC_HOLIDAYS = CRATE_ROOT_SRC / "data" / "holidays_public.txt"
-FILE_SCHOOL_HOLIDAYS = CRATE_ROOT_SRC / "data" / "holidays_school.txt"
+DIRECTORY_DATA = CRATE_ROOT_SRC / "data"
 FILE_ENUM_TEMPLATE = CRATE_ROOT_SRC / "data" / "templates" / "countries.rs.jinja"
 FILE_ENUM_OUTPUT = CRATE_ROOT_SRC / "src" / "localization" / "country" / "generated.rs"
 
@@ -62,28 +61,40 @@ async def load_dates(
     http: aiohttp.ClientSession,
     countries: list[Country],
     kind: str,
-    output_file: Path,
 ):
-    file = open(output_file, "w")
+    path_global = DIRECTORY_DATA / f"holidays_{kind.lower()}.global.txt"
+    path_regional = DIRECTORY_DATA / f"holidays_{kind.lower()}.regional.txt"
 
-    for country in countries:
-        print(f"Fetching {kind.lower()} holidays for {country.name}", file=sys.stderr)
+    with (
+        open(path_global, "w") as file_global,
+        open(path_regional, "w") as file_regional,
+    ):
+        for country in countries:
+            print(
+                f"Fetching {kind.lower()} holidays for {country.name}", file=sys.stderr
+            )
 
-        for year in range(arg.min_year, arg.max_year + 1):
-            async with http.get(
-                f"{API_URL}/PublicHolidays/{year}/{country.iso_code}"
-            ) as resp:
-                if not resp.ok:
-                    print(f"  - skip year {year}", file=sys.stderr)
-                    continue
+            for year in range(arg.min_year, arg.max_year + 1):
+                async with http.get(
+                    f"{API_URL}/PublicHolidays/{year}/{country.iso_code}"
+                ) as resp:
+                    if not resp.ok:
+                        print(f"  - skip year {year}", file=sys.stderr)
+                        continue
 
-                resp = await resp.json()
+                    resp = await resp.json()
 
-            for day in resp:
-                if kind.capitalize() in day["types"]:
+                for day in resp:
+                    if kind.capitalize() not in day["types"]:
+                        continue
+
+                    file = (
+                        file_global
+                        if day["global"] or not day["counties"]
+                        else file_regional
+                    )
+
                     print(country.iso_code, day["date"], file=file)
-
-    file.close()
 
 
 def generate_enum(countries: list[Country]):
@@ -103,11 +114,8 @@ async def main(arg: Arg, http: aiohttp.ClientSession):
 
     match arg.command:
         case "dates":
-            for kind, path in [
-                ("Public", FILE_PUBLIC_HOLIDAYS),
-                ("School", FILE_SCHOOL_HOLIDAYS),
-            ]:
-                await load_dates(arg, http, countries, kind, path)
+            for kind in ("Public", "School"):
+                await load_dates(arg, http, countries, kind)
         case "enum":
             generate_enum(countries)
 

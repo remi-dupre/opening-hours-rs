@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.0
+
+- Regional holidays will now be considered in unknown status.
+- Update holidays database from nagger. Support for new contries: Bangladesh
+  and Uganda.
+
 ## 1.3.1
 
 ### General

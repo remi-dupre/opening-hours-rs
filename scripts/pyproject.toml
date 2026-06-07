@@ -7,11 +7,11 @@ license = "MIT or Apache 2.0"
 requires-python = "~=3.11"
 
 dependencies = [
-  "aiohttp (~=3.10)",
-  "jinja2 (~=3.1)",
-  "semantic-version (~=2.8.5)",
-  "toml (~=0.10.2)",
-  "typed-argument-parser (~=1.6.1)",
+  "aiohttp (>=3.10,<4)",
+  "jinja2 (>=3.1,<4)",
+  "semantic-version (>=2.8.5,<3)",
+  "toml (>=0.10.2,<1)",
+  "typed-argument-parser (>=1.6.1,<2)",
 ]
 
 [build-system]

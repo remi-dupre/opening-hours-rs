@@ -2,6 +2,7 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 use compact_calendar::CompactCalendar;
+use opening_hours_syntax::rules::day::HolidayKind;
 
 use crate::localization::{Localize, NoLocation};
 
@@ -31,6 +32,14 @@ impl ContextHolidays {
     pub fn get_school(&self) -> &CompactCalendar {
         &self.school
     }
+
+    /// Get the set of holidays corresponding to given kind.
+    pub fn get_for_kind(&self, kind: HolidayKind) -> &CompactCalendar {
+        match kind {
+            HolidayKind::Public => &self.public,
+            HolidayKind::School => &self.school,
+        }
+    }
 }
 
 /// All the context attached to a parsed OpeningHours expression and that can
@@ -39,6 +48,10 @@ impl ContextHolidays {
 pub struct Context<L = NoLocation> {
     /// A calendar use for evaluation of public and private holidays.
     pub holidays: ContextHolidays,
+    /// A calendar of holidays where it is unknown whether it applies to
+    /// current location or not. Typicaly, this can include regional holidays
+    /// in a countext where only the country is known.
+    pub holidays_unknown: ContextHolidays,
     /// Specify locality of the place attached to the expression: from
     /// timezone to coordinates.
     pub locale: L,
@@ -54,10 +67,16 @@ impl<L> Context<L> {
         Self { holidays, ..self }
     }
 
+    /// Attach a new unknown holidays component to this context.
+    pub fn with_holidays_unknown(self, holidays_unknown: ContextHolidays) -> Self {
+        Self { holidays_unknown, ..self }
+    }
+
     /// Attach a new locale component to this context.
     pub fn with_locale<L2: Localize>(self, locale: L2) -> Context<L2> {
         Context {
             holidays: self.holidays,
+            holidays_unknown: self.holidays_unknown,
             locale,
             approx_bound_interval_size: None,
         }
@@ -91,12 +110,20 @@ impl Context<crate::localization::TzLocation<chrono_tz::Tz>> {
     pub fn from_coords(coords: crate::localization::Coordinates) -> Self {
         use crate::localization::Country;
 
-        let holidays = Country::try_from_coords(coords)
-            .map(Country::holidays)
+        let locale = crate::localization::TzLocation::from_coords(coords);
+        let country_res = Country::try_from_coords(coords);
+        let holidays = country_res.map(Country::holidays).unwrap_or_default();
+
+        let holidays_unknown = country_res
+            .map(Country::holidays_regional)
             .unwrap_or_default();
 
-        let locale = crate::localization::TzLocation::from_coords(coords);
-        Self { holidays, locale, approx_bound_interval_size: None }
+        Self {
+            holidays,
+            holidays_unknown,
+            locale,
+            approx_bound_interval_size: None,
+        }
     }
 }
 
@@ -104,6 +131,7 @@ impl Default for Context<NoLocation> {
     fn default() -> Self {
         Self {
             holidays: Default::default(),
+            holidays_unknown: Default::default(),
             locale: NoLocation,
             approx_bound_interval_size: None,
         }

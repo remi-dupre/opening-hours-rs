@@ -78,46 +78,83 @@ impl Country {
     /// assert!(holidays_fr.get_public().contains(date));
     /// ```
     pub fn holidays(self) -> ContextHolidays {
-        fn decode_holidays_db(
-            countries: &'static str,
-            encoded_data: &'static [u8],
-        ) -> HashMap<Country, Arc<CompactCalendar>> {
-            let mut reader = DeflateDecoder::new(encoded_data);
+        static DB_PUBLIC_GLOBAL: LazyLock<HashMap<Country, Arc<CompactCalendar>>> =
+            LazyLock::new(|| {
+                decode_holidays_db(
+                    env!("HOLIDAYS_PUBLIC_GLOBAL_REGIONS"),
+                    include_bytes!(env!("HOLIDAYS_PUBLIC_GLOBAL_FILE")),
+                )
+            });
 
-            countries
-                .split(',')
-                .filter_map(|region| {
-                    let calendar = CompactCalendar::deserialize(&mut reader)
-                        .expect("unable to parse holiday data");
-
-                    let Ok(country) = region.parse() else {
-                        #[cfg(feature = "log")]
-                        log::warn!("Unknown initialized country code {region}");
-                        return None;
-                    };
-
-                    Some((country, Arc::new(calendar)))
-                })
-                .collect()
-        }
-
-        static DB_PUBLIC: LazyLock<HashMap<Country, Arc<CompactCalendar>>> = LazyLock::new(|| {
-            decode_holidays_db(
-                env!("HOLIDAYS_PUBLIC_REGIONS"),
-                include_bytes!(env!("HOLIDAYS_PUBLIC_FILE")),
-            )
-        });
-
-        static DB_SCHOOL: LazyLock<HashMap<Country, Arc<CompactCalendar>>> = LazyLock::new(|| {
-            decode_holidays_db(
-                env!("HOLIDAYS_SCHOOL_REGIONS"),
-                include_bytes!(env!("HOLIDAYS_SCHOOL_FILE")),
-            )
-        });
+        static DB_SCHOOL_GLOBAL: LazyLock<HashMap<Country, Arc<CompactCalendar>>> =
+            LazyLock::new(|| {
+                decode_holidays_db(
+                    env!("HOLIDAYS_SCHOOL_GLOBAL_REGIONS"),
+                    include_bytes!(env!("HOLIDAYS_SCHOOL_GLOBAL_FILE")),
+                )
+            });
 
         ContextHolidays::new(
-            DB_PUBLIC.get(&self).cloned().unwrap_or_default(),
-            DB_SCHOOL.get(&self).cloned().unwrap_or_default(),
+            DB_PUBLIC_GLOBAL.get(&self).cloned().unwrap_or_default(),
+            DB_SCHOOL_GLOBAL.get(&self).cloned().unwrap_or_default(),
         )
     }
+
+    /// Load regional holidays for this country from a compact embedded
+    /// database.
+    ///
+    /// ```
+    /// use chrono::NaiveDate;
+    /// use opening_hours::localization::Country;
+    ///
+    /// let holidays_de = Country::DE.holidays_regional();
+    /// let date = NaiveDate::from_ymd_opt(2025, 3, 8).unwrap(); // International Women's Day
+    /// assert!(holidays_de.get_public().contains(date));
+    /// ```
+    pub fn holidays_regional(self) -> ContextHolidays {
+        static DB_PUBLIC_REGIONAL: LazyLock<HashMap<Country, Arc<CompactCalendar>>> =
+            LazyLock::new(|| {
+                decode_holidays_db(
+                    env!("HOLIDAYS_PUBLIC_REGIONAL_REGIONS"),
+                    include_bytes!(env!("HOLIDAYS_PUBLIC_REGIONAL_FILE")),
+                )
+            });
+
+        static DB_SCHOOL_REGIONAL: LazyLock<HashMap<Country, Arc<CompactCalendar>>> =
+            LazyLock::new(|| {
+                decode_holidays_db(
+                    env!("HOLIDAYS_SCHOOL_REGIONAL_REGIONS"),
+                    include_bytes!(env!("HOLIDAYS_SCHOOL_REGIONAL_FILE")),
+                )
+            });
+
+        ContextHolidays::new(
+            DB_PUBLIC_REGIONAL.get(&self).cloned().unwrap_or_default(),
+            DB_SCHOOL_REGIONAL.get(&self).cloned().unwrap_or_default(),
+        )
+    }
+}
+
+/// Helper function to parse the compact calendars generated at build time
+fn decode_holidays_db(
+    countries: &'static str,
+    encoded_data: &'static [u8],
+) -> HashMap<Country, Arc<CompactCalendar>> {
+    let mut reader = DeflateDecoder::new(encoded_data);
+
+    countries
+        .split(',')
+        .filter_map(|region| {
+            let calendar =
+                CompactCalendar::deserialize(&mut reader).expect("unable to parse holiday data");
+
+            let Ok(country) = region.parse() else {
+                #[cfg(feature = "log")]
+                log::warn!("Unknown initialized country code {region}");
+                return None;
+            };
+
+            Some((country, Arc::new(calendar)))
+        })
+        .collect()
 }
