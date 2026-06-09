@@ -89,6 +89,8 @@ impl Display for TimeSpan {
         }
 
         if let Some(repeat) = self.repeats {
+            write!(f, "/")?;
+
             if repeat.num_hours() > 0 {
                 write!(f, "{:02}:", repeat.num_hours())?;
             }

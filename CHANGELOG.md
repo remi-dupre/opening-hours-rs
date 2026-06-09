@@ -12,6 +12,7 @@
   rule kind.
 - **(breaking)** Year and week ranges cannot be defined in inverted order,
   which is similarly to the JS library's behavior.
+- Fix: time spans with repetition were formatting into an invalid expression.
 
 ### Python
 

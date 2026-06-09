@@ -17,6 +17,9 @@ const DISPLAY_MODIFIED: &[(&str, u32, &str, &str)] = &[
     // Used to display an invalid expression as '/' can only follow ranges
     ex!("1975-1975/7", "1975"),
     ex!("week02-02/7", "week02"),
+    // Hide hours when it is null
+    ex!("12:00-14:00/01:30", "12:00-14:00/01:30"),
+    ex!("12:00-14:00/00:30", "12:00-14:00/30"),
 ];
 
 #[test]
