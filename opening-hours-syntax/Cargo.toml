@@ -16,6 +16,9 @@ log = { version = "0.4", features = [ "kv" ], optional = true }
 pest = { version = "2.0", default-features = false }
 pest_derive = { version = "2.0", default-features = false }
 
+[dev-dependencies]
+rstest = "0"
+
 [features]
 default = ["std", "log"]
 std = ["chrono/std", "pest/std", "pest_derive/std"]

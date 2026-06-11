@@ -12,7 +12,9 @@
   rule kind.
 - **(breaking)** Year and week ranges cannot be defined in inverted order,
   which is similarly to the JS library's behavior.
-- Fix: time spans with repetition were formatting into an invalid expression.
+- Fix: expressions formatting to invalid expression
+  - time spans with repetition (eg. "12:00-14:00/01:30")
+  - variable times with offset (eg. "(sunrise-00:10)-(sunset+01:15)")
 
 ### Python
 

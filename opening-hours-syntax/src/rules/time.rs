@@ -129,12 +129,14 @@ pub struct VariableTime {
 
 impl Display for VariableTime {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "{}", self.event)?;
+        let Self { event, offset } = self;
+        let offset_h = offset.abs() / 60;
+        let offset_m = offset.abs() % 60;
 
-        match self.offset.cmp(&0) {
-            Ordering::Less => write!(f, "{}", self.offset),
-            Ordering::Greater => write!(f, "+{}", self.offset),
-            Ordering::Equal => Ok(()),
+        match offset.cmp(&0) {
+            Ordering::Less => write!(f, "({event}-{offset_h:02}:{offset_m:02})"),
+            Ordering::Greater => write!(f, "({event}+{offset_h:02}:{offset_m:02})"),
+            Ordering::Equal => write!(f, "{event}"),
         }
     }
 }
