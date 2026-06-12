@@ -52,19 +52,18 @@ mod test {
     use opening_hours_syntax::rules::day::Year;
 
     use super::easter;
-    use crate::date;
 
     #[test]
     fn test_easter() {
         assert_eq!(easter(Year(i32::MIN)), None);
         assert_eq!(easter(Year(i32::MAX)), None);
-        assert_eq!(easter(Year(1901)), Some(date!("1901-04-07")));
-        assert_eq!(easter(Year(1961)), Some(date!("1961-04-02")));
-        assert_eq!(easter(Year(2024)), Some(date!("2024-03-31")));
-        assert_eq!(easter(Year(2025)), Some(date!("2025-04-20")));
-        assert_eq!(easter(Year(2050)), Some(date!("2050-04-10")));
-        assert_eq!(easter(Year(2106)), Some(date!("2106-04-18")));
-        assert_eq!(easter(Year(2200)), Some(date!("2200-04-06")));
-        assert_eq!(easter(Year(3000)), Some(date!("3000-04-13")));
+        assert_eq!(easter(Year(1901)), "1901-04-07".parse().ok());
+        assert_eq!(easter(Year(1961)), "1961-04-02".parse().ok());
+        assert_eq!(easter(Year(2024)), "2024-03-31".parse().ok());
+        assert_eq!(easter(Year(2025)), "2025-04-20".parse().ok());
+        assert_eq!(easter(Year(2050)), "2050-04-10".parse().ok());
+        assert_eq!(easter(Year(2106)), "2106-04-18".parse().ok());
+        assert_eq!(easter(Year(2200)), "2200-04-06".parse().ok());
+        assert_eq!(easter(Year(3000)), "3000-04-13".parse().ok());
     }
 }

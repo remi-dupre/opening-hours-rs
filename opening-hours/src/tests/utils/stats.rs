@@ -5,6 +5,7 @@ use std::cell::RefCell;
 thread_local! {
     /// Compute stats for current thread.
     static THREAD_TEST_STATS: RefCell<TestStats> = RefCell::default();
+
     /// Used as a lock to ensure a single consumer can be waiting for
     /// statistics at single time.
     static THREAD_LOCK: RefCell<()> = RefCell::default();

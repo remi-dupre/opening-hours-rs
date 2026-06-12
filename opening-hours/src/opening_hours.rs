@@ -55,9 +55,12 @@ impl OpeningHours<NoLocation> {
     /// assert!(OpeningHours::parse("24/7 open").is_ok());
     /// assert!(OpeningHours::parse("not a valid expression").is_err());
     /// ```
+    #[deprecated(
+        since = "2.0.0",
+        note = "Use `OpeningHours::from_str(raw_oh: &str)` or `raw_oh.parse()` via the trait `std::str::FromStr`"
+    )]
     pub fn parse(raw_oh: &str) -> Result<Self, ParserError> {
-        let expr = Arc::new(opening_hours_syntax::parse(raw_oh)?);
-        Ok(Self { expr, ctx: Context::default() })
+        raw_oh.parse()
     }
 }
 
@@ -139,7 +142,7 @@ impl<L: Localize> OpeningHours<L> {
     /// Get the schedule at a given day.
     pub fn schedule_at(&self, date: NaiveDate) -> Schedule {
         #[cfg(test)]
-        crate::tests::stats::notify::generated_schedule();
+        crate::tests::utils::stats::notify::generated_schedule();
 
         if !(DATE_START.date()..DATE_END.date()).contains(&date) {
             return Schedule::default();
@@ -340,7 +343,8 @@ impl FromStr for OpeningHours {
     type Err = ParserError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Self::parse(s)
+        let expr = Arc::new(opening_hours_syntax::parse(s)?);
+        Ok(Self { expr, ctx: Context::default() })
     }
 }
 

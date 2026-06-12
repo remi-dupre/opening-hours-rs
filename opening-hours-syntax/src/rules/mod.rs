@@ -1,6 +1,7 @@
 pub mod day;
 pub mod time;
 
+use alloc::str::FromStr;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 use core::fmt::Display;
@@ -209,6 +210,19 @@ impl RuleKind {
             Self::Open => "open",
             Self::Closed => "closed",
             Self::Unknown => "unknown",
+        }
+    }
+}
+
+impl FromStr for RuleKind {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "open" => Ok(Self::Open),
+            "closed" => Ok(Self::Closed),
+            "unknown" => Ok(Self::Unknown),
+            other => Err(format!("Unknown rule kind {other:?}")),
         }
     }
 }

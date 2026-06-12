@@ -823,6 +823,9 @@ dependencies = [
  "flate2",
  "log",
  "opening-hours-syntax",
+ "pest",
+ "pest_derive",
+ "rstest",
  "sunrise",
  "tzf-rs",
 ]

@@ -45,6 +45,14 @@ pub fn parse(data: &str) -> Result<rl::OpeningHoursExpression> {
     Ok(rl::OpeningHoursExpression { rules })
 }
 
+impl alloc::str::FromStr for rl::OpeningHoursExpression {
+    type Err = Error;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        parse(s)
+    }
+}
+
 // ---
 // --- Time domain
 // ---
