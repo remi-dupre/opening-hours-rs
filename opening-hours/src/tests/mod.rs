@@ -1,5 +1,3 @@
-use crate::OpeningHours;
-
 pub(crate) mod utils;
 
 mod country;
@@ -9,6 +7,10 @@ mod eval_state;
 mod localization;
 mod regression_github;
 mod regression_integration;
+
+use std::str::FromStr;
+
+use crate::OpeningHours;
 
 fn sample() -> impl Iterator<Item = &'static str> {
     include_str!("data/sample.txt")
@@ -21,6 +23,6 @@ fn sample() -> impl Iterator<Item = &'static str> {
 #[test]
 fn parse_sample() {
     for raw_oh in sample() {
-        assert!(OpeningHours::parse(raw_oh).is_ok());
+        assert!(OpeningHours::from_str(raw_oh).is_ok());
     }
 }

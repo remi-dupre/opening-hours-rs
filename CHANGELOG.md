@@ -23,6 +23,7 @@
 ### Rust
 
 - Add `OpeningHours::get_context(&self)`.
+- Deprecate `OpeningHours::parse`, use `std::str::FromStr` instead.
 
 ## 1.4.0
 

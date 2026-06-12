@@ -1,7 +1,8 @@
+use std::str::FromStr;
+
 use chrono::NaiveDateTime;
 use rstest::rstest;
 
-use crate::schedule::Schedule;
 use crate::tests::utils::parse::dt;
 use crate::tests::utils::stats::TestStats;
 use crate::{Context, OpeningHours};
@@ -110,7 +111,7 @@ fn no_next_change(#[case] date: NaiveDateTime, #[case] expr: OpeningHours) {
 fn with_approx_bound_interval_size() {
     let ctx = Context::default().approx_bound_interval_size(chrono::TimeDelta::days(366));
 
-    let oh = OpeningHours::parse("2024-2030Jun open")
+    let oh = OpeningHours::from_str("2024-2030Jun open")
         .unwrap()
         .with_context(ctx);
 
@@ -126,7 +127,7 @@ fn with_approx_bound_interval_size() {
 #[test]
 fn explicit_closed_slow() {
     let stats = TestStats::watch(|| {
-        assert!(OpeningHours::parse("Feb Fr off")
+        assert!(OpeningHours::from_str("Feb Fr off")
             .unwrap()
             .next_change(dt("2021-07-09 19:30"))
             .is_none());

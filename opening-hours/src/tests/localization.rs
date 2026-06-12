@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use crate::localization::{Coordinates, TzLocation};
 use crate::tests::utils::parse::dtz;
 use crate::{Context, OpeningHours};
@@ -18,7 +20,7 @@ fn coords_cannot_be_nan() {
 fn ctx_with_tz() {
     let ctx = Context::default().with_locale(TzLocation::new(TIMEZONE));
 
-    let oh = OpeningHours::parse("10:00-18:00")
+    let oh = OpeningHours::from_str("10:00-18:00")
         .unwrap()
         .with_context(ctx);
 
@@ -34,7 +36,7 @@ fn ctx_with_tz() {
 fn ends_at_invalid_time() {
     let ctx = Context::default().with_locale(TzLocation::new(TIMEZONE));
 
-    let oh = OpeningHours::parse("10:00-26:30")
+    let oh = OpeningHours::from_str("10:00-26:30")
         .unwrap()
         .with_context(ctx);
 
@@ -50,7 +52,7 @@ fn ends_at_invalid_time() {
 fn ends_at_ambiguous_time() {
     let ctx = Context::default().with_locale(TzLocation::new(TIMEZONE));
 
-    let oh = OpeningHours::parse("10:00-26:30")
+    let oh = OpeningHours::from_str("10:00-26:30")
         .unwrap()
         .with_context(ctx);
 
@@ -66,7 +68,7 @@ fn infer_tz() {
     let ctx = Context::default().with_locale(TzLocation::from_coords(COORDS_PARIS));
     assert_eq!(ctx.locale.get_timezone(), &TIMEZONE);
 
-    let oh = OpeningHours::parse("sunrise-sunset")
+    let oh = OpeningHours::from_str("sunrise-sunset")
         .unwrap()
         .with_context(ctx);
 
@@ -89,7 +91,7 @@ fn infer_all() {
     let ctx = Context::from_coords(COORDS_PARIS);
     assert_eq!(ctx.locale.get_timezone(), &TIMEZONE);
 
-    let oh = OpeningHours::parse("sunrise-sunset; PH off")
+    let oh = OpeningHours::from_str("sunrise-sunset; PH off")
         .unwrap()
         .with_context(ctx);
 

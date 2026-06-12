@@ -129,7 +129,7 @@ fn s009_pj_no_open_before_separator() {
 #[test]
 fn s010_pj_slow_after_24_7() {
     let stats = TestStats::watch(|| {
-        assert!(OpeningHours::parse("24/7 open ; 2021Jan-Feb off")
+        assert!(OpeningHours::from_str("24/7 open ; 2021Jan-Feb off")
             .unwrap()
             .next_change(dt("2021-07-09 19:30"))
             .is_none());
@@ -138,7 +138,7 @@ fn s010_pj_slow_after_24_7() {
     assert!(stats.count_generated_schedules < 10);
 
     let stats = TestStats::watch(|| {
-        assert!(OpeningHours::parse("24/7 open ; 2021 Jan 01-Feb 10 off")
+        assert!(OpeningHours::from_str("24/7 open ; 2021 Jan 01-Feb 10 off")
             .unwrap()
             .next_change(dt("2021-07-09 19:30"))
             .is_none());
@@ -163,7 +163,7 @@ fn s011_fuzz_extreme_year() {
 #[test]
 fn s012_fuzz_slow_sh() {
     let stats = TestStats::watch(|| {
-        assert!(OpeningHours::parse("SH")
+        assert!(OpeningHours::from_str("SH")
             .unwrap()
             .next_change(dt("2020-01-01 00:00"))
             .is_none());
@@ -175,7 +175,7 @@ fn s012_fuzz_slow_sh() {
 #[test]
 fn s013_fuzz_slow_weeknum() {
     let stats = TestStats::watch(|| {
-        assert!(OpeningHours::parse("Novweek09")
+        assert!(OpeningHours::from_str("Novweek09")
             .unwrap()
             .next_change(dt("2020-01-01 00:00"))
             .is_none());
@@ -186,7 +186,7 @@ fn s013_fuzz_slow_weeknum() {
 
 #[test]
 fn s014_fuzz_feb30_before_leap_year() {
-    assert!(OpeningHours::parse("Feb30")
+    assert!(OpeningHours::from_str("Feb30")
         .unwrap()
         .next_change(dt("4419-03-01 00:00"))
         .is_none());
@@ -215,7 +215,7 @@ fn s016_fuzz_week01_sh() {
         dt("2010-01-04 00:00"),
     );
 
-    assert!(OpeningHours::parse("week01SH")
+    assert!(OpeningHours::from_str("week01SH")
         .unwrap()
         .next_change(now)
         .is_none());
@@ -225,7 +225,7 @@ fn s016_fuzz_week01_sh() {
 fn s017_fuzz_open_range_timeout() {
     let stats = TestStats::watch(|| {
         assert_eq!(
-            OpeningHours::parse("May2+")
+            OpeningHours::from_str("May2+")
                 .unwrap()
                 .next_change(dt("2020-01-01 12:00"))
                 .unwrap(),
@@ -233,7 +233,7 @@ fn s017_fuzz_open_range_timeout() {
         );
 
         assert_eq!(
-            OpeningHours::parse("May2+")
+            OpeningHours::from_str("May2+")
                 .unwrap()
                 .next_change(dt("2020-05-15 12:00"))
                 .unwrap(),
@@ -254,14 +254,14 @@ fn s018_fuzz_ph_infinite_loop() {
 
     let ctx = Context::from_coords(Coordinates::new(0.0, 4.2619).unwrap());
     let tz = *ctx.locale.get_timezone();
-    let oh = OpeningHours::parse("PH").unwrap().with_context(ctx);
+    let oh = OpeningHours::from_str("PH").unwrap().with_context(ctx);
     oh.next_change(dtz("2106-02-12 13:54", tz));
 }
 
 #[test]
 fn s019_fuzz_stringify_dusk() -> Result<(), Error> {
     let oh: OpeningHours = "dusk-22:00".parse()?;
-    assert!(OpeningHours::parse(&oh.to_string()).is_ok());
+    assert!(OpeningHours::from_str(&oh.to_string()).is_ok());
     Ok(())
 }
 
@@ -270,7 +270,7 @@ fn s20_year_starts_at_weeknum_53() -> Result<(), Error> {
     // 1st of January 7583 is in week 53 of previous year which could result
     // on jumping on year 7584 with a failing implementation.
     assert_eq!(
-        OpeningHours::parse("week 13")?
+        OpeningHours::from_str("week 13")?
             .next_change(dt("7583-01-01 12:00"))
             .unwrap(),
         dt("7583-03-28 00:00"),

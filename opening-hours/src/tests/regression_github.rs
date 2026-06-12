@@ -1,6 +1,8 @@
 //! Tests that proove fixes of past Github issues.
 //! See https://github.com/remi-dupre/opening-hours-rs/issues
 
+use std::str::FromStr;
+
 use opening_hours_syntax::error::Error;
 use opening_hours_syntax::rules::RuleKind;
 
@@ -46,7 +48,7 @@ fn gh45_infinite_loop() -> Result<(), Error> {
 // 24 25 26 27 28 29 30
 #[test]
 fn gh52_no_interval_after_last_midnight() -> Result<(), Error> {
-    let oh = OpeningHours::parse("Mo-Su 00:00-06:00, 23:00-00:00")?;
+    let oh = OpeningHours::from_str("Mo-Su 00:00-06:00, 23:00-00:00")?;
     let mut intervals = oh.iter_range(dt("2024-11-11 01:00"), dt("2024-11-12 01:00"));
 
     assert_eq!(
@@ -103,7 +105,7 @@ fn gh56_only_close_when_no_day_filter() -> Result<(), Error> {
 /// https://github.com/remi-dupre/opening-hours-rs/issues/77
 #[test]
 fn gh77_invalid_time_step_panics() {
-    OpeningHours::parse("Mo-Sa 09:00-20:00/21:00").unwrap();
+    OpeningHours::from_str("Mo-Sa 09:00-20:00/21:00").unwrap();
 }
 
 /// https://github.com/remi-dupre/opening-hours-rs/issues/88
@@ -113,11 +115,12 @@ fn gh77_invalid_time_step_panics() {
 #[test]
 fn gh88_allow_space_in_time_block() {
     let oh_1 =
-        OpeningHours::parse("Mo 11:45-14:30; Tu-Fr 11:45-14:30, 19:00-21:45; Sa 19:00-21:45")
+        OpeningHours::from_str("Mo 11:45-14:30; Tu-Fr 11:45-14:30, 19:00-21:45; Sa 19:00-21:45")
             .unwrap();
 
-    let oh_2 = OpeningHours::parse("Mo 11:45-14:30; Tu-Fr 11:45-14:30,19:00-21:45; Sa 19:00-21:45")
-        .unwrap();
+    let oh_2 =
+        OpeningHours::from_str("Mo 11:45-14:30; Tu-Fr 11:45-14:30,19:00-21:45; Sa 19:00-21:45")
+            .unwrap();
 
     assert_eq!(oh_1.normalize(), oh_2.normalize());
 }
@@ -125,8 +128,9 @@ fn gh88_allow_space_in_time_block() {
 /// https://github.com/remi-dupre/opening-hours-rs/issues/97
 #[test]
 fn gh97_normalize_double_overlap() {
-    let oh = OpeningHours::parse("Mo 13:00-15:00; Tu 08:00-10:00; We 08:00-10:00, We 13:00-15:00")
-        .unwrap();
+    let oh =
+        OpeningHours::from_str("Mo 13:00-15:00; Tu 08:00-10:00; We 08:00-10:00, We 13:00-15:00")
+            .unwrap();
 
     let normalized = oh.normalize();
 

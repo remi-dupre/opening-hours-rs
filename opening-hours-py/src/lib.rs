@@ -3,12 +3,14 @@ pub(crate) mod types;
 #[cfg(test)]
 mod tests;
 
+use std::str::FromStr;
+
 use pyo3::exceptions::PyException;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods};
 
-use ::opening_hours_rs::localization::{Coordinates, Country, TzLocation};
-use ::opening_hours_rs::{Context, OpeningHours};
+use opening_hours_rs::localization::{Coordinates, Country, TzLocation};
+use opening_hours_rs::{Context, OpeningHours};
 
 use crate::types::datetime::DateTimeMaybeAware;
 use crate::types::iterator::RangeIterator;
@@ -58,7 +60,7 @@ pyo3::create_exception!(
 #[pyfunction]
 #[pyo3(text_signature = "(oh, /)")]
 fn validate(oh: &str) -> bool {
-    OpeningHours::parse(oh).is_ok()
+    OpeningHours::from_str(oh).is_ok()
 }
 
 /// Parse input opening hours description.
@@ -127,7 +129,7 @@ impl PyOpeningHours {
             })
             .transpose()?;
 
-        let oh = OpeningHours::parse(oh)
+        let oh = OpeningHours::from_str(oh)
             .map_err(|err| ParserError::new_err(format!("Failed to parse expression: {err}")))?;
 
         if let Some(iso_code) = country {
