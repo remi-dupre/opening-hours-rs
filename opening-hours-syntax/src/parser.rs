@@ -40,7 +40,7 @@ pub fn parse(data: &str) -> Result<rl::OpeningHoursExpression> {
 impl alloc::str::FromStr for rl::OpeningHoursExpression {
     type Err = Error;
 
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+    fn from_str(s: &str) -> core::result::Result<Self, Self::Err> {
         parse(s)
     }
 }
