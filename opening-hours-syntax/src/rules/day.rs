@@ -290,13 +290,13 @@ impl Display for Date {
 #[derive(Clone, Copy, Debug, Default, Hash, PartialEq, Eq)]
 pub struct DateOffset {
     pub wday_offset: WeekDayOffset,
-    pub day_offset: i64,
+    pub day_offset: i16,
 }
 
 impl DateOffset {
     #[inline]
     pub fn apply(&self, mut date: NaiveDate) -> NaiveDate {
-        date += Duration::days(self.day_offset);
+        date += Duration::days(self.day_offset.into());
 
         match self.wday_offset {
             WeekDayOffset::None => {}
@@ -366,13 +366,13 @@ impl Display for WeekDayOffset {
 pub enum WeekDayRange {
     Fixed {
         range: RangeInclusive<Weekday>,
-        offset: i64,
+        offset: i16,
         nth_from_start: [bool; 5],
         nth_from_end: [bool; 5],
     },
     Holiday {
         kind: HolidayKind,
-        offset: i64,
+        offset: i16,
     },
 }
 

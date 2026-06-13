@@ -453,7 +453,7 @@ impl DateFilter for ds::WeekDayRange {
                         .filter(date, ctx);
                 }
 
-                let date = date - Duration::days(*offset);
+                let date = date - Duration::days((*offset).into());
                 let pos_from_start = (date.day() as u8 - 1) / 7;
                 let pos_from_end = (count_days_in_month(date) - date.day() as u8) / 7;
                 let range_u8 = (*range.start() as u8)..=(*range.end() as u8);
@@ -463,7 +463,7 @@ impl DateFilter for ds::WeekDayRange {
                         || nth_from_end[usize::from(pos_from_end)])
             }
             ds::WeekDayRange::Holiday { kind, offset } => {
-                let date = date - Duration::days(*offset);
+                let date = date - Duration::days((*offset).into());
 
                 ctx.holidays.get_for_kind(*kind).contains(date)
                     || ctx.holidays_unknown.get_for_kind(*kind).contains(date)
@@ -479,7 +479,7 @@ impl DateFilter for ds::WeekDayRange {
             return false;
         };
 
-        let date = date - Duration::days(*offset);
+        let date = date - Duration::days((*offset).into());
         ctx.holidays_unknown.get_for_kind(*kind).contains(date)
     }
 
@@ -489,7 +489,7 @@ impl DateFilter for ds::WeekDayRange {
     {
         match self {
             ds::WeekDayRange::Holiday { kind, offset } => Some({
-                let date_with_offset = date - Duration::days(*offset);
+                let date_with_offset = date - Duration::days((*offset).into());
                 let calendar = ctx.holidays.get_for_kind(*kind);
                 let calendar_unknown = ctx.holidays_unknown.get_for_kind(*kind);
 
@@ -498,7 +498,7 @@ impl DateFilter for ds::WeekDayRange {
                         date.succ_opt().unwrap_or_else(|| DATE_END.date())
                     } else {
                         cal.first_after(date_with_offset)
-                            .map(|following| following + Duration::days(*offset))
+                            .map(|following| following + Duration::days((*offset).into()))
                             .unwrap_or_else(|| DATE_END.date())
                     }
                 };

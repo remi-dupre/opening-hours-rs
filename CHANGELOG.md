@@ -24,6 +24,8 @@
 ### Rust
 
 - Add `OpeningHours::get_context(&self)`.
+- Infaillible parser: parsing any call is garanteed to be panic-free. Added new
+  class of implementation issues that would prompt you to open a Github issue.
 - Deprecate `OpeningHours::parse`, use `std::str::FromStr` instead.
 
 ## 1.4.0

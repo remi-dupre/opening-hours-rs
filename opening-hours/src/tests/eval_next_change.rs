@@ -42,6 +42,9 @@ use crate::{Context, OpeningHours};
 #[case::month_wday("2020-01-27 12:00", "Jan Mo[1]-Jan Su[-1]", "2021-01-04 00:00")]
 #[case::month_wday("2020-01-01 12:00", "easter-2025 Jan Su[-2]", "2024-03-31 00:00")]
 #[case::month_wday("2024-03-31 12:00", "easter-2025 Jan Su[-2]", "2025-01-20 00:00")]
+#[case::month_wday("2020-01-01 12:00", "Jan Mo[1]-15", "2020-01-06 00:00")]
+#[case::month_wday("2020-01-06 12:00", "Jan Mo[1]-15", "2020-01-16 00:00")]
+#[case::month_wday("2020-01-16 12:00", "Jan Mo[1]-15", "2021-01-04 00:00")]
 // Only the comment changes the state
 #[case::comment("2024-01-01 12:00", r#""aaa" ; Mar"#, "2024-03-01 00:00")]
 #[case::comment("2024-03-15 12:00", r#""aaa" ; Mar"#, "2024-04-01 00:00")]
@@ -84,11 +87,12 @@ fn next_change(
 #[case::month("2021-04-17 12:00", "2021 Mar 28-Apr 16")]
 #[case::month("2021-04-17 12:00", "Mar 28-2021 Apr 16")]
 #[case::month_wday("2025-01-20 12:00", "easter-2025 Jan Su[-2]")]
+#[case::month_wday("2020-01-01 12:00", "2020 Jan Mo[-1]-15")]
+#[case::month_wday("2020-01-01 12:00", "2020 Jan Mo[5]-15")]
 fn no_next_change(#[case] date: ParsedDateTime, #[case] expr: OpeningHours) {
-    assert!(
-        expr.next_change(*date).is_none(),
-        "shouldn't have a next change for '{expr}' at '{date}'",
-    )
+    if let Some(next_change) = expr.next_change(*date) {
+        panic!("shouldn't have a next change for '{expr}' at '{date}', got {next_change}",)
+    }
 }
 
 #[test]

@@ -11,6 +11,7 @@ use crate::rules::OpeningHoursExpression;
 #[case("10:00-18:00/30")]
 #[case("10:00-18:00/01:30")]
 #[case(r#"Mo-Fr open "ring the bell""#)]
+#[case("Jan Mo[1]-30")]
 // Comments
 #[case::comment(r#"open "comment""#)]
 #[case::comment(r#""comment""#)]

@@ -19,6 +19,8 @@ fn main() {
         }
     };
 
+    dbg!(oh.get_expression());
+
     println!(" - expression: {oh}");
     println!(" - normalized: {}", oh.normalize());
     println!(" - date: {start_date:?}");

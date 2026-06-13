@@ -185,7 +185,7 @@ date_from = {
       year? ~ variable_date
     | (year ~ " "?)? ~ month ~ " "? ~ daynum
     | (year ~ " "?)? ~ month ~ " " ~ wday ~ "[" ~ nth_minus? ~ nth ~ "]"
-        ~ !day_offset ~ !( "," ~ !monthday_range )
+        ~ !( "," ~ !monthday_range )
 }
 
 date_to = {
@@ -285,7 +285,7 @@ year = @{
     | ( '2'..'9' ~ ASCII_DIGIT{3} )  // 2000 -> 9999
 }
 
-positive_number = @{ "0"* ~ ASCII_NONZERO_DIGIT ~ ASCII_DIGIT* }
+positive_number = @{ "0"* ~ ASCII_NONZERO_DIGIT ~ ASCII_DIGIT{,4} }
 
 comment = { comment_delimiter ~ comment_inner ~ comment_delimiter }
 
