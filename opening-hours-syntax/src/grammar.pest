@@ -34,7 +34,7 @@ fallback_rule_separator = @{ space? ~ "||" ~ space }
 
 rules_modifier = {
       comment
-    | rules_modifier_enum ~ ( space? ~ comment )?
+    | rules_modifier_enum ~ ( space ~ comment )?
 }
 
 rules_modifier_enum = {
@@ -182,8 +182,10 @@ date_offset = {
 
 // NOTE: In specification space separators are not allowed.
 date_from = {
-      (year ~ " "?)? ~ month ~ " "? ~ daynum
-    | year? ~ variable_date
+      year? ~ variable_date
+    | (year ~ " "?)? ~ month ~ " "? ~ daynum
+    | (year ~ " "?)? ~ month ~ " " ~ wday ~ "[" ~ nth_minus? ~ nth ~ "]"
+        ~ !day_offset ~ !( "," ~ !monthday_range )
 }
 
 date_to = {

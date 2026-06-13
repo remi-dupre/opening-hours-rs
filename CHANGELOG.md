@@ -12,6 +12,7 @@
   rule kind.
 - **(breaking)** Year and week ranges cannot be defined in inverted order,
   which is similarly to the JS library's behavior.
+- Syntax: handle week days in month selectors (eg. "Jan Su[-1]-Jul Mo[1]")
 - Fix: expressions formatting to invalid expression
   - time spans with repetition (eg. "12:00-14:00/01:30")
   - variable times with offset (eg. "(sunrise-00:10)-(sunset+01:15)")

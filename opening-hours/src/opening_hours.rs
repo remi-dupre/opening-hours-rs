@@ -43,7 +43,7 @@ pub struct OpeningHours<L: Localize = NoLocation> {
     /// Rules describing opening hours
     expr: Arc<OpeningHoursExpression>,
     /// Evaluation context
-    pub(crate) ctx: Context<L>,
+    ctx: Context<L>,
 }
 
 impl OpeningHours<NoLocation> {
@@ -72,6 +72,11 @@ impl<L: Localize> OpeningHours<L> {
     /// Get the evaluation context for this expression.
     pub fn get_context(&self) -> &Context<L> {
         &self.ctx
+    }
+
+    /// Get the inner expression object.
+    pub fn get_expression(&self) -> Arc<OpeningHoursExpression> {
+        self.expr.clone()
     }
 
     /// Set a new evaluation context for this expression.

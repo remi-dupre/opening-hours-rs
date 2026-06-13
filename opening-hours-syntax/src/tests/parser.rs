@@ -11,6 +11,14 @@ use crate::rules::OpeningHoursExpression;
 #[case("10:00-18:00/30")]
 #[case("10:00-18:00/01:30")]
 #[case(r#"Mo-Fr open "ring the bell""#)]
+// Comments
+#[case::comment(r#"open "comment""#)]
+#[case::comment(r#""comment""#)]
+#[case::comment(r#"24/7 "comment""#)]
+// Ambiguity of a weekday after a month, it could either be a full montday
+// range or a monthday range followed by a weekday range.
+#[case("Feb Mo[1] +2 days")]
+#[case("Feb Mo[1],Tu-Fr")]
 // Expressions that are not handled by the documented grammar but either make sense or are commonly
 // supported by other libraries
 #[case::relaxed("4:00-8:00")]
@@ -33,6 +41,9 @@ fn parse_valid(#[case] expression: &str) {
 #[case("InvertedWeekRange", "week15-10/3")]
 #[case("InvertedYearRange", "2020-2010")]
 #[case("InvertedYearRange", "2020-2010/3")]
+// Comments
+#[case::comment("Parser", r#"open "comment1" "comment2""#)]
+#[case::comment("Parser", r#""comment" open"#)] // could be allowed with warning
 // 00 is invalid for monthdays
 #[case::monthday00("Parser", "Jan 0")]
 #[case::monthday00("Parser", "Jan 00")]
@@ -44,9 +55,9 @@ fn parse_valid(#[case] expression: &str) {
 #[case::extended_start("Parser", "24:11-28:00")]
 #[case::extended_start("Parser", "27:43-10:00")]
 fn parse_invalid(#[case] expected_error_variant: &str, #[case] expression: &str) {
-    let err = str::parse::<OpeningHoursExpression>(dbg!(expression))
-        .err()
-        .expect("parser didn't raise an error on invalid expression");
+    let Err(err) = str::parse::<OpeningHoursExpression>(expression) else {
+        panic!("parser should have raised an error on {expression}")
+    };
 
     let err_debug = format!("{err:?}");
 

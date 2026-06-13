@@ -219,6 +219,12 @@ pub enum Date {
         month: Month,
         day: u8,
     },
+    Weekday {
+        year: Option<Year>,
+        month: Month,
+        wday: Weekday,
+        nth: i8,
+    },
     Easter {
         year: Option<Year>,
     },
@@ -238,7 +244,7 @@ impl Date {
     #[inline]
     pub fn year(&self) -> Option<Year> {
         match *self {
-            Date::Fixed { year, .. } | Date::Easter { year } => year,
+            Self::Fixed { year, .. } | Self::Weekday { year, .. } | Self::Easter { year } => year,
         }
     }
 }
@@ -246,23 +252,34 @@ impl Date {
 impl Display for Date {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Date::Fixed { year, month, day } => {
+            Self::Fixed { year, month, day } => {
                 if let Some(year) = year {
                     write!(f, "{} ", **year)?;
                 }
 
-                write!(f, "{month} {day}")?;
+                write!(f, "{month} {day}")
             }
-            Date::Easter { year } => {
+            Self::Weekday { year, month, wday: weekday, nth } => {
                 if let Some(year) = year {
                     write!(f, "{} ", **year)?;
                 }
 
-                write!(f, "easter")?;
+                write!(f, "{month} {}", wday_str(*weekday))?;
+
+                if *nth != 0 {
+                    write!(f, "[{nth}]")?;
+                }
+
+                Ok(())
+            }
+            Self::Easter { year } => {
+                if let Some(year) = year {
+                    write!(f, "{} ", **year)?;
+                }
+
+                write!(f, "easter")
             }
         }
-
-        Ok(())
     }
 }
 

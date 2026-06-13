@@ -265,6 +265,32 @@ impl DateFilter for ds::YearRange {
     }
 }
 
+/// Get the day number for a given
+fn date_for_nth_wday(year: Year, month: Month, wday: Weekday, nth: i8) -> Option<NaiveDate> {
+    if nth >= 0 {
+        return NaiveDate::from_weekday_of_month_opt(*year, month.into(), wday, nth.unsigned_abs());
+    }
+
+    let num_occurences = {
+        // The shortest month being february on a non-leap year, we are guaranteed that a day of
+        // week occurs at least 4 times.
+        if NaiveDate::from_weekday_of_month_opt(*year, month.into(), wday, 5).is_some() {
+            5
+        } else {
+            4
+        }
+    };
+
+    NaiveDate::from_weekday_of_month_opt(
+        *year,
+        month.into(),
+        wday,
+        // If nth > num_occurences, then this will equal 0 in which case
+        // `NaiveDate::from_weekday_of_month_opt` returns None.
+        (num_occurences + 1u8).saturating_sub(nth.unsigned_abs()),
+    )
+}
+
 /// Project date on a given year.
 fn date_on_year(
     date: ds::Date,
@@ -273,13 +299,28 @@ fn date_on_year(
 ) -> Option<NaiveDate> {
     match date {
         ds::Date::Easter { year } => easter(year.unwrap_or(for_year)),
-        ds::Date::Fixed { year: None, month, day } => {
+        ds::Date::Fixed { year, month, day } => {
+            if year.is_some() && year != Some(for_year) {
+                return None;
+            }
+
             Some(date_builder(for_year, month.into(), day.into()))
         }
-        ds::Date::Fixed { year: Some(year), month, day } if year == for_year => {
-            Some(date_builder(year, month.into(), day.into()))
+        ds::Date::Weekday { year, month, wday, nth } => {
+            if year.is_some() && year != Some(for_year) {
+                return None;
+            }
+
+            date_for_nth_wday(for_year, month, wday, nth).inspect(|date| {
+                // `date_for_nth_wday` is guaranteed to find an exact date so we don't need to
+                // use `date_builder`. This check ensures that we don't use this builder to
+                // filter on dates without updating this logic in the future.
+                debug_assert_eq!(
+                    date_builder(Year(date.year()), date.month(), date.day()),
+                    *date
+                )
+            })
         }
-        _ => None,
     }
 }
 

@@ -1,108 +1,92 @@
 use std::str::FromStr;
 
-use chrono::NaiveDateTime;
 use rstest::rstest;
 
-use crate::tests::utils::parse::dt;
+use crate::tests::utils::parse::{dt, ParsedDateTime};
 use crate::tests::utils::stats::TestStats;
 use crate::{Context, OpeningHours};
 
 #[rstest]
 // Outside of global evaluator bounds
-#[case::before_bounds(dt("1789-07-14 12:00"), "24/7", dt("1900-01-01 00:00"))]
-#[case::before_bounds(dt("1789-07-14 12:00"), "3000", dt("3000-01-01 00:00"))]
+#[case::before_bounds("1789-07-14 12:00", "24/7", "1900-01-01 00:00")]
+#[case::before_bounds("1789-07-14 12:00", "3000", "3000-01-01 00:00")]
 // Time sector
-#[case::time_selector(dt("2024-06-21 22:30"), "Jun dusk+", dt("2024-06-22 00:00"))]
+#[case::time_selector("2024-06-21 22:30", "Jun dusk+", "2024-06-22 00:00")]
 // Year ranges
-#[case::year_range(dt("2021-02-09 21:00"), "2000-3000", dt("3001-01-01 00:00"))]
-#[case::year_range(dt("2021-02-09 21:00"), "2000-3000/42", dt("2042-01-01 00:00"))]
-#[case::year_range(dt("2021-02-09 21:00"), "2000-3000/21", dt("2022-01-01 00:00"))]
-#[case::year_range(
-    dt("2021-02-09 21:00"),
-    "2020,8000-9000 10:00-22:00",
-    dt("8000-01-01 10:00")
-)]
-#[case::year_range(
-    dt("2021-02-09 21:00"),
-    "2020,8000-9000 10:00-22:00",
-    dt("8000-01-01 10:00")
-)]
+#[case::year_range("2021-02-09 21:00", "2000-3000", "3001-01-01 00:00")]
+#[case::year_range("2021-02-09 21:00", "2000-3000/42", "2042-01-01 00:00")]
+#[case::year_range("2021-02-09 21:00", "2000-3000/21", "2022-01-01 00:00")]
+#[case::year_range("2021-02-09 21:00", "2020,8000-9000 10:00-22:00", "8000-01-01 10:00")]
+#[case::year_range("2021-02-09 21:00", "2020,8000-9000 10:00-22:00", "8000-01-01 10:00")]
 // Week Range
 // . week 52 of 7569 is the last week of the year and ends at the 28th
-#[case::week(dt("7569-12-28 08:05"), "week 52 ; Jun", dt("7569-12-29 00:00"))]
+#[case::week("7569-12-28 08:05", "week 52 ; Jun", "7569-12-29 00:00")]
 // . week 52 of 7569 is the last week of the year and ends at the 28th
-#[case::week(dt("7569-12-28 08:05"), "week 1 ; Jun", dt("7569-12-29 00:00"))]
+#[case::week("7569-12-28 08:05", "week 1 ; Jun", "7569-12-29 00:00")]
 // . week 52 of 2021 is the last week and ends on the 2th of January
-#[case::week(dt("2021-12-28 08:05"), "week 52 ; Jun", dt("2022-01-03 00:00"))]
+#[case::week("2021-12-28 08:05", "week 52 ; Jun", "2022-01-03 00:00")]
 // . week 53 of 2020 ends on 3rd of January
-#[case::week(dt("2020-12-28 08:05"), "week 53 ; Jun", dt("2021-01-04 00:00"))]
+#[case::week("2020-12-28 08:05", "week 53 ; Jun", "2021-01-04 00:00")]
 // . there is no week 53 from 2021 to 2026
-#[case::week(dt("2021-01-15 08:05"), "week 53", dt("2026-12-28 00:00"))]
-// Month Range
-#[case::month(dt("2024-02-15 10:00"), "Jun", dt("2024-06-01 00:00"))]
-#[case::month(dt("2024-06-15 10:00"), "Jun", dt("2024-07-01 00:00"))]
-#[case::month(dt("2021-02-15 12:00"), "2021 Mar 28-Apr 16", dt("2021-03-28 00:00"))]
-#[case::month(dt("2021-04-01 12:00"), "2021 Mar 28-Apr 16", dt("2021-04-17 00:00"))]
-#[case::month(dt("2021-02-15 12:00"), "Mar 28-2021 Apr 16", dt("2021-03-28 00:00"))]
-#[case::month(dt("2021-04-01 12:00"), "Mar 28-2021 Apr 16", dt("2021-04-17 00:00"))]
+#[case::week("2021-01-15 08:05", "week 53", "2026-12-28 00:00")]
+// Month Selector
+#[case::month("2024-02-15 10:00", "Jun", "2024-06-01 00:00")]
+#[case::month("2024-06-15 10:00", "Jun", "2024-07-01 00:00")]
+#[case::month("2021-02-15 12:00", "2021 Mar 28-Apr 16", "2021-03-28 00:00")]
+#[case::month("2021-04-01 12:00", "2021 Mar 28-Apr 16", "2021-04-17 00:00")]
+#[case::month("2021-02-15 12:00", "Mar 28-2021 Apr 16", "2021-03-28 00:00")]
+#[case::month("2021-04-01 12:00", "Mar 28-2021 Apr 16", "2021-04-17 00:00")]
+// Month Selector (with weekday)
+#[case::month_wday("2020-01-01 12:00", "Jan Mo[1]-Jan Su[-1]", "2020-01-06 00:00")]
+#[case::month_wday("2020-01-06 12:00", "Jan Mo[1]-Jan Su[-1]", "2020-01-27 00:00")]
+#[case::month_wday("2020-01-27 12:00", "Jan Mo[1]-Jan Su[-1]", "2021-01-04 00:00")]
+#[case::month_wday("2020-01-01 12:00", "easter-2025 Jan Su[-2]", "2024-03-31 00:00")]
+#[case::month_wday("2024-03-31 12:00", "easter-2025 Jan Su[-2]", "2025-01-20 00:00")]
 // Only the comment changes the state
-#[case::comment(dt("2024-01-01 12:00"), r#""aaa" ; Mar"#, dt("2024-03-01 00:00"))]
-#[case::comment(dt("2024-03-15 12:00"), r#""aaa" ; Mar"#, dt("2024-04-01 00:00"))]
+#[case::comment("2024-01-01 12:00", r#""aaa" ; Mar"#, "2024-03-01 00:00")]
+#[case::comment("2024-03-15 12:00", r#""aaa" ; Mar"#, "2024-04-01 00:00")]
 #[case::comment(
-    dt("2024-01-01 12:00"),
+    "2024-01-01 12:00",
     r#"00:00-14:00 "may open earlier", 14:00-24:00"#,
-    dt("2024-01-01 14:00")
+    "2024-01-01 14:00"
 )]
 #[case::comment(
-    dt("2024-01-01 16:00"),
+    "2024-01-01 16:00",
     r#"00:00-14:00 "may open earlier", 14:00-24:00"#,
-    dt("2024-01-02 00:00")
+    "2024-01-02 00:00"
 )]
-#[case::comment(
-    dt("2024-01-01 12:00"),
-    r#"24/7 "aaa" ; Mar "bbb""#,
-    dt("2024-03-01 00:00")
-)]
-#[case::comment(
-    dt("2024-03-15 12:00"),
-    r#"24/7 "aaa" ; Mar "bbb""#,
-    dt("2024-04-01 00:00")
-)]
-#[case::comment(
-    dt("2024-01-01 02:00"),
-    r#"01:00-03:00 closed "aaa""#,
-    dt("2024-01-01 03:00")
-)]
-#[case::comment(
-    dt("2024-01-01 12:00"),
-    r#"01:00-03:00 closed "aaa""#,
-    dt("2024-01-02 01:00")
-)]
+#[case::comment("2024-01-01 12:00", r#"24/7 "aaa" ; Mar "bbb""#, "2024-03-01 00:00")]
+#[case::comment("2024-03-15 12:00", r#"24/7 "aaa" ; Mar "bbb""#, "2024-04-01 00:00")]
+#[case::comment("2024-01-01 02:00", r#"01:00-03:00 closed "aaa""#, "2024-01-01 03:00")]
+#[case::comment("2024-01-01 12:00", r#"01:00-03:00 closed "aaa""#, "2024-01-02 01:00")]
 fn next_change(
-    #[case] date: NaiveDateTime,
+    #[case] date: ParsedDateTime,
     #[case] expr: OpeningHours,
-    #[case] expected: NaiveDateTime,
+    #[case] expected: ParsedDateTime,
 ) {
-    let next_change = expr.next_change(date).expect("should have a next change");
+    let Some(next_change) = expr.next_change(*date) else {
+        panic!("no next change for {expr} after {date}");
+    };
 
     assert_eq!(
-        next_change, expected,
+        next_change, *expected,
         "wrong next change for {expr} at {date}: {next_change} != {expected}",
     )
 }
 
 #[rstest]
 // Outside of global evaluator bounds
-#[case::after_bounds(dt("9999-01-01 12:00"), "24/7")]
+#[case::after_bounds("9999-01-01 12:00", "24/7")]
 // Year ranges
-#[case::year_range(dt("2019-02-10 11:00"), "24/7")]
-#[case::year_range(dt("+10000-01-01 00:00"), "24/7")]
+#[case::year_range("2019-02-10 11:00", "24/7")]
+#[case::year_range("+10000-01-01 00:00", "24/7")]
 // Month selector
-#[case::month(dt("2021-04-17 12:00"), "2021 Mar 28-Apr 16")]
-#[case::month(dt("2021-04-17 12:00"), "Mar 28-2021 Apr 16")]
-fn no_next_change(#[case] date: NaiveDateTime, #[case] expr: OpeningHours) {
+#[case::month("2021-04-17 12:00", "2021 Mar 28-Apr 16")]
+#[case::month("2021-04-17 12:00", "Mar 28-2021 Apr 16")]
+#[case::month_wday("2025-01-20 12:00", "easter-2025 Jan Su[-2]")]
+fn no_next_change(#[case] date: ParsedDateTime, #[case] expr: OpeningHours) {
     assert!(
-        expr.next_change(date).is_none(),
+        expr.next_change(*date).is_none(),
         "shouldn't have a next change for '{expr}' at '{date}'",
     )
 }

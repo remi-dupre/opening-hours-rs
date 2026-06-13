@@ -6,9 +6,8 @@ use opening_hours_syntax::rules::RuleKind::*;
 use rstest::rstest;
 
 use crate::localization::{
-    Coordinates, Country,
+    Country,
     Country::{DE, FR, US},
-    TzLocation,
 };
 use crate::schedule::{Schedule, TimeRange};
 use crate::tests::utils::parse::xt;
@@ -99,6 +98,16 @@ use crate::{Context, OpeningHours};
 #[case::month("2020-06-01", r#"2019Sep01+:10:00-12:00"#, "10:00 open 12:00")]
 #[case::month("2020-06-01", r#"2019Sep01-Jul01:10:00-12:00"#, "10:00 open 12:00")]
 #[case::month("2020-06-01", r#"Sep01-Jul01:10:00-12:00"#, "10:00 open 12:00")]
+#[case::month(
+    "2020-01-01",
+    r#"open "comment"; (sunset-00:30)-(sunrise-00:15) closed; Mar01-Sep30 (sunset-00:30)-07:30 closed"#,
+    "06:45 open[comment] 18:30"
+)]
+#[case::month(
+    "2020-06-01",
+    r#"open "comment"; (sunset-00:30)-(sunrise-00:15) closed; Mar01-Sep30 (sunset-00:30)-07:30 closed"#,
+    "07:30 open[comment] 18:30"
+)]
 // Month Selector (out of february bounds)
 #[case::month_oob("2020-01-31", "Feb01-Feb31:10:00-12:00", Schedule::new())]
 #[case::month_oob("2020-02-01", "Feb01-Feb31:10:00-12:00", "10:00 open 12:00")]
@@ -106,6 +115,9 @@ use crate::{Context, OpeningHours};
 #[case::month_oob("2020-02-29", "Feb01-Feb31:10:00-12:00", "10:00 open 12:00")]
 #[case::month_oob("2020-03-01", "Feb01-Feb31:10:00-12:00", Schedule::new())]
 #[case::month_oob("2021-03-01", "Feb01-Feb31:10:00-12:00", Schedule::new())]
+// Month Selector (with weekday)
+#[case::month_wday("2020-01-01", "Feb Mo[2]-Sep Su[-1] 10:00-12:00", Schedule::new())]
+#[case::month_wday("2020-06-01", "Feb Mo[2]-Sep Su[-1] 10:00-12:00", "10:00 open 12:00")]
 // Year Selector
 #[case::year("2020-01-01", "2020:10:00-12:00", "10:00 open 12:00")]
 #[case::year("2021-01-01", "2020:10:00-12:00", Schedule::new())]
@@ -217,6 +229,8 @@ fn schedule_at_with_timezone(
     #[case] expr: OpeningHours,
     #[case] expected_schedule: Schedule,
 ) {
+    use crate::localization::{Coordinates, TzLocation};
+
     let coords = Coordinates::new(48.87, 2.29).unwrap();
     let ctx = Context::default().with_locale(TzLocation::from_coords(coords));
     let expr = expr.with_context(ctx);

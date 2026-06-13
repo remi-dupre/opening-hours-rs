@@ -23,6 +23,7 @@ fn sample() -> impl Iterator<Item = &'static str> {
 #[test]
 fn parse_sample() {
     for raw_oh in sample() {
+        eprintln!("Parse {raw_oh:?} from sample");
         assert!(OpeningHours::from_str(raw_oh).is_ok());
     }
 }

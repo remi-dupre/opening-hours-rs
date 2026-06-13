@@ -17,14 +17,6 @@ use crate::rules as rl;
 use crate::rules::day::{self as ds, WeekNum, Year};
 use crate::rules::time as ts;
 
-#[cfg(feature = "log")]
-use core::sync::atomic::{AtomicBool, Ordering};
-
-/// Keep track of whether a feature warning was emitted for easter support. This ensures that a
-/// warning is not spammed for a single process session.
-#[cfg(feature = "log")]
-static WARNING_EASTER_EMITTED: AtomicBool = AtomicBool::new(false);
-
 #[derive(Parser)]
 #[grammar = "grammar.pest"]
 struct OHParser;
@@ -591,7 +583,6 @@ fn build_date_offset(pair: Pair<Rule>) -> Result<ds::DateOffset> {
     };
 
     let day_offset = pairs.next().map(build_day_offset).unwrap_or(Ok(0))?;
-
     Ok(ds::DateOffset { wday_offset, day_offset })
 }
 
@@ -607,20 +598,37 @@ fn build_date_from(pair: Pair<Rule>) -> ds::Date {
         }
     };
 
-    match pairs.peek().expect("empty date (from)").as_rule() {
-        Rule::variable_date => {
-            #[cfg(feature = "log")]
-            if !WARNING_EASTER_EMITTED.swap(true, Ordering::Relaxed) {
-                log::warn!("Easter is not supported yet");
-            }
+    let pair_month_or_variable = pairs.next().expect("empty date (from)");
 
-            ds::Date::Easter { year }
+    if pair_month_or_variable.as_rule() == Rule::variable_date {
+        return ds::Date::Easter { year };
+    }
+
+    let month = build_month(pair_month_or_variable);
+    let pair_day = pairs.next().expect("expected weekday or daynum");
+
+    match pair_day.as_rule() {
+        Rule::daynum => ds::Date::Fixed { year, month, day: build_daynum(pair_day) },
+        Rule::wday => {
+            let weekday = build_wday(pair_day);
+
+            let nth_sign = {
+                if pairs.peek().map(|x| x.as_rule()) == Some(Rule::nth_minus) {
+                    pairs.next();
+                    -1
+                } else {
+                    1
+                }
+            };
+
+            let nth: i8 = (pairs.next())
+                .map(build_nth)
+                .unwrap_or(0)
+                .try_into()
+                .expect("grammar allowed a too large nth value");
+
+            ds::Date::Weekday { year, month, wday: weekday, nth: nth_sign * nth }
         }
-        Rule::month => ds::Date::Fixed {
-            year,
-            month: build_month(pairs.next().expect("missing month")),
-            day: build_daynum(pairs.next().expect("missing day")),
-        },
         other => unexpected_token(other, Rule::date_from),
     }
 }
@@ -636,10 +644,12 @@ fn build_date_to(pair: Pair<Rule>, from: ds::Date) -> Result<ds::Date> {
 
             match from {
                 ds::Date::Easter { .. } => {
-                    // NOTE: this is actually not a specified constraint, but it is quite confusing
-                    //       that this is allowed
+                    // NOTE: this is actually not a specified constraint, but allowing this could
+                    // be super ambiguous anyway as the resulting end month could vary depending on
+                    // current year's easter date.
                     return Err(Error::Unsupported("Easter followed by a day number"));
                 }
+                ds::Date::Weekday { .. } => todo!(),
                 ds::Date::Fixed { mut year, mut month, day } => {
                     if day > daynum {
                         month = month.next();

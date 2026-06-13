@@ -1,3 +1,5 @@
+use std::{fmt::Display, ops::Deref, str::FromStr};
+
 use chrono::{DateTime, NaiveDateTime, TimeZone};
 use opening_hours_syntax::ExtendedTime;
 
@@ -12,9 +14,34 @@ pub(crate) fn xt(expr: &str) -> ExtendedTime {
     .expect("invalid extended time")
 }
 
+/// NaiveDateTime wrapper with a simpler parse syntax
+pub(crate) struct ParsedDateTime(NaiveDateTime);
+
+impl FromStr for ParsedDateTime {
+    type Err = chrono::ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self(NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M")?))
+    }
+}
+
+impl Deref for ParsedDateTime {
+    type Target = NaiveDateTime;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl Display for ParsedDateTime {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 /// Shortcut to build a datetime
 pub(crate) fn dt(expr: &str) -> NaiveDateTime {
-    NaiveDateTime::parse_from_str(expr, "%Y-%m-%d %H:%M").expect("invalid datetime literal")
+    *ParsedDateTime::from_str(expr).expect("invalid datetime literal")
 }
 
 /// Shortcut to build a datetime with a timezone
