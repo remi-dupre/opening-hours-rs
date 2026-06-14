@@ -29,7 +29,6 @@ features = ["log", "auto-country", "auto-timezone"]
 [dependencies.opening-hours-syntax]
 path = "../opening-hours-syntax"
 version = "2.0.0"
-features = ["log"]
 
 [dependencies.pyo3]
 version = "0.28"

@@ -25,7 +25,7 @@ path = "opening-hours/src/lib.rs"
 default = ["log"]
 auto-country = ["dep:country-boundaries"]
 auto-timezone = ["dep:chrono-tz", "dep:tzf-rs"]
-log = ["opening-hours-syntax/log", "dep:log"]
+log = ["dep:log"]
 
 [dependencies]
 chrono = "0.4"

@@ -4,6 +4,7 @@ use chrono::{Duration, Local};
 
 use opening_hours::localization::Country;
 use opening_hours::{Context, OpeningHours};
+use opening_hours_syntax::Parser;
 
 const COUNTRY: Country = Country::FR;
 
@@ -12,14 +13,19 @@ fn main() {
     let start_datetime = Local::now().naive_local();
     let start_date = start_datetime.date();
 
-    let oh = match expression.parse::<OpeningHours>() {
+    let mut warns = 0;
+
+    let mut parser = Parser::default().with_warning_handler(|warning| {
+        warns += 1;
+        eprintln!(" ! warning: {warning}")
+    } as _);
+
+    let oh = match OpeningHours::parse_with(&mut parser, &expression) {
         Ok(val) => val.with_context(Context::default().with_holidays(COUNTRY.holidays())),
         Err(err) => {
             panic!("{err}");
         }
     };
-
-    dbg!(oh.get_expression());
 
     println!(" - expression: {oh}");
     println!(" - normalized: {}", oh.normalize());

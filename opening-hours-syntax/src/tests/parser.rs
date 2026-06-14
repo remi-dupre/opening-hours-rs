@@ -1,6 +1,10 @@
+use alloc::string::{String, ToString};
+use alloc::vec::Vec;
+
 use rstest::rstest;
 
-use crate::rules::OpeningHoursExpression;
+use crate::tests::parser_no_warn;
+use crate::Parser;
 
 #[rstest]
 #[case("12:00+")]
@@ -26,10 +30,10 @@ use crate::rules::OpeningHoursExpression;
 #[case::relaxed("04:00 - 08:00")]
 #[case::relaxed("4:00 - 8:00")]
 #[case::relaxed("Mo-Fr 10:00-18:00;Sa-Su 10:00-12:00")]
-fn parse_valid(#[case] expression: &str) {
+fn parse_valid(mut parser_no_warn: Parser, #[case] expr: &str) {
     assert!(
-        str::parse::<OpeningHoursExpression>(expression).is_ok(),
-        "parser fails on {expression:?}",
+        parser_no_warn.parse(expr).is_ok(),
+        "parser fails on {expr:?}",
     );
 }
 
@@ -59,9 +63,13 @@ fn parse_valid(#[case] expression: &str) {
 #[case::extended_start("Syntax", "27:43-28:00")]
 #[case::extended_start("Syntax", "24:11-28:00")]
 #[case::extended_start("Syntax", "27:43-10:00")]
-fn parse_invalid(#[case] expected_error_variant: &str, #[case] expression: &str) {
-    let Err(err) = str::parse::<OpeningHoursExpression>(expression) else {
-        panic!("parser should have raised an error on {expression}")
+fn parse_invalid(
+    mut parser_no_warn: Parser,
+    #[case] expected_error_variant: &str,
+    #[case] expr: &str,
+) {
+    let Err(err) = parser_no_warn.parse(expr) else {
+        panic!("parser should have raised an error on {expr}")
     };
 
     let err_debug = format!("{err:?}");
@@ -76,5 +84,55 @@ fn parse_invalid(#[case] expected_error_variant: &str, #[case] expression: &str)
     assert!(
         !err.is_implementation_error(),
         "{err_variant} should not be marked to be an implementation error",
+    );
+}
+
+#[rstest]
+// Weekday
+#[case::wday("mo-fr", &["ShouldBeCapitalized"])]
+#[case::wday("mO-fR", &["ShouldBeCapitalized"])]
+#[case::wday("Mo-FR", &["ShouldBeCapitalized"])]
+// Monthday
+#[case::monthday("jan-mar", &["ShouldBeCapitalized"])]
+#[case::monthday("Jan-mar", &["ShouldBeCapitalized"])]
+#[case::monthday("Jan-MAR", &["ShouldBeCapitalized"])]
+#[case::monthday("Easter-Mar 31", &["ShouldBeLowercase"])]
+// Rule Modifier
+#[case::modifier("OPEN", &["ShouldBeLowercase"])]
+#[case::modifier("Off", &["ShouldBeLowercase"])]
+#[case::modifier("closeD", &["ShouldBeLowercase"])]
+#[case::modifier("UNKNOWN", &["ShouldBeLowercase"])]
+// Event
+#[case::event("DAWN-DUSK", &["ShouldBeLowercase"])]
+#[case::event("Dawn-Dusk", &["ShouldBeLowercase"])]
+// Mixed
+#[case::mix("Jan mo-tu OPEN", &["ShouldBeCapitalized", "ShouldBeLowercase"])]
+fn parse_with_warnings(#[case] expr: &str, #[case] expected_warnings: &[&str]) {
+    let mut warnings: Vec<String> = Vec::default();
+
+    let mut parser = Parser::default().with_warning_handler(|warning| {
+        let warn_debug = format!("{warning:?}");
+
+        let err_variant = warn_debug
+            .split_once([' ', '('])
+            .map(|(variant, _)| variant)
+            .unwrap_or(&warn_debug);
+
+        warnings.push(err_variant.to_string());
+    });
+
+    assert!(parser.parse(expr).is_ok(), "{expr} should be valid");
+    warnings.sort();
+    warnings.dedup();
+
+    let expected_warnings: Vec<String> = expected_warnings
+        .iter()
+        .copied()
+        .map(str::to_string)
+        .collect();
+
+    assert_eq!(
+        warnings, expected_warnings,
+        "warnings are not as expected for {expr}"
     );
 }

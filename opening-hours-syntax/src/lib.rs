@@ -3,22 +3,23 @@
 
 #[macro_use]
 extern crate alloc;
-
-#[macro_use]
 extern crate pest_derive;
 
 mod display;
 mod normalize;
 mod parser;
+mod util;
 
 pub mod error;
 pub mod extended_time;
 pub mod rules;
+pub mod warning;
 
 pub use error::{Error, Result};
 pub use extended_time::ExtendedTime;
-pub use parser::parse;
+pub use parser::{parse, Parser};
 pub use rules::RuleKind;
+pub use warning::Warning;
 
 #[cfg(test)]
 pub mod tests;

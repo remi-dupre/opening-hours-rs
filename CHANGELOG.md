@@ -16,6 +16,9 @@
 - Fix: expressions formatting to invalid expression
   - time spans with repetition (eg. "12:00-14:00/01:30")
   - variable times with offset (eg. "(sunrise-00:10)-(sunset+01:15)")
+- The parser won't log any warnings anymore, it is however now possible to
+  register a callback to handle more kind of warnings.
+- Syntax: Literals are no longer case sensitive (emits a warning).
 
 ### Python
 
@@ -27,6 +30,7 @@
 - Infaillible parser: parsing any call is garanteed to be panic-free. Added new
   class of implementation issues that would prompt you to open a Github issue.
 - Deprecate `OpeningHours::parse`, use `std::str::FromStr` instead.
+- Syntax: remove log feature.
 
 ## 1.4.0
 

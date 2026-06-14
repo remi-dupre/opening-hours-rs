@@ -848,7 +848,6 @@ name = "opening-hours-syntax"
 version = "2.0.0"
 dependencies = [
  "chrono",
- "log",
  "pest",
  "pest_derive",
  "rstest",

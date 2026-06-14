@@ -110,3 +110,12 @@ impl std::error::Error for Error {
         }
     }
 }
+
+// --
+// -- Helpers
+// --
+
+/// Commonly built errors
+pub(crate) fn err_empty(rule: Rule) -> Error {
+    Error::GrammarLogic { rule, invariant: "cannot be empty" }
+}

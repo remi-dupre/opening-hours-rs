@@ -4,6 +4,8 @@ use rstest::rstest;
 
 use crate::parser::parse;
 use crate::rules::OpeningHoursExpression;
+use crate::tests::parser_no_warn;
+use crate::Parser;
 
 #[rstest]
 #[case("2020, 2021 10:00-16:00")]
@@ -12,9 +14,12 @@ use crate::rules::OpeningHoursExpression;
 #[case("(sunrise-00:10)-(sunset+01:15)")]
 #[case("(sunrise-00:10)-sunset")]
 #[case("sunrise-(sunset+01:15)")]
-fn display_stable(#[case] example: &str) {
+fn display_stable(mut parser_no_warn: Parser, #[case] example: &str) {
     assert_eq!(
-        parse(example).expect("invalid example").to_string(),
+        parser_no_warn
+            .parse(example)
+            .expect("invalid example")
+            .to_string(),
         example,
     );
 }

@@ -7,7 +7,7 @@ use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime};
 
 use opening_hours_syntax::extended_time::ExtendedTime;
 use opening_hours_syntax::rules::{OpeningHoursExpression, RuleKind, RuleOperator, RuleSequence};
-use opening_hours_syntax::Error as ParserError;
+use opening_hours_syntax::{Error as ParserError, Parser, Warning};
 
 use crate::filter::date_filter::DateFilter;
 use crate::filter::time_filter::{
@@ -61,6 +61,15 @@ impl OpeningHours<NoLocation> {
     )]
     pub fn parse(raw_oh: &str) -> Result<Self, ParserError> {
         raw_oh.parse()
+    }
+
+    /// Use a specific parser configuration to parse an expression.
+    pub fn parse_with<F: FnMut(Warning)>(
+        parser: &mut Parser<F>,
+        raw_oh: &str,
+    ) -> Result<Self, ParserError> {
+        let expr = parser.parse(raw_oh)?;
+        Ok(Self { expr: Arc::new(expr), ctx: Context::default() })
     }
 }
 
@@ -348,8 +357,7 @@ impl FromStr for OpeningHours {
     type Err = ParserError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let expr = Arc::new(opening_hours_syntax::parse(s)?);
-        Ok(Self { expr, ctx: Context::default() })
+        OpeningHours::parse_with(&mut Parser::default(), s)
     }
 }
 

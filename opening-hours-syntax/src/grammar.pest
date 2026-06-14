@@ -43,9 +43,9 @@ rules_modifier_enum = {
     | rules_modifier_enum_unknown
 }
 
-rules_modifier_enum_closed = @{ "closed" | "off" }
-rules_modifier_enum_open = @{ "open" }
-rules_modifier_enum_unknown = @{ "unknown" }
+rules_modifier_enum_closed = @{ ^"closed" | ^"off" }
+rules_modifier_enum_open = @{ ^"open" }
+rules_modifier_enum_unknown = @{ ^"unknown" }
 
 // Selectors
 
@@ -109,10 +109,10 @@ variable_time = {
 
 event = { dawn | sunrise | sunset | dusk }
 
-dawn = @{ "dawn" }
-sunrise = @{ "sunrise" }
-sunset = @{ "sunset" }
-dusk = @{ "dusk" }
+dawn    = @{ ^"dawn" }
+sunrise = @{ ^"sunrise" }
+sunset  = @{ ^"sunset" }
+dusk    = @{ ^"dusk" }
 
 // Weekday selector
 
@@ -193,7 +193,7 @@ date_to = {
     | daynum
 }
 
-variable_date = { " "? ~ "easter" }
+variable_date = { " "? ~ ^"easter" }
 
 
 // Year selector
@@ -235,15 +235,19 @@ hour_minutes = { hour ~ ":" ~ minute | "24:00" }
 
 extended_hour_minutes = { extended_hour ~ ":" ~ minute }
 
-wday = { sunday | monday | tuesday | wednesday | thursday | friday | saturday }
+wday = { 
+  !event  // avoid ambuiguity between sunday and sunrise
+  ~ sunday | monday | tuesday | wednesday | thursday | friday | saturday 
+}
 
-sunday = @{ "Su" }
-monday = @{ "Mo" }
-tuesday = @{ "Tu" }
-wednesday = @{ "We" }
-thursday = @{ "Th" }
-friday = @{ "Fr" }
-saturday = @{ "Sa" }
+// Relaxed : case insensitive
+sunday    = @{ ^"Su" }
+monday    = @{ ^"Mo" }
+tuesday   = @{ ^"Tu" }
+wednesday = @{ ^"We" }
+thursday  = @{ ^"Th" }
+friday    = @{ ^"Fr" }
+saturday  = @{ ^"Sa" }
 
 // Ensures that we are not greedily matching the "hour" component from a timespan
 daynum = @{ daynum_digits ~ !(":" ~ minute ~ !(":" ~ minute)) }
@@ -267,18 +271,18 @@ month = {
     | october | november | december
 }
 
-january = @{ "Jan" }
-february = @{ "Feb" }
-march = @{ "Mar" }
-april = @{ "Apr" }
-may = @{ "May" }
-june = @{ "Jun" }
-july = @{ "Jul" }
-august = @{ "Aug" }
-september = @{ "Sep" }
-october = @{ "Oct" }
-november = @{ "Nov" }
-december = @{ "Dec" }
+january   = @{ ^"Jan" }
+february  = @{ ^"Feb" }
+march     = @{ ^"Mar" }
+april     = @{ ^"Apr" }
+may       = @{ ^"May" }
+june      = @{ ^"Jun" }
+july      = @{ ^"Jul" }
+august    = @{ ^"Aug" }
+september = @{ ^"Sep" }
+october   = @{ ^"Oct" }
+november  = @{ ^"Nov" }
+december  = @{ ^"Dec" }
 
 year = @{
           ( "19" ~ ASCII_DIGIT{2} )  // 1900 -> 1999
