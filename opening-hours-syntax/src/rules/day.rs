@@ -122,8 +122,8 @@ impl DerefMut for Year {
 /// A year range that ensures that bounds are always in the right order
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct YearRange {
-    pub range: RangeInclusive<Year>,
-    pub step: u16,
+    range: RangeInclusive<Year>,
+    step: u16,
 }
 
 impl YearRange {
@@ -400,13 +400,16 @@ impl Display for WeekDayRange {
                         .map(|(idx, _)| -(idx as isize) - 1);
 
                     let mut weeknum_iter = pos_weeknum_iter.chain(neg_weeknum_iter);
-                    write!(f, "[{}", weeknum_iter.next().unwrap())?;
 
-                    for num in weeknum_iter {
-                        write!(f, ",{num}")?;
+                    if let Some(first_num) = weeknum_iter.next() {
+                        write!(f, "[{first_num}")?;
+
+                        for num in weeknum_iter {
+                            write!(f, ",{num}")?;
+                        }
+
+                        write!(f, "]")?;
                     }
-
-                    write!(f, "]")?;
                 }
 
                 write_days_offset(f, *offset)?;
@@ -537,12 +540,14 @@ impl Month {
     #[inline]
     pub fn next(self) -> Self {
         let num = self as u8;
+        #[allow(clippy::unwrap_used)] // (x % 12) + 1 is guaranteed to be in [1, 12]
         ((num % 12) + 1).try_into().unwrap()
     }
 
     #[inline]
     pub fn prev(self) -> Self {
         let num = self as u8;
+        #[allow(clippy::unwrap_used)] // (x % 12) + 1 is guaranteed to be in [1, 12]
         (((num + 10) % 12) + 1).try_into().unwrap()
     }
 

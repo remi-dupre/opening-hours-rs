@@ -207,15 +207,10 @@ impl DateFilter for ds::DaySelector {
             return Some(DATE_END.date());
         }
 
-        *[
-            self.year.next_change_hint(date, ctx),
-            self.monthday.next_change_hint(date, ctx),
-            self.week.next_change_hint(date, ctx),
-            self.weekday.next_change_hint(date, ctx),
-        ]
-        .iter()
-        .min()
-        .unwrap()
+        (self.year.next_change_hint(date, ctx))
+            .min(self.monthday.next_change_hint(date, ctx))
+            .min(self.week.next_change_hint(date, ctx))
+            .min(self.weekday.next_change_hint(date, ctx))
     }
 }
 
@@ -357,32 +352,28 @@ fn monthday_range_to_intervals(
         ds::MonthdayRange::Date {
             start: (start, start_offset),
             end: (end, end_offset),
-        } if start.year().is_some() || end.year().is_some() => {
-            let year: Year = start.year().or(end.year()).unwrap();
+        } if let Some(year) = start.year().or(end.year()) => Box::new(
+            [
+                (year, year),
+                (Year(*year - 1), year),
+                (year, Year(*year + 1)),
+            ]
+            .into_iter()
+            .filter_map(|(year_start, year_end)| {
+                let year_start = start.year().unwrap_or(year_start);
+                let year_end = end.year().unwrap_or(year_end);
 
-            Box::new(
-                [
-                    (year, year),
-                    (Year(*year - 1), year),
-                    (year, Year(*year + 1)),
-                ]
-                .into_iter()
-                .filter_map(|(year_start, year_end)| {
-                    let year_start = start.year().unwrap_or(year_start);
-                    let year_end = end.year().unwrap_or(year_end);
+                let start = date_on_year(*start, year_start, valid_ymd_after)
+                    .map(|d| start_offset.apply(d))?;
 
-                    let start = date_on_year(*start, year_start, valid_ymd_after)
-                        .map(|d| start_offset.apply(d))?;
+                let end =
+                    date_on_year(*end, year_end, valid_ymd_before).map(|d| end_offset.apply(d))?;
 
-                    let end = date_on_year(*end, year_end, valid_ymd_before)
-                        .map(|d| end_offset.apply(d))?;
-
-                    Some(start..=end)
-                })
-                .find(|rg| rg.start() <= rg.end())
-                .into_iter(),
-            ) as _
-        }
+                Some(start..=end)
+            })
+            .find(|rg| rg.start() <= rg.end())
+            .into_iter(),
+        ) as _,
         ds::MonthdayRange::Date {
             start: (start, start_offset),
             end: (end, end_offset),

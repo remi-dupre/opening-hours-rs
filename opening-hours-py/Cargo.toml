@@ -40,3 +40,7 @@ features = [
     # https://github.com/Jij-Inc/pyo3-stub-gen/pull/297
     "abi3", "abi3-py310",
 ]
+
+[lints.clippy]
+todo = "deny"
+unwrap_used = "deny"

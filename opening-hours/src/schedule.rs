@@ -184,21 +184,15 @@ impl Schedule {
 
         // Extend the inserted interval if it has adjacent intervals with same value
 
-        while before
-            .last()
-            .map(|tr| tr.range.end == ins_tr.range.start && tr.as_state() == ins_tr.as_state())
-            .unwrap_or(false)
+        while let Some(tr) = before
+            .pop_if(|tr| tr.range.end == ins_tr.range.start && tr.as_state() == ins_tr.as_state())
         {
-            let tr = before.pop().unwrap();
             ins_tr.range.start = tr.range.start;
         }
 
-        while after
-            .peek()
-            .map(|tr| ins_tr.range.end == tr.range.start && tr.as_state() == ins_tr.as_state())
-            .unwrap_or(false)
+        while let Some(tr) = after
+            .next_if(|tr| ins_tr.range.end == tr.range.start && tr.as_state() == ins_tr.as_state())
         {
-            let tr = after.next().unwrap();
             ins_tr.range.end = tr.range.end;
         }
 
@@ -240,7 +234,7 @@ impl IntoIter {
     }
 
     /// Must be called before a value is yielded.
-    fn pre_yield(&mut self, value: TimeRange) -> Option<TimeRange> {
+    fn yielded(&mut self, value: TimeRange) -> Option<TimeRange> {
         assert!(
             value.range.start < value.range.end,
             "infinite loop detected"
@@ -260,39 +254,38 @@ impl Iterator for IntoIter {
             return None;
         }
 
-        let mut yielded_range = {
-            let next_start = self.ranges.peek().map(|tr| tr.range.start);
-
-            if next_start == Some(self.last_end) {
-                // Start from an interval
-                self.ranges.next().unwrap()
-            } else {
-                // Start from a hole
-                TimeRange::new(
-                    self.last_end..next_start.unwrap_or(self.last_end),
-                    Self::HOLES_STATE.0,
-                    Default::default(),
-                )
-            }
-        };
+        let mut yielded_range = (self.ranges)
+            // Start from an interval
+            .next_if(|tr| tr.range.start == self.last_end)
+            // Start from a hole
+            .unwrap_or_else(|| {
+                let start = self.last_end;
+                let end = self.ranges.peek().map(|tr| tr.range.start).unwrap_or(start);
+                TimeRange::new(start..end, Self::HOLES_STATE.0, Default::default())
+            });
 
         while let Some(next_range) = self.ranges.peek() {
+            // If there is a gap before next range
             if next_range.range.start > yielded_range.range.end {
+                // If current range is the "holes" values (typicaly closed)
                 if yielded_range.as_state() == Self::HOLES_STATE {
                     // Just extend the closed range with this hole
                     yielded_range.range.end = next_range.range.start;
                 } else {
-                    // The range before the hole is not closed
-                    return self.pre_yield(yielded_range);
+                    // The range before the hole is not closed, then this is
+                    // were current range stops.
+                    return self.yielded(yielded_range);
                 }
             }
 
-            if yielded_range.as_state() != next_range.as_state() {
-                // The next range has a different state
-                return self.pre_yield(yielded_range);
-            }
+            let Some(next_range) = (self.ranges)
+                .next_if(|next_range| yielded_range.as_state() == next_range.as_state())
+            else {
+                // The next range has a different state, then this is where the current range
+                // stops.
+                return self.yielded(yielded_range);
+            };
 
-            let next_range = self.ranges.next().unwrap();
             yielded_range.range.end = next_range.range.end;
         }
 
@@ -301,7 +294,7 @@ impl Iterator for IntoIter {
             yielded_range.range.end = ExtendedTime::MIDNIGHT_24;
         }
 
-        self.pre_yield(yielded_range)
+        self.yielded(yielded_range)
     }
 }
 

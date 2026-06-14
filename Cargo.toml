@@ -57,6 +57,10 @@ pest_derive = { version = "2.0", default-features = false }
 pest = { version = "2.0", default-features = false }
 rstest = "0"
 
+[lints.clippy]
+todo = "deny"
+unwrap_used = "deny"
+
 [[bin]]
 name = "schedule"
 path = "opening-hours/src/bin/schedule.rs"

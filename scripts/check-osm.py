@@ -61,6 +61,7 @@ async def main():
                         file=f,
                     )
 
+                print(f"Page {page}")
                 page += 1
 
                 if len(content["data"]) < PAGE_LENGTH:

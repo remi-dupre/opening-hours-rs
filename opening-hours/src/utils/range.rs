@@ -34,27 +34,19 @@ pub(crate) fn ranges_union<T: Ord>(
     ranges.sort_unstable_by(|r1, r2| r1.start.cmp(&r2.start));
 
     // Get ranges by increasing start
-    let mut ranges = ranges.into_iter();
-    let mut current_opt = ranges.next();
+    let mut ranges = ranges.into_iter().peekable();
 
     std::iter::from_fn(move || {
-        if let Some(ref mut current) = current_opt {
-            #[allow(clippy::while_let_on_iterator)]
-            while let Some(item) = ranges.next() {
-                if current.end >= item.start {
-                    // The two intervals intersect with each other
-                    if item.end > current.end {
-                        current.end = item.end;
-                    }
-                } else {
-                    return Some(current_opt.replace(item).unwrap());
-                }
-            }
+        let mut current = ranges.next()?;
 
-            Some(current_opt.take().unwrap())
-        } else {
-            None
+        while let Some(item) = ranges.next_if(|item| current.end >= item.start) {
+            // The two intervals intersect with each other
+            if item.end > current.end {
+                current.end = item.end;
+            }
         }
+
+        Some(current)
     })
 }
 

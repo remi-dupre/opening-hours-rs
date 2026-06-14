@@ -60,17 +60,20 @@ impl OpeningHoursExpression {
         let mut rules_queue = self.rules.into_iter().peekable();
         let mut paving = Paving5D::default();
 
-        while let Some(rule) = rules_queue.peek() {
+        #[allow(clippy::result_large_err)]
+        while let Some((rule, selector)) = rules_queue.next_if_map(|rule| {
+            // As long as this is not a fallback operator
             if rule.operator == RuleOperator::Fallback {
-                break;
+                return Err(rule);
             }
 
-            let Some(selector) = ruleseq_to_selector(rule) else {
-                break;
+            // And as long as we can parse it
+            let Some(selector) = ruleseq_to_selector(&rule) else {
+                return Err(rule);
             };
 
-            let rule = rules_queue.next().unwrap();
-
+            Ok((rule, selector))
+        }) {
             // If the rule is not explicitly targeting a closed kind, then it overrides
             // previous rules for the whole day.
             if rule.operator == RuleOperator::Normal && rule.kind != RuleKind::Closed {

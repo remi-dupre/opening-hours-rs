@@ -3,7 +3,7 @@ use core::fmt;
 use core::ops::RangeInclusive;
 
 use crate::parser::Rule;
-use crate::rules::day::{WeekNum, WeekRange, Year, YearRange};
+use crate::rules::day::{WeekNum, Year};
 
 pub type Result<T> = core::result::Result<T, Error>;
 
@@ -11,36 +11,30 @@ const REPORT_ISSUE_LINK: &str = "https://github.com/remi-dupre/opening-hours-rs/
 
 #[derive(Clone, Debug)]
 pub enum Error {
-    Parser(Box<pest::error::Error<Rule>>),
+    /// Could not parse the expression. It is not conformant with the grammar defined in the wiki:
+    /// https://wiki.openstreetmap.org/wiki/Key:opening_hours/specification
+    Syntax(Box<pest::error::Error<Rule>>),
+    /// Use of an unsupported feature.
     Unsupported(&'static str),
+    /// Some number has overflowed.
     Overflow {
         value: i16,
         expected_bounds: RangeInclusive<i16>,
     },
-    InvalidExtendTime {
-        hour: u8,
-        minutes: u8,
-    },
-    InvertedYearRange {
-        start: Year,
-        end: Year,
-        step: u16,
-    },
+    /// Extended time has overflowed.
+    InvalidExtendedTime { hour: u8, minutes: u8 },
+    /// A year range that starts after it ends.
+    InvertedYearRange { start: Year, end: Year, step: u16 },
+    /// A week range that starts after it ends.
     InvertedWeekRange {
         start: WeekNum,
         end: WeekNum,
         step: u8,
     },
     /// This should never be built at runtime if the grammar implementation is sound.
-    GrammarUnexpectedToken {
-        rule: Rule,
-        unexpected: Rule,
-    },
+    GrammarUnexpectedToken { rule: Rule, unexpected: Rule },
     /// This should never be built at runtime if the grammar implementation is sound.
-    GrammarLogic {
-        rule: Rule,
-        invariant: &'static str,
-    },
+    GrammarLogic { rule: Rule, invariant: &'static str },
 }
 
 impl Error {
@@ -57,16 +51,16 @@ impl Error {
 
 impl From<pest::error::Error<Rule>> for Error {
     fn from(pest_err: pest::error::Error<Rule>) -> Self {
-        Self::Parser(pest_err.into())
+        Self::Syntax(pest_err.into())
     }
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Parser(pest_err) => write!(f, "{pest_err}"),
+            Self::Syntax(pest_err) => write!(f, "{pest_err}"),
             Self::Unsupported(desc) => write!(f, "using an unsupported feature: {desc}"),
-            Self::InvalidExtendTime { hour, minutes: minute } => {
+            Self::InvalidExtendedTime { hour, minutes: minute } => {
                 write!(f, "invalid extended time for {hour:02}:{minute:02}")
             }
             Self::Overflow { value, expected_bounds } => {
@@ -77,18 +71,18 @@ impl fmt::Display for Error {
                     expected_bounds.end(),
                 )
             }
-            &Self::InvertedYearRange { start, end, step } => {
+            &Self::InvertedYearRange { start, end, .. } => {
                 write!(
                     f,
-                    "Inverted year ranges are ambiguous, do you mean '{}'?",
-                    YearRange::new(end..=start, step).unwrap(),
+                    "Inverted year ranges are ambiguous, do you mean '{}-{}'?",
+                    *end, *start
                 )
             }
-            &Self::InvertedWeekRange { start, end, step } => {
+            &Self::InvertedWeekRange { start, end, .. } => {
                 write!(
                     f,
-                    "Inverted week ranges are ambiguous, do you mean '{}'?",
-                    WeekRange::new(end..=start, step).unwrap(),
+                    "Inverted week ranges are ambiguous, do you mean '{}-{}'?",
+                    *end, *start
                 )
             }
             Error::GrammarUnexpectedToken { rule, unexpected } => {
@@ -111,7 +105,7 @@ impl fmt::Display for Error {
 impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            Self::Parser(err) => Some(err as _),
+            Self::Syntax(err) => Some(err as _),
             _ => None,
         }
     }

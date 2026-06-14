@@ -318,8 +318,10 @@ impl<T: Clone + Debug + Ord, U: Debug + Paving> Paving for Dim<T, U> {
             // Check if part of the selector covers a part that is outside of
             // the explicitly set values for this paving.
             let partialy_outside_bounds = self.cols.is_empty()
-                || range.start < *self.cuts.first().unwrap()
-                || range.end > *self.cuts.last().unwrap();
+                || range.start
+                    < *(self.cuts.first()).expect("there is always on more cuts than columns")
+                || range.end
+                    > *(self.cuts.last()).expect("there is always on more cuts than columns");
 
             // If part of the selector is outside of explicitly set values, the
             // expected value must be the default.

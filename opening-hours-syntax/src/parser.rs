@@ -177,13 +177,11 @@ fn build_selector_sequence(
         .transpose()?
         .unwrap_or_default();
 
-    let (weekday, time) = {
-        if let Some(pair) = pairs.next() {
-            build_small_range_selectors(pair)?
-        } else {
-            (Vec::new(), Vec::new())
-        }
-    };
+    let (weekday, time) = pairs
+        .next()
+        .map(build_small_range_selectors)
+        .transpose()?
+        .unwrap_or_default();
 
     Ok((
         ds::DaySelector { year, monthday, week, weekday },
@@ -535,7 +533,7 @@ fn build_week(pair: Pair<Rule>) -> Result<ds::WeekRange> {
 
     let step = step
         .try_into()
-        .map_err(|_| Error::Overflow { value: step.into(), expected_bounds: 0i16..=255i16 })?;
+        .map_err(|_| Error::Overflow { value: step, expected_bounds: 0i16..=255i16 })?;
 
     ds::WeekRange::new(start..=end, step).ok_or(Error::InvertedWeekRange { start, end, step })
 }
@@ -715,7 +713,7 @@ fn build_date_to(pair: Pair<Rule>, from: ds::Date) -> Result<ds::Date> {
                     // NOTE: this is actually not a specified constraint, but allowing this could
                     // be super ambiguous anyway as the resulting end month could vary depending on
                     // current year's easter date.
-                    return Err(Error::Unsupported("Easter followed by a day number"));
+                    Err(Error::Unsupported("Easter followed by a day number"))
                 }
                 ds::Date::Weekday { year, month, .. } => {
                     Ok(ds::Date::Fixed { year, month, day: daynum })
@@ -833,7 +831,7 @@ fn build_hour_minutes(pair: Pair<Rule>) -> Result<ExtendedTime> {
             invariant: "must be a valid number",
         })?;
 
-    ExtendedTime::new(hour, minutes).ok_or(Error::InvalidExtendTime { hour, minutes })
+    ExtendedTime::new(hour, minutes).ok_or(Error::InvalidExtendedTime { hour, minutes })
 }
 
 fn build_extended_hour_minutes(pair: Pair<Rule>) -> Result<ExtendedTime> {
@@ -863,7 +861,7 @@ fn build_extended_hour_minutes(pair: Pair<Rule>) -> Result<ExtendedTime> {
             invariant: "must be a valid number",
         })?;
 
-    ExtendedTime::new(hour, minutes).ok_or(Error::InvalidExtendTime { hour, minutes })
+    ExtendedTime::new(hour, minutes).ok_or(Error::InvalidExtendedTime { hour, minutes })
 }
 
 fn build_hour_minutes_as_duration(pair: Pair<Rule>) -> Result<Duration> {

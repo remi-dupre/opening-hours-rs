@@ -22,10 +22,10 @@ pub trait Localize: Clone + Send + Sync {
     /// Get the localized time for a sun event at a given date.
     fn event_time(&self, _date: NaiveDate, event: TimeEvent) -> NaiveTime {
         match event {
-            TimeEvent::Dawn => NaiveTime::from_hms_opt(6, 0, 0).unwrap(),
-            TimeEvent::Sunrise => NaiveTime::from_hms_opt(7, 0, 0).unwrap(),
-            TimeEvent::Sunset => NaiveTime::from_hms_opt(19, 0, 0).unwrap(),
-            TimeEvent::Dusk => NaiveTime::from_hms_opt(20, 0, 0).unwrap(),
+            TimeEvent::Dawn => const { NaiveTime::from_hms_opt(6, 0, 0).unwrap() },
+            TimeEvent::Sunrise => const { NaiveTime::from_hms_opt(7, 0, 0).unwrap() },
+            TimeEvent::Sunset => const { NaiveTime::from_hms_opt(19, 0, 0).unwrap() },
+            TimeEvent::Dusk => const { NaiveTime::from_hms_opt(20, 0, 0).unwrap() },
         }
     }
 }
