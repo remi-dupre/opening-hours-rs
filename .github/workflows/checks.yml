@@ -28,7 +28,6 @@ jobs:
           - { crate: ".", features: "log,auto-country" }
           - { crate: ".", features: "log,auto-country,auto-timezone" }
           - { crate: ".", features: "log,auto-timezone" }
-          - { crate: "opening-hours-syntax", features: "log" }
           - { crate: "opening-hours-syntax", features: "std" }
     defaults:
       run:

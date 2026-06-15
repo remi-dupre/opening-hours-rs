@@ -141,12 +141,6 @@ impl Display for ExtendedTime {
     }
 }
 
-impl Debug for ExtendedTime {
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::result::Result<(), core::fmt::Error> {
-        write!(f, "{self}")
-    }
-}
-
 impl TryInto<NaiveTime> for ExtendedTime {
     type Error = ();
 
