@@ -3,7 +3,6 @@ use std::str::FromStr;
 use rstest::rstest;
 
 use crate::tests::utils::parse::{dt, ParsedDateTime};
-use crate::tests::utils::stats::TestStats;
 use crate::{Context, OpeningHours};
 
 #[rstest]
@@ -110,16 +109,4 @@ fn with_approx_bound_interval_size() {
 
     assert!(oh.next_change(dt("2000-05-01 12:00")).is_none());
     assert!(oh.next_change(dt("2030-07-01 12:00")).is_none());
-}
-
-#[test]
-fn explicit_closed_slow() {
-    let stats = TestStats::watch(|| {
-        assert!(OpeningHours::from_str("Feb Fr off")
-            .unwrap()
-            .next_change(dt("2021-07-09 19:30"))
-            .is_none());
-    });
-
-    assert!(stats.count_generated_schedules < 10);
 }

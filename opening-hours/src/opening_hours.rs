@@ -155,9 +155,6 @@ impl<L: Localize> OpeningHours<L> {
 
     /// Get the schedule at a given day.
     pub fn schedule_at(&self, date: NaiveDate) -> Schedule {
-        #[cfg(test)]
-        crate::tests::utils::stats::notify::generated_schedule();
-
         if !(DATE_START.date()..DATE_END.date()).contains(&date) {
             return Schedule::default();
         }
@@ -375,6 +372,9 @@ fn rule_sequence_schedule_at<L: Localize>(
     date: NaiveDate,
     ctx: &Context<L>,
 ) -> Option<Schedule> {
+    #[cfg(test)]
+    crate::tests::utils::stats::notify::generated_schedule();
+
     /// Build a schedule at a given date from a list of intervals.
     fn build_from_rules_at_date<L: Localize>(
         rule_sequence: &RuleSequence,

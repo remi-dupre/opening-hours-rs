@@ -5,6 +5,7 @@ mod eval_next_change;
 mod eval_schedule;
 mod eval_state;
 mod localization;
+mod performance;
 mod regression_github;
 mod regression_integration;
 
