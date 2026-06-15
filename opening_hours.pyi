@@ -34,6 +34,10 @@ class OpeningHours:
       coordinates when they are specified.
     - auto_timezone: If set to `True`, the timezone will automatically be inferred from coordinates
       when they are specified.
+    - max_interval_days: If specified, any change that is longer than the number of specified days
+      will be considered infinite. This may be useful if you need to evaluate a large amount of
+      complicated expressions and performance is critical. Even setting a value of a full year (366)
+      is worth it.
 
     Raises
     ------
@@ -64,6 +68,7 @@ class OpeningHours:
         coords: typing.Optional[tuple[builtins.float, builtins.float]] = None,
         auto_country: typing.Optional[builtins.bool] = True,
         auto_timezone: typing.Optional[builtins.bool] = True,
+        max_interval_days: typing.Optional[builtins.int] = None,
     ) -> OpeningHours: ...
     def normalize(self) -> OpeningHours:
         r"""
