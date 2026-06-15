@@ -83,6 +83,9 @@
                         <li>
                                 <a class="function" href="#OpeningHours.intervals">intervals</a>
                         </li>
+                        <li>
+                                <a class="variable" href="#OpeningHours.warnings">warnings</a>
+                        </li>
                 </ul>
 
             </li>
@@ -116,18 +119,9 @@ remaining as close as possible to the core specification.</p>
 represents a parsed definition of opening hours.</p>
 </div>
 
-                        <input id="mod-opening_hours-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
-
-                        <label class="view-source-button" for="mod-opening_hours-view-source"><span>View Source</span></label>
-
-                        <div class="pdoc-code codehilite"><pre><span></span><span id="L-1"><a href="#L-1"><span class="linenos">1</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.opening_hours</span><span class="w"> </span><span class="kn">import</span> <span class="o">*</span>
-</span><span id="L-2"><a href="#L-2"><span class="linenos">2</span></a>
-</span><span id="L-3"><a href="#L-3"><span class="linenos">3</span></a><span class="vm">__doc__</span> <span class="o">=</span> <span class="n">opening_hours</span><span class="o">.</span><span class="vm">__doc__</span>
-</span><span id="L-4"><a href="#L-4"><span class="linenos">4</span></a><span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">opening_hours</span><span class="p">,</span> <span class="s2">&quot;__all__&quot;</span><span class="p">):</span>
-</span><span id="L-5"><a href="#L-5"><span class="linenos">5</span></a>    <span class="n">__all__</span> <span class="o">=</span> <span class="n">opening_hours</span><span class="o">.</span><span class="n">__all__</span>
-</span></pre></div>
-
-
+                
+                
+                
             </section>
                 <section id="InvalidCoordinatesError">
                     <div class="attr class">
@@ -284,6 +278,10 @@ automatically detect the timezone and a country code.</li>
 coordinates when they are specified.</li>
 <li><strong>- auto_timezone</strong> (If set to <code>True</code>, the timezone will automatically be inferred from coordinates):
 when they are specified.</li>
+<li><strong>- max_interval_days</strong> (If specified, any change that is longer than the number of specified days):
+will be considered infinite. This may be useful if you need to evaluate a large amount of
+complicated expressions and performance is critical. Even setting a value of a full year (366)
+is worth it.</li>
 </ul>
 
 <h6 id="raises">Raises</h6>
@@ -345,8 +343,8 @@ expression and might impact the performance of evaluations.</p>
     </div>
     <a class="headerlink" href="#OpeningHours.state"></a>
     
-            <div class="docstring"><p>Get current state of the time domain, the state can be either "open",
-"closed" or "unknown".</p>
+            <div class="docstring"><p>Get current state of the time domain together with current comment. The state can be either
+"open", "closed" or "unknown".</p>
 
 <h6 id="parameters">Parameters</h6>
 
@@ -358,7 +356,7 @@ expression and might impact the performance of evaluations.</p>
 
 <div class="pdoc-code codehilite">
 <pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">OpeningHours</span><span class="p">(</span><span class="s2">&quot;24/7 off&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">state</span><span class="p">()</span>
-<span class="go"><a href="#State.CLOSED">State.CLOSED</a></span>
+<span class="go">(<a href="#State.CLOSED">State.CLOSED</a>, &#39;&#39;)</span>
 </code></pre>
 </div>
 </div>
@@ -509,11 +507,24 @@ max is specified.</p></li>
 <div class="pdoc-code codehilite">
 <pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">intervals</span> <span class="o">=</span> <span class="n">OpeningHours</span><span class="p">(</span><span class="s2">&quot;2099Mo-Su 12:30-17:00&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">intervals</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">next</span><span class="p">(</span><span class="n">intervals</span><span class="p">)</span>
-<span class="go">(..., datetime.datetime(2099, 1, 1, 12, 30), <a href="#State.CLOSED">State.CLOSED</a>, [])</span>
+<span class="go">(..., datetime.datetime(2099, 1, 1, 12, 30), <a href="#State.CLOSED">State.CLOSED</a>, &#39;&#39;)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">next</span><span class="p">(</span><span class="n">intervals</span><span class="p">)</span>
-<span class="go">(datetime.datetime(2099, 1, 1, 12, 30), datetime.datetime(2099, 1, 1, 17, 0), <a href="#State.OPEN">State.OPEN</a>, [])</span>
+<span class="go">(datetime.datetime(2099, 1, 1, 12, 30), datetime.datetime(2099, 1, 1, 17, 0), <a href="#State.OPEN">State.OPEN</a>, &#39;&#39;)</span>
 </code></pre>
 </div>
+</div>
+
+
+                            </div>
+                            <div id="OpeningHours.warnings" class="classattr">
+                                <div class="attr variable">
+            <span class="name">warnings</span>
+
+        
+    </div>
+    <a class="headerlink" href="#OpeningHours.warnings"></a>
+    
+            <div class="docstring"><p>The list of warnings that were emited while parsing the expression.</p>
 </div>
 
 
