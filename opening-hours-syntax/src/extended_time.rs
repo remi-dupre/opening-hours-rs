@@ -1,10 +1,10 @@
 use core::convert::TryInto;
-use core::fmt::{Debug, Display};
+use core::fmt::Display;
 
 use chrono::{NaiveTime, Timelike};
 
 /// An hour+minute struct that can go up to 48h.
-#[derive(Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ExtendedTime {
     hour: u8,
     minute: u8,

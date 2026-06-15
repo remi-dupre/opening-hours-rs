@@ -5,6 +5,7 @@ mod tests;
 
 use std::str::FromStr;
 
+use opening_hours_syntax::Parser;
 use pyo3::exceptions::PyException;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods};
@@ -102,6 +103,7 @@ fn validate(oh: &str) -> bool {
 #[derive(PartialEq)]
 struct PyOpeningHours {
     inner: OpeningHours<PyLocation>,
+    warnings: Vec<String>,
 }
 
 #[gen_stub_pymethods]
@@ -120,6 +122,10 @@ impl PyOpeningHours {
         let auto_country = auto_country.unwrap_or(true);
         let auto_timezone = auto_timezone.unwrap_or(true);
         let mut ctx = Context::default();
+        let mut warnings = Vec::new();
+
+        let mut parser =
+            Parser::default().with_warning_handler(|warning| warnings.push(warning.to_string()));
 
         let coords = coords
             .map(|(lat, lon)| {
@@ -129,7 +135,7 @@ impl PyOpeningHours {
             })
             .transpose()?;
 
-        let oh = OpeningHours::from_str(oh)
+        let oh = OpeningHours::parse_with(&mut parser, oh)
             .map_err(|err| ParserError::new_err(format!("Failed to parse expression: {err}")))?;
 
         if let Some(iso_code) = country {
@@ -156,7 +162,16 @@ impl PyOpeningHours {
             _ => PyLocation::Naive,
         };
 
-        Ok(PyOpeningHours { inner: oh.with_context(ctx.with_locale(locale)) })
+        Ok(PyOpeningHours {
+            inner: oh.with_context(ctx.with_locale(locale)),
+            warnings,
+        })
+    }
+
+    /// The list of warnings that were emited while parsing the expression.
+    #[getter]
+    fn warnings(&self) -> Vec<String> {
+        self.warnings.clone()
     }
 
     /// Convert the expression into a normalized form. It will not affect the meaning of the
@@ -167,7 +182,10 @@ impl PyOpeningHours {
     /// >>> OpeningHours("24/7 ; Su closed").normalize()
     /// OpeningHours("Mo-Sa")
     fn normalize(&self) -> Self {
-        PyOpeningHours { inner: self.inner.normalize() }
+        PyOpeningHours {
+            inner: self.inner.normalize(),
+            warnings: Vec::default(),
+        }
     }
 
     /// Get current state of the time domain together with current comment. The state can be either

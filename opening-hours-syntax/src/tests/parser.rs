@@ -72,6 +72,9 @@ fn parse_invalid(
         panic!("parser should have raised an error on {expr}")
     };
 
+    #[cfg(feature = "std")]
+    println!("Got expected error: {err}");
+
     let err_debug = format!("{err:?}");
 
     let err_variant = err_debug
@@ -130,6 +133,11 @@ fn parse_with_warnings(#[case] expr: &str, #[case] expected_warnings: &[&str]) {
         .copied()
         .map(str::to_string)
         .collect();
+
+    #[cfg(feature = "std")]
+    for warning in &expected_warnings {
+        println!("Got expected warning: {warning}");
+    }
 
     assert_eq!(
         warnings, expected_warnings,

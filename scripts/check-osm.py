@@ -4,6 +4,7 @@ Fetch examples from taginfo.openstreetmap.org.
 """
 
 import asyncio
+import csv
 from pathlib import Path
 
 import aiohttp
@@ -14,13 +15,32 @@ API_URL = "https://taginfo.openstreetmap.org/api/4/key/values"
 PAGE_LENGTH = 999
 
 
+def bool_csv_str(b: bool) -> str:
+    return "yes" if b else "no"
+
+
 async def main():
     count_ok = 0
     count_total = 0
     page = 1
 
     async with aiohttp.ClientSession() as http:
-        with open(CRATE_ROOT / "opening-hours" / "data" / "osm_examples.txt", "w") as f:
+        with open(CRATE_ROOT / "opening-hours" / "data" / "osm_examples.csv", "w") as f:
+            output = csv.DictWriter(
+                f,
+                [
+                    "count",
+                    "expression",
+                    "normalized",
+                    "parser ok",
+                    "eval ok",
+                    "error",
+                    "warnings",
+                ],
+            )
+
+            output.writeheader()
+
             while True:
                 async with http.get(
                     API_URL,
@@ -37,6 +57,7 @@ async def main():
                 for line in content["data"]:
                     can_parse = True
                     can_eval = False
+                    error = ""
 
                     try:
                         oh = OpeningHours(line["value"])
@@ -48,17 +69,25 @@ async def main():
 
                         try:
                             oh.is_open()
-                        except Exception:
+                        except Exception as exc:
                             can_eval = False
+                            error = str(exc)
 
                     count_total += line["count"]
 
                     if can_eval:
                         count_ok += line["count"]
 
-                    print(
-                        f"{line['count']:06} {can_parse} {can_eval} {line['value']}",
-                        file=f,
+                    output.writerow(
+                        {
+                            "count": line["count"],
+                            "expression": line["value"],
+                            "normalized": str(oh.normalize()),
+                            "parser ok": bool_csv_str(can_parse),
+                            "eval ok": bool_csv_str(can_eval),
+                            "error": error,
+                            "warnings": ",".join(oh.warnings),
+                        }
                     )
 
                 print(f"Page {page}")

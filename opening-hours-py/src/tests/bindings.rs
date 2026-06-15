@@ -123,6 +123,22 @@ fn parser_exception() {
 }
 
 #[test]
+fn parser_warning() {
+    run_python(
+        r#"
+        from opening_hours import OpeningHours
+
+        oh = OpeningHours("jan mo OPEN")
+
+        assert len(oh.warnings) == 3
+        assert oh.warnings[0] == "month literal should be capitalized, got 'jan'"
+        assert oh.warnings[1] == "wday literal should be capitalized, got 'mo'"
+        assert oh.warnings[2] == "rules_modifier_enum literal should be lowercase, got 'OPEN'"
+        "#,
+    );
+}
+
+#[test]
 fn normalize() {
     run_python(
         r#"

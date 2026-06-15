@@ -51,6 +51,11 @@ class OpeningHours:
     >>> assert oh.is_closed(dt)
     >>> assert oh.next_change(dt).replace(tzinfo=None) == datetime.fromisoformat("2024-07-15 06:03")
     """
+    @property
+    def warnings(self) -> builtins.list[builtins.str]:
+        r"""
+        The list of warnings that were emited while parsing the expression.
+        """
     def __new__(
         cls,
         oh: builtins.str,
