@@ -31,9 +31,9 @@ async def main():
                 [
                     "count",
                     "expression",
-                    "normalized",
                     "parser ok",
-                    "eval ok",
+                    "normalized",
+                    "next change",
                     "error",
                     "warnings",
                 ],
@@ -55,40 +55,34 @@ async def main():
                     content = await resp.json()
 
                 for line in content["data"]:
-                    can_parse = True
-                    can_eval = False
+                    oh = None
                     error = ""
 
                     try:
-                        oh = OpeningHours(line["value"])
-                    except Exception:
-                        can_parse = False
+                        oh = OpeningHours(line["value"], max_interval_days=366)
+                    except Exception as exc:
+                        error = str(exc)
 
-                    if can_parse:
-                        can_eval = True
+                    res = {
+                        "count": line["count"],
+                        "expression": line["value"],
+                        "parser ok": bool_csv_str(oh is not None),
+                        "normalized": "",
+                        "next change": "",
+                        "error": error,
+                        "warnings": "",
+                    }
 
-                        try:
-                            oh.is_open()
-                        except Exception as exc:
-                            can_eval = False
-                            error = str(exc)
-
-                    count_total += line["count"]
-
-                    if can_eval:
+                    if oh is not None:
                         count_ok += line["count"]
+                        res["normalized"] = str(oh.normalize())
+                        res["warnings"] = ",".join(oh.warnings)
 
-                    output.writerow(
-                        {
-                            "count": line["count"],
-                            "expression": line["value"],
-                            "normalized": str(oh.normalize()),
-                            "parser ok": bool_csv_str(can_parse),
-                            "eval ok": bool_csv_str(can_eval),
-                            "error": error,
-                            "warnings": ",".join(oh.warnings),
-                        }
-                    )
+                        if dt := oh.next_change():
+                            res["next change"] = str(dt.isoformat())
+
+                    output.writerow(res)
+                    count_total += line["count"]
 
                 print(f"Page {page}")
                 page += 1

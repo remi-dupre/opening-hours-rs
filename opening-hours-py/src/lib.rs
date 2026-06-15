@@ -5,6 +5,7 @@ mod tests;
 
 use std::str::FromStr;
 
+use chrono::TimeDelta;
 use opening_hours_syntax::Parser;
 use pyo3::exceptions::PyException;
 use pyo3::prelude::*;
@@ -82,6 +83,10 @@ fn validate(oh: &str) -> bool {
 ///   coordinates when they are specified.
 /// - auto_timezone: If set to `True`, the timezone will automatically be inferred from coordinates
 ///   when they are specified.
+/// - max_interval_days: If specified, any change that is longer than the number of specified days
+///   will be considered infinite. This may be useful if you need to evaluate a large amount of
+///   complicated expressions and performance is critical. Even setting a value of a full year (366)
+///   is worth it.
 ///
 /// Raises
 /// ------
@@ -110,7 +115,7 @@ struct PyOpeningHours {
 #[pymethods]
 impl PyOpeningHours {
     #[new]
-    #[pyo3(signature = (oh, timezone=None, country=None, coords=None, auto_country=Some(true), auto_timezone=Some(true)))]
+    #[pyo3(signature = (oh, timezone=None, country=None, coords=None, auto_country=Some(true), auto_timezone=Some(true), max_interval_days=None))]
     fn new(
         oh: &str,
         timezone: Option<TimeZoneWrapper>,
@@ -118,11 +123,17 @@ impl PyOpeningHours {
         coords: Option<(f64, f64)>,
         auto_country: Option<bool>,
         auto_timezone: Option<bool>,
+        max_interval_days: Option<u32>,
     ) -> PyResult<Self> {
         let auto_country = auto_country.unwrap_or(true);
         let auto_timezone = auto_timezone.unwrap_or(true);
-        let mut ctx = Context::default();
+
         let mut warnings = Vec::new();
+        let mut ctx = Context::default();
+
+        if let Some(days) = max_interval_days {
+            ctx = ctx.approx_bound_interval_size(TimeDelta::days(days.into()))
+        }
 
         let mut parser =
             Parser::default().with_warning_handler(|warning| warnings.push(warning.to_string()));

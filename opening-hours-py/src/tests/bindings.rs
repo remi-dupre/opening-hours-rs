@@ -84,6 +84,18 @@ fn return_date_limit() {
 }
 
 #[test]
+fn max_interval_days() {
+    run_python(
+        r#"
+        from opening_hours import OpeningHours
+
+        oh = OpeningHours("5000 open", max_interval_days=366)
+        assert oh.next_change() is None
+        "#,
+    )
+}
+
+#[test]
 fn prefer_input_timezone() {
     run_python(
         r#"
