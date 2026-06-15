@@ -1,6 +1,6 @@
 use std::env;
 
-use chrono::{Duration, Local};
+use chrono::{Duration, Local, NaiveDateTime};
 
 use opening_hours::localization::Country;
 use opening_hours::{Context, OpeningHours};
@@ -9,10 +9,15 @@ use opening_hours_syntax::Parser;
 const COUNTRY: Country = Country::FR;
 
 fn main() {
-    let expression = env::args().nth(1).expect("Usage: ./schedule <EXPRESSION>");
-    let start_datetime = Local::now().naive_local();
-    let start_date = start_datetime.date();
+    let mut args = env::args().skip(1);
+    let expression = args.next().expect("Usage: ./schedule <EXPRESSION>");
 
+    let start_datetime = args
+        .next()
+        .map(|dt_str| NaiveDateTime::parse_from_str(&dt_str, "%Y-%m-%d %H:%M").unwrap())
+        .unwrap_or_else(|| Local::now().naive_local());
+
+    let start_date = start_datetime.date();
     let mut warns = 0;
 
     let mut parser = Parser::default().with_warning_handler(|warning| {
@@ -53,7 +58,7 @@ fn main() {
         }
 
         for tr in schedule {
-            print!(" - {:?} - {:?}", tr.range, tr.kind);
+            print!(" - {}-{} - {:?}", tr.range.start, tr.range.end, tr.kind);
 
             if !tr.comment.is_empty() {
                 print!(" ({})", tr.comment);

@@ -72,8 +72,8 @@ impl<F: FnMut(Warning)> Parser<F> {
     }
 
     /// Attach a warning handler callback to this parser.
-    pub fn with_warning_handler<G: FnMut(Warning)>(self, warn: G) -> Parser<G> {
-        Parser { warning_handler: warn }
+    pub fn with_warning_handler<G: FnMut(Warning)>(self, warning_handler: G) -> Parser<G> {
+        Parser { warning_handler }
     }
 
     // --

@@ -382,7 +382,7 @@ fn monthday_range_to_intervals(
 
             if *start == Date::md(29, Month::February) && *end == Date::md(29, Month::February) {
                 return Box::new(
-                    (year - 3..=year + 3)
+                    (year - 4..=year + 4)
                         .filter_map(|y| NaiveDate::from_ymd_opt(y, 2, 29))
                         .map(|d| start_offset.apply(d)..=end_offset.apply(d)),
                 );

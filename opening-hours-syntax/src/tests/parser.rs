@@ -42,6 +42,7 @@ fn parse_valid(mut parser_no_warn: Parser, #[case] expr: &str) {
 #[case("Syntax", "10:00-100:00")]
 #[case("Syntax", "10:00-12:00 tomorrow")]
 #[case("Syntax", r#"Mo-Fr open "ring "the bell"""#)]
+#[case("Syntax", "1975-4291/37776")]
 #[case("InvertedWeekRange", "week15-10")]
 #[case("InvertedWeekRange", "week15-10/3")]
 #[case("InvertedYearRange", "2020-2010")]

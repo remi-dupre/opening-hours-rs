@@ -17,3 +17,4 @@ arbitrary = { version = "1", features = ["derive"] }
 chrono = "0.4"
 libfuzzer-sys = "0.4"
 opening-hours = { path = "..", features = ["auto-country", "auto-timezone"] }
+opening-hours-syntax = { path = "../opening-hours-syntax" }

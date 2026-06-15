@@ -452,6 +452,7 @@ dependencies = [
  "chrono",
  "libfuzzer-sys",
  "opening-hours",
+ "opening-hours-syntax",
 ]
 
 [[package]]

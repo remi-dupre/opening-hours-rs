@@ -182,7 +182,7 @@ date_offset = {
 
 // NOTE: In specification space separators are not allowed.
 date_from = {
-      year? ~ variable_date
+      year? ~ " "? ~ variable_date
     | (year ~ " "?)? ~ month ~ " "? ~ daynum
     | (year ~ " "?)? ~ month ~ " " ~ wday ~ "[" ~ nth_minus? ~ nth ~ "]"
         ~ !( "," ~ !monthday_range )
@@ -193,7 +193,7 @@ date_to = {
     | daynum
 }
 
-variable_date = { " "? ~ ^"easter" }
+variable_date = { ^"easter" }
 
 
 // Year selector
@@ -289,7 +289,7 @@ year = @{
     | ( '2'..'9' ~ ASCII_DIGIT{3} )  // 2000 -> 9999
 }
 
-positive_number = @{ "0"* ~ ASCII_NONZERO_DIGIT ~ ASCII_DIGIT{,4} }
+positive_number = @{ "0"* ~ ASCII_NONZERO_DIGIT ~ ASCII_DIGIT{,3} }
 
 comment = { comment_delimiter ~ comment_inner ~ comment_delimiter }
 

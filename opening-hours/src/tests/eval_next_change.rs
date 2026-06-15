@@ -35,6 +35,7 @@ use crate::{Context, OpeningHours};
 #[case::month("2021-04-01 12:00", "2021 Mar 28-Apr 16", "2021-04-17 00:00")]
 #[case::month("2021-02-15 12:00", "Mar 28-2021 Apr 16", "2021-03-28 00:00")]
 #[case::month("2021-04-01 12:00", "Mar 28-2021 Apr 16", "2021-04-17 00:00")]
+#[case::month("2024-03-14 12:00", "Feb 29", "2028-02-29 00:00")]
 // Month Selector (with weekday)
 #[case::month_wday("2020-01-01 12:00", "Jan Mo[1]-Jan Su[-1]", "2020-01-06 00:00")]
 #[case::month_wday("2020-01-06 12:00", "Jan Mo[1]-Jan Su[-1]", "2020-01-27 00:00")]
