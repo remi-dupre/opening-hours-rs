@@ -24,18 +24,14 @@ pub(crate) fn time_selector_intervals_at_next_day<'a, L: 'a + Localize>(
     time_selector: &'a ts::TimeSelector,
     date: NaiveDate,
 ) -> impl Iterator<Item = Range<ExtendedTime>> + 'a {
-    ranges_union(
-        time_selector
-            .as_naive(ctx, date)
-            .filter_map(|range| {
-                range_intersection(range, ExtendedTime::MIDNIGHT_24..ExtendedTime::MIDNIGHT_48)
-            })
-            .map(|range| {
-                let start = range.start.add_hours(-24).unwrap();
-                let end = range.end.add_hours(-24).unwrap();
-                start..end
-            }),
-    )
+    ranges_union(time_selector.as_naive(ctx, date).filter_map(|range| {
+        let range =
+            range_intersection(range, ExtendedTime::MIDNIGHT_24..ExtendedTime::MIDNIGHT_48)?;
+
+        let start = range.start.add_hours(-24)?;
+        let end = range.end.add_hours(-24)?;
+        Some(start..end)
+    }))
 }
 
 /// Trait used to project a time representation to its naive representation at

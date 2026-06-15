@@ -34,6 +34,10 @@ class OpeningHours:
       coordinates when they are specified.
     - auto_timezone: If set to `True`, the timezone will automatically be inferred from coordinates
       when they are specified.
+    - max_interval_days: If specified, any change that is longer than the number of specified days
+      will be considered infinite. This may be useful if you need to evaluate a large amount of
+      complicated expressions and performance is critical. Even setting a value of a full year (366)
+      is worth it.
 
     Raises
     ------
@@ -51,6 +55,11 @@ class OpeningHours:
     >>> assert oh.is_closed(dt)
     >>> assert oh.next_change(dt).replace(tzinfo=None) == datetime.fromisoformat("2024-07-15 06:03")
     """
+    @property
+    def warnings(self) -> builtins.list[builtins.str]:
+        r"""
+        The list of warnings that were emited while parsing the expression.
+        """
     def __new__(
         cls,
         oh: builtins.str,
@@ -59,6 +68,7 @@ class OpeningHours:
         coords: typing.Optional[tuple[builtins.float, builtins.float]] = None,
         auto_country: typing.Optional[builtins.bool] = True,
         auto_timezone: typing.Optional[builtins.bool] = True,
+        max_interval_days: typing.Optional[builtins.int] = None,
     ) -> OpeningHours: ...
     def normalize(self) -> OpeningHours:
         r"""
@@ -70,10 +80,12 @@ class OpeningHours:
         >>> OpeningHours("24/7 ; Su closed").normalize()
         OpeningHours("Mo-Sa")
         """
-    def state(self, time: typing.Optional[datetime.datetime] = None) -> State:
+    def state(
+        self, time: typing.Optional[datetime.datetime] = None
+    ) -> tuple[State, builtins.str]:
         r"""
-        Get current state of the time domain, the state can be either "open",
-        "closed" or "unknown".
+        Get current state of the time domain together with current comment. The state can be either
+        "open", "closed" or "unknown".
 
         Parameters
         ----------
@@ -82,7 +94,7 @@ class OpeningHours:
         Examples
         --------
         >>> OpeningHours("24/7 off").state()
-        State.CLOSED
+        (State.CLOSED, '')
         """
     def is_open(self, time: typing.Optional[datetime.datetime] = None) -> builtins.bool:
         r"""
@@ -165,9 +177,9 @@ class OpeningHours:
         --------
         >>> intervals = OpeningHours("2099Mo-Su 12:30-17:00").intervals()
         >>> next(intervals)
-        (..., datetime.datetime(2099, 1, 1, 12, 30), State.CLOSED, [])
+        (..., datetime.datetime(2099, 1, 1, 12, 30), State.CLOSED, '')
         >>> next(intervals)
-        (datetime.datetime(2099, 1, 1, 12, 30), datetime.datetime(2099, 1, 1, 17, 0), State.OPEN, [])
+        (datetime.datetime(2099, 1, 1, 12, 30), datetime.datetime(2099, 1, 1, 17, 0), State.OPEN, '')
         """
     def __str__(self) -> builtins.str: ...
     def __repr__(self) -> builtins.str: ...

@@ -84,6 +84,18 @@ fn return_date_limit() {
 }
 
 #[test]
+fn max_interval_days() {
+    run_python(
+        r#"
+        from opening_hours import OpeningHours
+
+        oh = OpeningHours("5000 open", max_interval_days=366)
+        assert oh.next_change() is None
+        "#,
+    )
+}
+
+#[test]
 fn prefer_input_timezone() {
     run_python(
         r#"
@@ -120,6 +132,22 @@ fn parser_exception() {
             raise Exception
         "#,
     )
+}
+
+#[test]
+fn parser_warning() {
+    run_python(
+        r#"
+        from opening_hours import OpeningHours
+
+        oh = OpeningHours("jan mo OPEN")
+
+        assert len(oh.warnings) == 3
+        assert oh.warnings[0] == "month literal should be capitalized, got 'jan'"
+        assert oh.warnings[1] == "wday literal should be capitalized, got 'mo'"
+        assert oh.warnings[2] == "rules_modifier_enum literal should be lowercase, got 'OPEN'"
+        "#,
+    );
 }
 
 #[test]

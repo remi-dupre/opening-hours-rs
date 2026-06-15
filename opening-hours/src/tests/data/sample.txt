@@ -197,8 +197,7 @@ week 4-16 We 00:00-24:00; week 38-42 Sa 00:00-24:00; PH off
 Jan 23-Feb 11,Feb 12 00:00-24:00; PH off
 Apr-Oct Su[2] 14:00-18:00; Aug Su[-1] -1 day 10:00-18:00; Aug Su[-1] 10:00-18:00; PH off
 Mo-Fr 08:00-12:00, We 14:00-18:00; Su,PH off
+"check website http://www.senat.fr/visite/jardin/horaires.html"; Mar Su[-1]-Sep 30 07:30-19:15+ open "check closing time on website http://www.senat.fr/visite/jardin/horaires.html"; (sunset-00:10)-(sunrise-00:50) closed; 21:30-07:30 closed
+
 # 00:00-24:00 week 6 Mo-Su Feb; PH off, (check out the error correction and the prettify function for the opening_hours value)
 # monday, Tu, wE, TH 12:00 - 20:00 ; 14:00-16:00 Off ; closed public Holiday, (check out the error correction and the prettify function for the opening_hours value)
-
-# This is a tough one, according to the grammar weekday should not be part of an interval.
-# "check website http://www.senat.fr/visite/jardin/horaires.html"; Mar Su[-1]-Sep 30 07:30-19:15+ open "check closing time on website http://www.senat.fr/visite/jardin/horaires.html"; (sunset-00:10)-(sunrise-00:50) closed; 21:30-07:30 closed

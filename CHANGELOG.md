@@ -1,5 +1,39 @@
 # Changelog
 
+## 2.0.0
+
+### General
+
+- **(breaking)** Intervals from iterators will now return a unique comment (an
+  empty string if there is no comment).
+- **(breaking)** `next_change()` can now return a date where the facility remains
+  open or remains closed if the comment changes.
+- **(breaking)** `state()` now returns the current comment together with the
+  rule kind.
+- **(breaking)** Year and week ranges cannot be defined in inverted order,
+  which is similarly to the JS library's behavior.
+- Syntax: handle week days in month selectors (eg. "Jan Su[-1]-Jul Mo[1]")
+- Fix: expressions formatting to invalid expression
+  - time spans with repetition (eg. "12:00-14:00/01:30")
+  - variable times with offset (eg. "(sunrise-00:10)-(sunset+01:15)")
+- The parser won't log any warnings anymore, it is however now possible to
+  register a callback to handle more kind of warnings.
+- Syntax: Literals are no longer case sensitive (emits a warning).
+
+### Python
+
+- **(breaking)** `State` has been renamed to `RuleKind`.
+- Added `max_interval_days` parameter that allows to enable an evaluation
+  optimisation at the cost of precision.
+
+### Rust
+
+- Add `OpeningHours::get_context(&self)`.
+- Infaillible parser: parsing any call is garanteed to be panic-free. Added new
+  class of implementation issues that would prompt you to open a Github issue.
+- Deprecate `OpeningHours::parse`, use `std::str::FromStr` instead.
+- Syntax: remove log feature.
+
 ## 1.4.0
 
 - Regional holidays will now be considered in unknown status.

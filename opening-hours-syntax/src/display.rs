@@ -2,7 +2,7 @@ use core::fmt::Display;
 
 pub(crate) fn write_days_offset(
     f: &mut core::fmt::Formatter<'_>,
-    offset: i64,
+    offset: i16,
 ) -> core::fmt::Result {
     if offset == 0 {
         return Ok(());

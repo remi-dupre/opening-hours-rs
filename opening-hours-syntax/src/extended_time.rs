@@ -1,10 +1,10 @@
 use core::convert::TryInto;
-use core::fmt::{Debug, Display};
+use core::fmt::Display;
 
 use chrono::{NaiveTime, Timelike};
 
 /// An hour+minute struct that can go up to 48h.
-#[derive(Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ExtendedTime {
     hour: u8,
     minute: u8,
@@ -138,12 +138,6 @@ impl ExtendedTime {
 impl Display for ExtendedTime {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{:02}:{:02}", self.hour, self.minute)
-    }
-}
-
-impl Debug for ExtendedTime {
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::result::Result<(), core::fmt::Error> {
-        write!(f, "{self}")
     }
 }
 

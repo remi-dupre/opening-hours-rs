@@ -1,6 +1,6 @@
 [package]
 name = "opening-hours-py"
-version = "1.4.0"
+version = "2.0.0"
 authors = ["Rémi Dupré <remi@dupre.io>"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
@@ -23,13 +23,12 @@ pyo3-stub-gen = "0.22"
 [dependencies.opening-hours-rs]
 package = "opening-hours"
 path = ".."
-version = "1.4.0"
+version = "2.0.0"
 features = ["log", "auto-country", "auto-timezone"]
 
 [dependencies.opening-hours-syntax]
 path = "../opening-hours-syntax"
-version = "1.4.0"
-features = ["log"]
+version = "2.0.0"
 
 [dependencies.pyo3]
 version = "0.28"
@@ -40,3 +39,7 @@ features = [
     # https://github.com/Jij-Inc/pyo3-stub-gen/pull/297
     "abi3", "abi3-py310",
 ]
+
+[lints.clippy]
+todo = "deny"
+unwrap_used = "deny"

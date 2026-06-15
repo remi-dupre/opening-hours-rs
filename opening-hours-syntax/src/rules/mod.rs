@@ -1,6 +1,8 @@
 pub mod day;
 pub mod time;
 
+use alloc::str::FromStr;
+use alloc::string::String;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 use core::fmt::Display;
@@ -8,7 +10,6 @@ use core::fmt::Display;
 use crate::normalize::frame::Bounded;
 use crate::normalize::paving::{Paving, Paving5D, UnpackFromBack};
 use crate::normalize::{canonical_to_seq, ruleseq_to_selector};
-use crate::sorted_vec::UniqueSortedVec;
 
 // OpeningHoursExpression
 
@@ -32,20 +33,20 @@ impl OpeningHoursExpression {
     /// assert!(!parse("24/7 ; PH off").unwrap().is_constant());
     /// ```
     pub fn is_constant(&self) -> bool {
-        let Some(kind) = self.rules.last().map(|rs| rs.kind) else {
+        let Some(state) = self.rules.last().map(|rs| rs.as_state()) else {
             return true;
         };
 
         // Ignores rules from the end as long as they are all evaluated to the same kind.
         let search_tail_full = self.rules.iter().rev().find(|rs| {
-            rs.day_selector.is_empty() || !rs.time_selector.is_00_24() || rs.kind != kind
+            rs.day_selector.is_empty() || !rs.time_selector.is_00_24() || rs.as_state() != state
         });
 
         let Some(tail) = search_tail_full else {
-            return kind == RuleKind::Closed;
+            return state == Default::default();
         };
 
-        tail.kind == kind && tail.is_constant()
+        tail.as_state() == state && tail.is_constant()
     }
 
     /// Convert the expression into a normalized form. It will not affect the meaning of the
@@ -59,17 +60,20 @@ impl OpeningHoursExpression {
         let mut rules_queue = self.rules.into_iter().peekable();
         let mut paving = Paving5D::default();
 
-        while let Some(rule) = rules_queue.peek() {
+        #[allow(clippy::result_large_err)]
+        while let Some((rule, selector)) = rules_queue.next_if_map(|rule| {
+            // As long as this is not a fallback operator
             if rule.operator == RuleOperator::Fallback {
-                break;
+                return Err(rule);
             }
 
-            let Some(selector) = ruleseq_to_selector(rule) else {
-                break;
+            // And as long as we can parse it
+            let Some(selector) = ruleseq_to_selector(&rule) else {
+                return Err(rule);
             };
 
-            let rule = rules_queue.next().unwrap();
-
+            Ok((rule, selector))
+        }) {
             // If the rule is not explicitly targeting a closed kind, then it overrides
             // previous rules for the whole day.
             if rule.operator == RuleOperator::Normal && rule.kind != RuleKind::Closed {
@@ -78,7 +82,7 @@ impl OpeningHoursExpression {
                 paving.set(&full_day_selector, &Default::default());
             }
 
-            paving.set(&selector, &(rule.kind, rule.comments));
+            paving.set(&selector, &(rule.kind, rule.comment));
         }
 
         Self {
@@ -123,7 +127,7 @@ pub struct RuleSequence {
     pub time_selector: time::TimeSelector,
     pub kind: RuleKind,
     pub operator: RuleOperator,
-    pub comments: UniqueSortedVec<Arc<str>>,
+    pub comment: Arc<str>,
 }
 
 impl RuleSequence {
@@ -131,6 +135,12 @@ impl RuleSequence {
     /// can't detect all cases.
     pub fn is_constant(&self) -> bool {
         self.day_selector.is_empty() && self.time_selector.is_00_24()
+    }
+
+    /// Extract the kind and comment from the range, which are the values that define current state
+    /// of an expression.
+    pub fn as_state(&self) -> (RuleKind, &str) {
+        (self.kind, &self.comment)
     }
 
     /// Format rule sequence into given formatter.
@@ -170,12 +180,12 @@ impl RuleSequence {
             write!(f, "{}", self.kind)?;
         }
 
-        if !self.comments.is_empty() {
+        if !self.comment.is_empty() {
             if !is_empty {
                 write!(f, " ")?;
             }
 
-            write!(f, "\"{}\"", self.comments.join(", "))?;
+            write!(f, "\"{}\"", self.comment)?;
         }
 
         Ok(())
@@ -204,6 +214,19 @@ impl RuleKind {
             Self::Open => "open",
             Self::Closed => "closed",
             Self::Unknown => "unknown",
+        }
+    }
+}
+
+impl FromStr for RuleKind {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "open" => Ok(Self::Open),
+            "closed" => Ok(Self::Closed),
+            "unknown" => Ok(Self::Unknown),
+            other => Err(format!("Unknown rule kind {other:?}")),
         }
     }
 }

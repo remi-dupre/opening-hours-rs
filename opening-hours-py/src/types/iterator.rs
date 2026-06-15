@@ -57,7 +57,7 @@ impl RangeIterator {
         DateTimeMaybeAware,
         Option<DateTimeMaybeAware>,
         State,
-        Vec<String>,
+        String,
     )> {
         let dt_range = slf.iter.next()?;
 
@@ -66,7 +66,7 @@ impl RangeIterator {
             slf.map_prefered_timezone(dt_range.range.end)
                 .map_date_limit(),
             dt_range.kind.into(),
-            dt_range.comments.iter().map(|c| c.to_string()).collect(),
+            dt_range.comment.to_string(),
         ))
     }
 }

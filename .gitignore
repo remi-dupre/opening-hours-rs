@@ -4,6 +4,6 @@
 __pycache__
 docs
 fuzz/artifacts
-opening-hours/data/osm_examples.txt
+opening-hours/data/osm_examples.csv
 shell.nix
 tarpaulin-report.html

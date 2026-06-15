@@ -27,7 +27,7 @@ jobs:
         run: poetry run maturin develop
 
       - name: Build python documentation
-        run: poetry run pdoc -o docs -d numpy opening_hours
+        run: poetry run pdoc --no-show-source -o docs -d numpy opening_hours
 
       - name: Publish to github pages
         uses: peaceiris/actions-gh-pages@v3

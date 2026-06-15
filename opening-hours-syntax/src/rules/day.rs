@@ -101,10 +101,10 @@ impl Display for DaySelector {
 // --
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Year(pub u16);
+pub struct Year(pub i32);
 
 impl Deref for Year {
-    type Target = u16;
+    type Target = i32;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -118,18 +118,43 @@ impl DerefMut for Year {
 }
 
 // YearRange
+
+/// A year range that ensures that bounds are always in the right order
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct YearRange {
-    pub range: RangeInclusive<Year>,
-    pub step: u16,
+    range: RangeInclusive<Year>,
+    step: u16,
+}
+
+impl YearRange {
+    /// Create a new `YearRange`. Return `None` if the bounds are in the wrong order.
+    pub fn new(range: RangeInclusive<Year>, mut step: u16) -> Option<Self> {
+        if range.start() > range.end() {
+            return None;
+        }
+
+        if range.start().abs_diff(**range.end()) < step.into() {
+            step = 1;
+        }
+
+        Some(Self { range, step })
+    }
+
+    /// Extract range and step from this object.
+    pub fn into_parts(&self) -> (RangeInclusive<Year>, u16) {
+        (self.range.clone(), self.step)
+    }
 }
 
 impl Display for YearRange {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "{}", self.range.start().deref())?;
+        let start = **self.range.start();
+        let end = **self.range.end();
 
-        if self.range.start() != self.range.end() {
-            write!(f, "-{}", self.range.end().deref())?;
+        write!(f, "{start}")?;
+
+        if start != end {
+            write!(f, "-{end}")?;
 
             if self.step != 1 {
                 write!(f, "/{}", self.step)?;
@@ -148,7 +173,7 @@ impl Display for YearRange {
 pub enum MonthdayRange {
     Month {
         range: RangeInclusive<Month>,
-        year: Option<u16>,
+        year: Option<Year>,
     },
     Date {
         start: (Date, DateOffset),
@@ -161,7 +186,7 @@ impl Display for MonthdayRange {
         match self {
             Self::Month { range, year } => {
                 if let Some(year) = year {
-                    write!(f, "{year}")?;
+                    write!(f, "{}", **year)?;
                 }
 
                 write!(f, "{}", range.start())?;
@@ -190,18 +215,24 @@ impl Display for MonthdayRange {
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub enum Date {
     Fixed {
-        year: Option<u16>,
+        year: Option<Year>,
         month: Month,
         day: u8,
     },
+    Weekday {
+        year: Option<Year>,
+        month: Month,
+        wday: Weekday,
+        nth: i8,
+    },
     Easter {
-        year: Option<u16>,
+        year: Option<Year>,
     },
 }
 
 impl Date {
     #[inline]
-    pub fn ymd(day: u8, month: Month, year: u16) -> Self {
+    pub fn ymd(day: u8, month: Month, year: Year) -> Self {
         Self::Fixed { day, month, year: Some(year) }
     }
 
@@ -211,34 +242,44 @@ impl Date {
     }
 
     #[inline]
-    pub fn has_year(&self) -> bool {
-        matches!(
-            self,
-            Self::Fixed { year: Some(_), .. } | Self::Easter { year: Some(_) }
-        )
+    pub fn year(&self) -> Option<Year> {
+        match *self {
+            Self::Fixed { year, .. } | Self::Weekday { year, .. } | Self::Easter { year } => year,
+        }
     }
 }
 
 impl Display for Date {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Date::Fixed { year, month, day } => {
+            Self::Fixed { year, month, day } => {
                 if let Some(year) = year {
-                    write!(f, "{year} ")?;
+                    write!(f, "{} ", **year)?;
                 }
 
-                write!(f, "{month} {day}")?;
+                write!(f, "{month} {day}")
             }
-            Date::Easter { year } => {
+            Self::Weekday { year, month, wday: weekday, nth } => {
                 if let Some(year) = year {
-                    write!(f, "{year} ")?;
+                    write!(f, "{} ", **year)?;
                 }
 
-                write!(f, "easter")?;
+                write!(f, "{month} {}", wday_str(*weekday))?;
+
+                if *nth != 0 {
+                    write!(f, "[{nth}]")?;
+                }
+
+                Ok(())
+            }
+            Self::Easter { year } => {
+                if let Some(year) = year {
+                    write!(f, "{} ", **year)?;
+                }
+
+                write!(f, "easter")
             }
         }
-
-        Ok(())
     }
 }
 
@@ -249,13 +290,13 @@ impl Display for Date {
 #[derive(Clone, Copy, Debug, Default, Hash, PartialEq, Eq)]
 pub struct DateOffset {
     pub wday_offset: WeekDayOffset,
-    pub day_offset: i64,
+    pub day_offset: i16,
 }
 
 impl DateOffset {
     #[inline]
     pub fn apply(&self, mut date: NaiveDate) -> NaiveDate {
-        date += Duration::days(self.day_offset);
+        date += Duration::days(self.day_offset.into());
 
         match self.wday_offset {
             WeekDayOffset::None => {}
@@ -325,13 +366,13 @@ impl Display for WeekDayOffset {
 pub enum WeekDayRange {
     Fixed {
         range: RangeInclusive<Weekday>,
-        offset: i64,
+        offset: i16,
         nth_from_start: [bool; 5],
         nth_from_end: [bool; 5],
     },
     Holiday {
         kind: HolidayKind,
-        offset: i64,
+        offset: i16,
     },
 }
 
@@ -359,13 +400,16 @@ impl Display for WeekDayRange {
                         .map(|(idx, _)| -(idx as isize) - 1);
 
                     let mut weeknum_iter = pos_weeknum_iter.chain(neg_weeknum_iter);
-                    write!(f, "[{}", weeknum_iter.next().unwrap())?;
 
-                    for num in weeknum_iter {
-                        write!(f, ",{num}")?;
+                    if let Some(first_num) = weeknum_iter.next() {
+                        write!(f, "[{first_num}")?;
+
+                        for num in weeknum_iter {
+                            write!(f, ",{num}")?;
+                        }
+
+                        write!(f, "]")?;
                     }
-
-                    write!(f, "]")?;
                 }
 
                 write_days_offset(f, *offset)?;
@@ -427,10 +471,31 @@ impl DerefMut for WeekNum {
 // -- Struct: WeekRange
 // --
 
+// TODO: ensure there can't be wrapping with step
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct WeekRange {
-    pub range: RangeInclusive<WeekNum>,
-    pub step: u8,
+    range: RangeInclusive<WeekNum>,
+    step: u8,
+}
+
+impl WeekRange {
+    /// Create a new `WeekRange`. Return `None` if the bounds are in the wrong order.
+    pub fn new(range: RangeInclusive<WeekNum>, mut step: u8) -> Option<Self> {
+        if range.start() > range.end() {
+            return None;
+        }
+
+        if range.start().abs_diff(**range.end()) < step {
+            step = 1;
+        }
+
+        Some(Self { range, step })
+    }
+
+    /// Extract range and step from this object.
+    pub fn into_parts(&self) -> (RangeInclusive<WeekNum>, u8) {
+        (self.range.clone(), self.step)
+    }
 }
 
 impl Display for WeekRange {
@@ -475,12 +540,14 @@ impl Month {
     #[inline]
     pub fn next(self) -> Self {
         let num = self as u8;
+        #[allow(clippy::unwrap_used)] // (x % 12) + 1 is guaranteed to be in [1, 12]
         ((num % 12) + 1).try_into().unwrap()
     }
 
     #[inline]
     pub fn prev(self) -> Self {
         let num = self as u8;
+        #[allow(clippy::unwrap_used)] // (x % 12) + 1 is guaranteed to be in [1, 12]
         (((num + 10) % 12) + 1).try_into().unwrap()
     }
 

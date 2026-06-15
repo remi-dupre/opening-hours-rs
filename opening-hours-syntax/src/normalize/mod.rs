@@ -40,22 +40,20 @@ pub(crate) fn canonical_to_seq(canonical: Canonical) -> impl Iterator<Item = Rul
 
     core::iter::from_fn(move || {
         // Extract open periods first, then unknowns
-        let ((kind, comments), mut selector) =
-            [RuleKind::Open, RuleKind::Unknown, RuleKind::Closed]
-                .into_iter()
-                .find_map(|target_kind| {
-                    canonical_remaining.pop_filter(|(kind, comments)| {
-                        *kind == target_kind
-                            && (target_kind != RuleKind::Closed || !comments.is_empty())
-                    })
-                })?;
+        let ((kind, comment), mut selector) = [RuleKind::Open, RuleKind::Unknown, RuleKind::Closed]
+            .into_iter()
+            .find_map(|target_kind| {
+                canonical_remaining.pop_filter(|(kind, comment)| {
+                    *kind == target_kind && (target_kind != RuleKind::Closed || !comment.is_empty())
+                })
+            })?;
 
         // Merge consecutive intervals as much as possible if the hole between
         // two consecutive intervals was covered with the same value during a
         // previous extraction.
         selector.fill_holes({
             let canonical = &canonical;
-            let val = (kind, comments.clone());
+            let val = (kind, comment.clone());
             move |candidate| canonical.is_val(candidate, &val)
         });
 
@@ -100,7 +98,7 @@ pub(crate) fn canonical_to_seq(canonical: Canonical) -> impl Iterator<Item = Rul
             time_selector,
             kind,
             operator,
-            comments,
+            comment,
         })
     })
 }

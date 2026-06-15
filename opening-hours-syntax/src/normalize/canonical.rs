@@ -8,7 +8,6 @@ use chrono::Weekday;
 use crate::normalize::paving::{Paving5D, Selector5D};
 use crate::rules::day::{Month, MonthdayRange, WeekDayRange, WeekNum, WeekRange, Year, YearRange};
 use crate::rules::time::{Time, TimeSpan};
-use crate::sorted_vec::UniqueSortedVec;
 use crate::{ExtendedTime, RuleKind};
 
 use super::frame::{Bounded, Frame};
@@ -19,7 +18,7 @@ pub(crate) type Canonical = Paving5D<
     Frame<Month>,
     Frame<Year>,
     ExtendedTime,
-    (RuleKind, UniqueSortedVec<Arc<str>>),
+    (RuleKind, Arc<str>),
 >;
 
 pub(crate) type CanonicalSelector =
@@ -100,18 +99,17 @@ impl MakeCanonical for YearRange {
     type CanonicalType = Frame<Year>;
 
     fn try_make_canonical(&self) -> Option<Range<Self::CanonicalType>> {
-        if self.step != 1 {
+        let (range, step) = self.into_parts();
+
+        if step != 1 {
             return None;
         }
 
-        Some(Frame::to_range_strict(self.range.clone()))
+        Some(Frame::to_range_strict(range))
     }
 
     fn into_type(canonical: Range<Self::CanonicalType>) -> Option<Self> {
-        Some(YearRange {
-            range: Frame::to_range_inclusive(canonical)?,
-            step: 1,
-        })
+        YearRange::new(Frame::to_range_inclusive(canonical)?, 1)
     }
 }
 
@@ -137,18 +135,17 @@ impl MakeCanonical for WeekRange {
     type CanonicalType = Frame<WeekNum>;
 
     fn try_make_canonical(&self) -> Option<Range<Self::CanonicalType>> {
-        if self.step != 1 {
+        let (range, step) = self.into_parts();
+
+        if step != 1 {
             return None;
         }
 
-        Some(Frame::to_range_strict(self.range.clone()))
+        Some(Frame::to_range_strict(range))
     }
 
     fn into_type(canonical: Range<Self::CanonicalType>) -> Option<Self> {
-        Some(WeekRange {
-            range: Frame::to_range_inclusive(canonical)?,
-            step: 1,
-        })
+        WeekRange::new(Frame::to_range_inclusive(canonical)?, 1)
     }
 }
 

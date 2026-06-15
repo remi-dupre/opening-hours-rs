@@ -3,12 +3,16 @@ pub(crate) mod types;
 #[cfg(test)]
 mod tests;
 
+use std::str::FromStr;
+
+use chrono::TimeDelta;
+use opening_hours_syntax::Parser;
 use pyo3::exceptions::PyException;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods};
 
-use ::opening_hours_rs::localization::{Coordinates, Country, TzLocation};
-use ::opening_hours_rs::{Context, OpeningHours};
+use opening_hours_rs::localization::{Coordinates, Country, TzLocation};
+use opening_hours_rs::{Context, OpeningHours};
 
 use crate::types::datetime::DateTimeMaybeAware;
 use crate::types::iterator::RangeIterator;
@@ -58,7 +62,7 @@ pyo3::create_exception!(
 #[pyfunction]
 #[pyo3(text_signature = "(oh, /)")]
 fn validate(oh: &str) -> bool {
-    OpeningHours::parse(oh).is_ok()
+    OpeningHours::from_str(oh).is_ok()
 }
 
 /// Parse input opening hours description.
@@ -79,6 +83,10 @@ fn validate(oh: &str) -> bool {
 ///   coordinates when they are specified.
 /// - auto_timezone: If set to `True`, the timezone will automatically be inferred from coordinates
 ///   when they are specified.
+/// - max_interval_days: If specified, any change that is longer than the number of specified days
+///   will be considered infinite. This may be useful if you need to evaluate a large amount of
+///   complicated expressions and performance is critical. Even setting a value of a full year (366)
+///   is worth it.
 ///
 /// Raises
 /// ------
@@ -100,13 +108,14 @@ fn validate(oh: &str) -> bool {
 #[derive(PartialEq)]
 struct PyOpeningHours {
     inner: OpeningHours<PyLocation>,
+    warnings: Vec<String>,
 }
 
 #[gen_stub_pymethods]
 #[pymethods]
 impl PyOpeningHours {
     #[new]
-    #[pyo3(signature = (oh, timezone=None, country=None, coords=None, auto_country=Some(true), auto_timezone=Some(true)))]
+    #[pyo3(signature = (oh, timezone=None, country=None, coords=None, auto_country=Some(true), auto_timezone=Some(true), max_interval_days=None))]
     fn new(
         oh: &str,
         timezone: Option<TimeZoneWrapper>,
@@ -114,10 +123,20 @@ impl PyOpeningHours {
         coords: Option<(f64, f64)>,
         auto_country: Option<bool>,
         auto_timezone: Option<bool>,
+        max_interval_days: Option<u32>,
     ) -> PyResult<Self> {
         let auto_country = auto_country.unwrap_or(true);
         let auto_timezone = auto_timezone.unwrap_or(true);
+
+        let mut warnings = Vec::new();
         let mut ctx = Context::default();
+
+        if let Some(days) = max_interval_days {
+            ctx = ctx.approx_bound_interval_size(TimeDelta::days(days.into()))
+        }
+
+        let mut parser =
+            Parser::default().with_warning_handler(|warning| warnings.push(warning.to_string()));
 
         let coords = coords
             .map(|(lat, lon)| {
@@ -127,7 +146,7 @@ impl PyOpeningHours {
             })
             .transpose()?;
 
-        let oh = OpeningHours::parse(oh)
+        let oh = OpeningHours::parse_with(&mut parser, oh)
             .map_err(|err| ParserError::new_err(format!("Failed to parse expression: {err}")))?;
 
         if let Some(iso_code) = country {
@@ -154,7 +173,16 @@ impl PyOpeningHours {
             _ => PyLocation::Naive,
         };
 
-        Ok(PyOpeningHours { inner: oh.with_context(ctx.with_locale(locale)) })
+        Ok(PyOpeningHours {
+            inner: oh.with_context(ctx.with_locale(locale)),
+            warnings,
+        })
+    }
+
+    /// The list of warnings that were emited while parsing the expression.
+    #[getter]
+    fn warnings(&self) -> Vec<String> {
+        self.warnings.clone()
     }
 
     /// Convert the expression into a normalized form. It will not affect the meaning of the
@@ -165,11 +193,14 @@ impl PyOpeningHours {
     /// >>> OpeningHours("24/7 ; Su closed").normalize()
     /// OpeningHours("Mo-Sa")
     fn normalize(&self) -> Self {
-        PyOpeningHours { inner: self.inner.normalize() }
+        PyOpeningHours {
+            inner: self.inner.normalize(),
+            warnings: Vec::default(),
+        }
     }
 
-    /// Get current state of the time domain, the state can be either "open",
-    /// "closed" or "unknown".
+    /// Get current state of the time domain together with current comment. The state can be either
+    /// "open", "closed" or "unknown".
     ///
     /// Parameters
     /// ----------
@@ -178,11 +209,12 @@ impl PyOpeningHours {
     /// Examples
     /// --------
     /// >>> OpeningHours("24/7 off").state()
-    /// State.CLOSED
+    /// (State.CLOSED, '')
     #[pyo3(signature = (time=None))]
-    fn state(&self, time: Option<DateTimeMaybeAware>) -> State {
+    fn state(&self, time: Option<DateTimeMaybeAware>) -> (State, String) {
         let time = DateTimeMaybeAware::unwrap_or_now(time);
-        self.inner.state(time).into()
+        let (kind, comment) = self.inner.state(time);
+        (kind.into(), comment.to_string())
     }
 
     /// Check if current state is open.
@@ -267,9 +299,9 @@ impl PyOpeningHours {
     /// --------
     /// >>> intervals = OpeningHours("2099Mo-Su 12:30-17:00").intervals()
     /// >>> next(intervals)
-    /// (..., datetime.datetime(2099, 1, 1, 12, 30), State.CLOSED, [])
+    /// (..., datetime.datetime(2099, 1, 1, 12, 30), State.CLOSED, '')
     /// >>> next(intervals)
-    /// (datetime.datetime(2099, 1, 1, 12, 30), datetime.datetime(2099, 1, 1, 17, 0), State.OPEN, [])
+    /// (datetime.datetime(2099, 1, 1, 12, 30), datetime.datetime(2099, 1, 1, 17, 0), State.OPEN, '')
     #[pyo3(signature = (start=None, end=None))]
     fn intervals(
         &self,

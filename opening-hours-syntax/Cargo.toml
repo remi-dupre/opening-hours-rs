@@ -1,6 +1,6 @@
 [package]
 name = "opening-hours-syntax"
-version = "1.4.0"
+version = "2.0.0"
 authors = ["Rémi Dupré <remi@dupre.io>"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
@@ -12,11 +12,16 @@ edition = "2021"
 
 [dependencies]
 chrono = { version = "0.4", default-features = false }
-log = { version = "0.4", features = [ "kv" ], optional = true }
 pest = { version = "2.0", default-features = false }
 pest_derive = { version = "2.0", default-features = false }
 
+[dev-dependencies]
+rstest = "0"
+
 [features]
-default = ["std", "log"]
+default = ["std"]
 std = ["chrono/std", "pest/std", "pest_derive/std"]
-log = ["dep:log"]
+
+[lints.clippy]
+todo = "deny"
+unwrap_used = "deny"

@@ -75,10 +75,10 @@ impl<L> Context<L> {
     /// Attach a new locale component to this context.
     pub fn with_locale<L2: Localize>(self, locale: L2) -> Context<L2> {
         Context {
+            locale,
             holidays: self.holidays,
             holidays_unknown: self.holidays_unknown,
-            locale,
-            approx_bound_interval_size: None,
+            approx_bound_interval_size: self.approx_bound_interval_size,
         }
     }
 

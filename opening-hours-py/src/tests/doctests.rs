@@ -9,6 +9,8 @@ fn run_doctests() {
         from datetime import datetime
         from opening_hours import OpeningHours, State
 
+        # The trick doesn't seem to work on attributes
+        del OpeningHours.warnings
 
         opening_hours.__test__ = dict(OpeningHours.__dict__) | {
             "OpeningHours": OpeningHours,

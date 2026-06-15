@@ -78,15 +78,17 @@ impl CompactCalendar {
                 year
             } else if self.calendar.is_empty() {
                 self.first_year = date.year();
-                self.calendar.push_back(CompactYear::default());
-                self.calendar.back_mut().unwrap() // just pushed
+                self.calendar.push_back_mut(CompactYear::default())
             } else if date.year() < self.first_year {
                 for _ in date.year()..self.first_year {
                     self.calendar.push_front(CompactYear::default());
                 }
 
                 self.first_year = date.year();
-                self.calendar.front_mut().unwrap() // just pushed
+
+                #[allow(clippy::unwrap_used)]
+                // self.calendar is not empty as checked in second if branch
+                self.calendar.front_mut().unwrap()
             } else {
                 let last_year = self.first_year
                     + i32::try_from(self.calendar.len()).expect("calendar is too large")
@@ -96,7 +98,9 @@ impl CompactCalendar {
                     self.calendar.push_back(CompactYear::default());
                 }
 
-                self.calendar.back_mut().unwrap() // just pushed
+                #[allow(clippy::unwrap_used)]
+                // self.calendar is not empty as checked in second if branch
+                self.calendar.back_mut().unwrap()
             }
         };
 

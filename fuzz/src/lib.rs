@@ -7,11 +7,14 @@ use arbitrary::Arbitrary;
 use chrono::{DateTime, Datelike};
 
 use std::fmt::Debug;
+use std::str::FromStr;
 
 use opening_hours::localization::{Coordinates, Localize};
 use opening_hours::{Context, OpeningHours};
+use opening_hours_syntax::Parser;
 
 const MAX_INTERVAL_RANGE: chrono::TimeDelta = chrono::TimeDelta::days(366 * 10);
+const MAX_OH_LENGTH: usize = 256;
 
 /// A fuzzing example
 #[derive(Arbitrary, Clone)]
@@ -69,8 +72,7 @@ impl Debug for Data {
 /// Run a fuzzing test and return `true` if the example should be kept in
 /// corpus.
 pub fn run_fuzz_oh(data: Data) -> bool {
-    if data.oh.contains('=') {
-        // The fuzzer spends way too much time building comments.
+    if data.oh.len() > MAX_OH_LENGTH {
         return false;
     }
 
@@ -84,7 +86,7 @@ pub fn run_fuzz_oh(data: Data) -> bool {
         return false;
     }
 
-    let Ok(oh_1) = data.oh.parse::<OpeningHours>() else {
+    let Ok(oh_1) = OpeningHours::from_str(&data.oh) else {
         return false;
     };
 
@@ -96,11 +98,22 @@ pub fn run_fuzz_oh(data: Data) -> bool {
         Operation::Compare(compare_with) => {
             let oh_2 = match compare_with {
                 CompareWith::Normalized => oh_1.normalize(),
-                CompareWith::Stringified => oh_1.to_string().parse().unwrap_or_else(|err| {
-                    eprintln!("[ERR] Initial Expression: {}", data.oh);
-                    eprintln!("[ERR] Invalid stringified Expression: {oh_1}");
-                    panic!("{err}")
-                }),
+                CompareWith::Stringified => {
+                    let mut stringified_parser =
+                        Parser::default().with_warning_handler(|warning| {
+                            panic!(
+                                "Got unexpected warning on stringified expression '{}': {warning}",
+                                warning.as_pair().get_input()
+                            )
+                        });
+
+                    OpeningHours::parse_with(&mut stringified_parser, &oh_1.to_string())
+                        .unwrap_or_else(|err| {
+                            eprintln!("[ERR] Initial Expression: {}", data.oh);
+                            eprintln!("[ERR] Invalid stringified Expression: {oh_1}");
+                            panic!("{err}")
+                        })
+                }
             };
 
             if let Some([lat, lon]) = data.coords_float() {
@@ -110,7 +123,6 @@ pub fn run_fuzz_oh(data: Data) -> bool {
                 let date = ctx.locale.datetime(date);
                 let oh_1 = oh_1.with_context(ctx.clone());
                 let oh_2 = oh_2.with_context(ctx.clone());
-
                 assert_eq!(oh_1.state(date), oh_2.state(date));
                 assert_eq!(oh_1.next_change(date), oh_2.next_change(date));
             } else {
