@@ -46,7 +46,7 @@ async def main():
     rt = Path(__file__).parent.parent
     rs_version = toml.load(rt / "Cargo.toml")["package"]["version"]
     cc_version = toml.load(rt / "compact-calendar/Cargo.toml")["package"]["version"]
-    lc_version = toml.load(rt / "compact-calendar-c/Cargo.toml")["package"]["version"]
+    lc_version = toml.load(rt / "opening-hours-c/Cargo.toml")["package"]["version"]
     py_version = toml.load(rt / "opening-hours-py/Cargo.toml")["package"]["version"]
     sy_version = toml.load(rt / "opening-hours-syntax/Cargo.toml")["package"]["version"]
     pt_version = toml.load(rt / "pyproject.toml")["project"]["version"]
