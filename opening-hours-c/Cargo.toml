@@ -1,6 +1,6 @@
 [package]
 name = "opening-hours-c"
-version = "0.1.0"
+version = "2.1.0"
 edition = "2024"
 
 [lib]
@@ -8,8 +8,8 @@ crate-type = ["cdylib"]
 
 [dependencies]
 chrono = "0.4"
-opening-hours = { path = ".." }
-opening-hours-syntax = { path = "../opening-hours-syntax" }
+opening-hours = { version = "2.1.0", path = ".." }
+opening-hours-syntax = { version = "2.1.0", path = "../opening-hours-syntax" }
 
 [build-dependencies]
 cbindgen = { version = "*", default-features = false }

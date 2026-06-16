@@ -19,6 +19,7 @@ jobs:
         crate:
           - .
           - compact-calendar
+          - opening-hours-c
           - opening-hours-py
           - opening-hours-syntax
           - fuzz
@@ -52,6 +53,19 @@ jobs:
         run: cargo fmt -- --check
       - name: Tests
         run: cargo test --no-default-features --features "${{ matrix.features }}"
+
+  ffi-miri:
+    name: "ffi tests with Miri"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Miri
+        run: |
+          rustup toolchain install nightly --component miri
+          rustup override set nightly
+          cargo miri setup
+      - name: Test with Miri
+        run: cargo miri test -p opening-hours-c
 
   # ---
   # --- Check that all versions are consistency accross packages

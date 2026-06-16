@@ -1,6 +1,6 @@
 [package]
 name = "opening-hours-py"
-version = "2.1.1"
+version = "2.2.0"
 authors = ["Rémi Dupré <remi@dupre.io>"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
@@ -9,6 +9,7 @@ documentation = "https://remi-dupre.github.io/opening-hours-rs/opening_hours.htm
 homepage = "https://github.com/remi-dupre/opening-hours-rs/tree/master/opening-hours-py"
 description = "A parser and toolkit for the opening_hours in OpenStreetMap written in Rust."
 edition = "2024"
+publish = false
 
 [lib]
 name = "opening_hours"
@@ -23,12 +24,12 @@ pyo3-stub-gen = "0.23"
 [dependencies.opening-hours-rs]
 package = "opening-hours"
 path = ".."
-version = "2.1.1"
+version = "2.2.0"
 features = ["log", "auto-country", "auto-timezone"]
 
 [dependencies.opening-hours-syntax]
 path = "../opening-hours-syntax"
-version = "2.1.1"
+version = "2.2.0"
 
 [dependencies.pyo3]
 version = "0.29"

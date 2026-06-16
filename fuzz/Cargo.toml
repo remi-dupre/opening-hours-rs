@@ -3,6 +3,7 @@ name = "fuzz"
 version = "0.1.0"
 authors = ["Rémi Dupré <remi@dupre.io>"]
 edition = "2024"
+publish = false
 
 [[bin]]
 name = "fuzz_oh"
