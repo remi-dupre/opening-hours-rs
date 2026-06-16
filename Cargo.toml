@@ -16,7 +16,16 @@ build = "opening-hours/build.rs"
 all-features = true  # include all features in documentation for docs.rs
 
 [workspace]
-members = ["compact-calendar", "opening-hours-syntax", "opening-hours-py", "fuzz"]
+# Avoid leaking unrelated symbols
+exclude = ["opening-hours-c"]
+
+members = [
+    "compact-calendar",
+    "opening-hours-py",
+    "opening-hours-syntax", 
+    "fuzz",
+]
+
 
 [lib]
 path = "opening-hours/src/lib.rs"

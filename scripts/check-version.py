@@ -45,19 +45,28 @@ async def main():
 
     rt = Path(__file__).parent.parent
     rs_version = toml.load(rt / "Cargo.toml")["package"]["version"]
-    sy_version = toml.load(rt / "opening-hours-syntax/Cargo.toml")["package"]["version"]
     cc_version = toml.load(rt / "compact-calendar/Cargo.toml")["package"]["version"]
+    lc_version = toml.load(rt / "compact-calendar-c/Cargo.toml")["package"]["version"]
     py_version = toml.load(rt / "opening-hours-py/Cargo.toml")["package"]["version"]
+    sy_version = toml.load(rt / "opening-hours-syntax/Cargo.toml")["package"]["version"]
     pt_version = toml.load(rt / "pyproject.toml")["project"]["version"]
 
     print("Checking local packages:")
     print(" - Rust crate:", rs_version)
     print(" - Syntax crate", sy_version)
     print(" - Compact Calendar crate", cc_version)
+    print(" - C crate:", lc_version)
     print(" - Python crate:", py_version)
     print(" - Python package:", pt_version)
 
-    if not rs_version == sy_version == cc_version == py_version == pt_version:
+    if (
+        not rs_version
+        == sy_version
+        == cc_version
+        == py_version
+        == pt_version
+        == lc_version
+    ):
         print(r"/!\ Packages versions don't match")
         return_status = 1
 

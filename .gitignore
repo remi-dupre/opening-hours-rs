@@ -7,3 +7,7 @@ fuzz/artifacts
 opening-hours/data/osm_examples.csv
 shell.nix
 tarpaulin-report.html
+
+# Typical tests for c bindings
+opening-hours-c/main.c
+opening-hours-c/main
