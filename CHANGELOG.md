@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.1
+
+### General
+
+- Update dependencies (noticeably PyO3 CVE)
+
 ## 2.0.0
 
 ### General
