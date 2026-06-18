@@ -104,7 +104,7 @@ impl Display for TimeSpan {
 
 // Time
 
-#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Time {
     Fixed(ExtendedTime),
     Variable(VariableTime),
@@ -121,7 +121,7 @@ impl Display for Time {
 
 // VariableTime
 
-#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct VariableTime {
     pub event: TimeEvent,
     pub offset: i16,
@@ -143,7 +143,7 @@ impl Display for VariableTime {
 
 // TimeEvent
 
-#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TimeEvent {
     Dawn,
     Sunrise,

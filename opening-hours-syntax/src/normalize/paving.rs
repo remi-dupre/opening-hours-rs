@@ -173,14 +173,19 @@ impl<T, U: UnpackFromBack> UnpackFromBack for PavingSelector<T, U> {
 /// Interface over a n-dim paving.
 pub(crate) trait Paving: Clone + Default {
     type Selector: Debug;
-    type Value: Clone + Default + Eq + Ord;
-    fn set(&mut self, selector: &Self::Selector, val: &Self::Value);
+    type Value: Clone + Default + Eq;
+
+    fn update(&mut self, selector: &Self::Selector, operation: impl FnMut(&mut Self::Value));
     fn is_val(&self, selector: &Self::Selector, val: &Self::Value) -> bool;
 
     fn pop_filter(
         &mut self,
         filter: impl Fn(&Self::Value) -> bool,
     ) -> Option<(Self::Value, Self::Selector)>;
+
+    fn set(&mut self, selector: &Self::Selector, val: &Self::Value) {
+        self.update(selector, |inner| *inner = val.clone());
+    }
 }
 
 // --
@@ -189,16 +194,16 @@ pub(crate) trait Paving: Clone + Default {
 
 /// Just a 0-dimension cell.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub(crate) struct Cell<Val: Default + Eq + Ord> {
+pub(crate) struct Cell<Val: Default + Eq> {
     inner: Val,
 }
 
-impl<Val: Clone + Default + Eq + Ord> Paving for Cell<Val> {
+impl<Val: Clone + Default + Eq> Paving for Cell<Val> {
     type Selector = EmptyPavingSelector;
     type Value = Val;
 
-    fn set(&mut self, _selector: &Self::Selector, val: &Val) {
-        self.inner = val.clone();
+    fn update(&mut self, _selector: &Self::Selector, mut operation: impl FnMut(&mut Self::Value)) {
+        operation(&mut self.inner)
     }
 
     fn is_val(&self, _selector: &Self::Selector, val: &Val) -> bool {
@@ -289,7 +294,7 @@ impl<T: Clone + Debug + Ord, U: Debug + Paving> Paving for Dim<T, U> {
     type Selector = PavingSelector<T, U::Selector>;
     type Value = U::Value;
 
-    fn set(&mut self, selector: &Self::Selector, val: &Self::Value) {
+    fn update(&mut self, selector: &Self::Selector, mut operation: impl FnMut(&mut Self::Value)) {
         let (ranges, selector_tail) = selector.unpack_front();
 
         for range in ranges {
@@ -298,7 +303,7 @@ impl<T: Clone + Debug + Ord, U: Debug + Paving> Paving for Dim<T, U> {
 
             for (col_start, col_val) in self.cuts.iter().zip(&mut self.cols) {
                 if *col_start >= range.start && *col_start < range.end {
-                    col_val.set(selector_tail, val);
+                    col_val.update(selector_tail, &mut operation);
                 }
             }
         }

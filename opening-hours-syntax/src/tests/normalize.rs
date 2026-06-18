@@ -25,7 +25,7 @@ use crate::rules::OpeningHoursExpression;
 #[case("dusk-dusk", "dusk-dusk")]
 #[case("dusk-48:00+", "dusk-48:00+")]
 #[case("Sep24:00-04:20", "Sep 24:00-04:20")]
-#[case("Sa;Su;2490-2490/8", "2490, Sa-Su")]
+#[case("Sa;Su;2490-2490/8", "2490; 1900-2489,2491-9999 Sa-Su")]
 #[case("Mo 10:00-21:00; Tu,We,Th,Fr,Sa,Su 10:00-21:00", "10:00-21:00")]
 #[case("week2Mo;Jun;Fr", "Jun, week02 Mo,Fr, Fr")]
 #[case(
