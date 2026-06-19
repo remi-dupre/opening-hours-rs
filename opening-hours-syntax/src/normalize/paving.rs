@@ -176,7 +176,16 @@ pub(crate) trait Paving: Clone + Default {
     type Value: Clone + Default + Eq;
 
     fn update(&mut self, selector: &Self::Selector, operation: impl FnMut(&mut Self::Value));
-    fn is_val(&self, selector: &Self::Selector, val: &Self::Value) -> bool;
+
+    fn check_predicate(
+        &self,
+        selector: &Self::Selector,
+        predicate: impl FnMut(&Self::Value) -> bool,
+    ) -> bool;
+
+    fn is_val(&self, selector: &Self::Selector, val: &Self::Value) -> bool {
+        self.check_predicate(selector, move |part| part == val)
+    }
 
     fn pop_filter(
         &mut self,
@@ -206,8 +215,12 @@ impl<Val: Clone + Default + Eq> Paving for Cell<Val> {
         operation(&mut self.inner)
     }
 
-    fn is_val(&self, _selector: &Self::Selector, val: &Val) -> bool {
-        self.inner == *val
+    fn check_predicate(
+        &self,
+        _selector: &Self::Selector,
+        mut predicate: impl FnMut(&Self::Value) -> bool,
+    ) -> bool {
+        predicate(&self.inner)
     }
 
     fn pop_filter(
@@ -310,6 +323,51 @@ impl<T: Clone + Debug + Ord, U: Debug + Paving> Paving for Dim<T, U> {
     }
 
     /// Check if the *full* range covered by `selector` is set and equals to `val`.
+    fn check_predicate(
+        &self,
+        selector: &Self::Selector,
+        mut predicate: impl FnMut(&Self::Value) -> bool,
+    ) -> bool {
+        let (ranges, selector_tail) = selector.unpack_front();
+
+        for range in ranges {
+            // Wrapping ranges are not supported : inverted bounds are
+            // considered an empty interval.
+            if range.start >= range.end {
+                continue;
+            }
+
+            // Check if part of the selector covers a part that is outside of
+            // the explicitly set values for this paving.
+            let partialy_outside_bounds = self.cols.is_empty()
+                || range.start
+                    < *(self.cuts.first()).expect("there is always on more cuts than columns")
+                || range.end
+                    > *(self.cuts.last()).expect("there is always on more cuts than columns");
+
+            // If part of the selector is outside of explicitly set values, the
+            // expected value must be the default.
+            if partialy_outside_bounds && !predicate(&Self::Value::default()) {
+                return false;
+            }
+
+            // Check value of overlapping columns
+            for ((col_start, col_end), col_val) in (self.cuts.iter())
+                .zip(self.cuts.iter().skip(1))
+                .zip(&self.cols)
+            {
+                // Column overlaps with the input range
+                let col_overlaps = *col_start < range.end && *col_end > range.start;
+
+                if col_overlaps && !col_val.check_predicate(&selector_tail, &mut predicate) {
+                    return false;
+                }
+            }
+        }
+
+        true
+    }
+
     fn is_val(&self, selector: &Self::Selector, val: &Self::Value) -> bool {
         let (ranges, selector_tail) = selector.unpack_front();
 

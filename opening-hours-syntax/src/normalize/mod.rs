@@ -36,15 +36,16 @@ pub(crate) fn ruleseq_to_selector(rs: &RuleSequence) -> Option<CanonicalSelector
     Some(selector)
 }
 
-pub(crate) type CanonicalSlot =
-    Paving4D<Frame<OrderedWeekday>, Frame<WeekNum>, Frame<Month>, Frame<Year>, Vec<TimeSpan>>;
+pub(crate) type Canonical2 = Paving4D<
+    Frame<OrderedWeekday>,
+    Frame<WeekNum>,
+    Frame<Month>,
+    Frame<Year>,
+    Vec<(RuleKind, Arc<str>, TimeSpan)>,
+>;
 
-type Canonical2 = HashMap<(RuleKind, Arc<str>), CanonicalSlot>;
-
-pub(crate) fn partialytocanonical2(
-    rules: &mut VecDeque<RuleSequence>,
-) -> HashMap<(RuleKind, Arc<str>), CanonicalSlot> {
-    let mut canonical: HashMap<(RuleKind, Arc<str>), CanonicalSlot> = HashMap::new();
+pub(crate) fn partialytocanonical2(rules: &mut VecDeque<RuleSequence>) -> Canonical2 {
+    let mut canonical = Canonical2::default();
 
     #[allow(clippy::result_large_err)]
     while let Some(rule) = rules.pop_front() {
@@ -59,68 +60,73 @@ pub(crate) fn partialytocanonical2(
         };
 
         let (selector, _) = selector.into_unpack_back();
-        let state = (rule.kind, rule.comment);
 
-        // First, unset all values of this selector for other rules
-        canonical
-            .iter_mut()
-            .filter(|(other_state, _)| **other_state != state)
-            .for_each(|(_, slot)| slot.update(&selector, |val| val.clear()));
+        let slots: Vec<_> = (rule.time_selector.time)
+            .into_iter()
+            .map(|span| (rule.kind, rule.comment.clone(), span))
+            .collect();
 
-        // Then, insert current time spans
-        let entry = canonical.entry(state).or_default();
-
-        if rule.operator == RuleOperator::Normal && rule.kind != RuleKind::Closed {
-            // If the rule is not explicitly targeting a closed kind, then it
-            // overrides previous rules for the whole day.
-            entry.set(&selector, &rule.time_selector.time);
+        if rule.operator == RuleOperator::Normal {
+            canonical.set(&selector, &slots);
         } else {
-            entry.update(&selector, |content| {
-                content.extend_from_slice(rule.time_selector.time.as_slice())
-            })
+            canonical.update(&selector, |content| content.extend_from_slice(&slots))
         }
     }
 
     canonical
 }
 
-pub(crate) fn canonical_to_seq2(mut canonical: Canonical2) -> Vec<RuleSequence> {
-    // Order output rules from open to unknown
-    canonical.remove(&(RuleKind::Closed, Arc::default()));
-    let mut keys_ordered: Vec<_> = canonical.keys().cloned().collect();
-    keys_ordered.sort();
-
+pub(crate) fn canonical_to_seq2(canonical: Canonical2) -> Vec<RuleSequence> {
     // Fill output
-    let mut result = Vec::with_capacity(canonical.len());
+    let mut result = Vec::new();
 
-    for state in keys_ordered {
-        let Some(mut slot) = canonical.remove(&state) else {
-            core::hint::cold_path(); // cannot happend
-            continue;
+    let mut pop = {
+        let mut canonical = canonical.clone();
+
+        move || {
+            // blabla
+            canonical
+                .pop_filter(|spans| {
+                    !spans.is_empty() && spans.iter().all(|s| s.0 == RuleKind::Open)
+                })
+                .or_else(|| {
+                    canonical.pop_filter(|spans| {
+                        !spans.is_empty() && spans.iter().all(|s| s.0 == RuleKind::Closed)
+                    })
+                })
+                .or_else(|| canonical.pop_filter(|spans| !spans.is_empty()))
+        }
+    };
+
+    while let Some((slots, mut selector)) = pop() {
+        // let (kind, comment) = state.clone();
+        selector.fill_holes(|candidate| {
+            canonical.check_predicate(&candidate, |canonical_slots| {
+                canonical_slots.starts_with(&slots)
+            })
+        });
+
+        // Unpack ranges
+        let (rgs_weekday, selector) = selector.into_unpack_front();
+        let (rgs_week, selector) = selector.into_unpack_front();
+        let (rgs_monthday, selector) = selector.into_unpack_front();
+        let (rgs_year, EmptyPavingSelector) = selector.into_unpack_front();
+
+        let day_selector = DaySelector {
+            year: MakeCanonical::into_selector(rgs_year, true),
+            monthday: MakeCanonical::into_selector(rgs_monthday, true),
+            week: MakeCanonical::into_selector(rgs_week, true),
+            weekday: MakeCanonical::into_selector(rgs_weekday, true),
         };
 
-        while let Some((time, selector)) = slot.pop_filter(|spans| !spans.is_empty()) {
-            let (kind, comment) = state.clone();
-
-            // TODO: merge
-            let time_selector = TimeSelector { time };
-
-            // Unpack ranges
-            let (rgs_weekday, selector) = selector.into_unpack_front();
-            let (rgs_week, selector) = selector.into_unpack_front();
-            let (rgs_monthday, selector) = selector.into_unpack_front();
-            let (rgs_year, EmptyPavingSelector) = selector.into_unpack_front();
-
-            let day_selector = DaySelector {
-                year: MakeCanonical::into_selector(rgs_year, true),
-                monthday: MakeCanonical::into_selector(rgs_monthday, true),
-                week: MakeCanonical::into_selector(rgs_week, true),
-                weekday: MakeCanonical::into_selector(rgs_weekday, true),
-            };
+        for (kind, comment, time) in slots {
+            if kind == RuleKind::Closed && comment.is_empty() {
+                continue;
+            }
 
             result.push(RuleSequence {
-                day_selector,
-                time_selector,
+                day_selector: day_selector.clone(),
+                time_selector: TimeSelector { time: vec![time] }, // TODO: merge
                 kind,
                 operator: RuleOperator::Normal,
                 comment,

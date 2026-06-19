@@ -9,7 +9,7 @@ use crate::rules::OpeningHoursExpression;
 #[case("06:00+;24/7", "06:00+; 24/7")]
 #[case("06:00-24:00;24/7", "24/7")]
 #[case("Tu-Mo", "24/7")]
-#[case("2022;Fr", "2022, Fr")]
+#[case("2022;Fr", "2022; Fr")]
 #[case("Mo,Th open; Tu,Fr-Su open", "Mo-Tu,Th-Su")]
 #[case("Mo-Fr 10:00-14:00 ; We-Su 10:00-14:00", "10:00-14:00")]
 #[case("Mo,Tu,We,Th,Fr,Sa,Su 10:00-21:00", "10:00-21:00")]
@@ -54,7 +54,7 @@ use crate::rules::OpeningHoursExpression;
     )]
 #[case(
     "week04 Mo; Jul; Jun 5; Sep Fr; 04:00-04:20",
-    "Jul, week04 Mo; Jun 5; Sep Fr; 04:00-04:20"
+    "Jul; week04 Mo; Jun 5; Sep Fr; 04:00-04:20"
 )]
 fn normalize(#[case] example: OpeningHoursExpression, #[case] normalized_expected: &str) {
     let normalized = example.normalize();
