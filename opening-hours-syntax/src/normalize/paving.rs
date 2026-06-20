@@ -90,7 +90,9 @@ impl SelectorCompression for EmptyPavingSelector {
     fn fill_holes_back(&mut self, _predicate: impl FnMut(&Self) -> bool) {}
 }
 
-impl<T: Clone, U: Clone + SelectorCompression> SelectorCompression for PavingSelector<T, U> {
+impl<T: Clone + Debug, U: Clone + Debug + SelectorCompression> SelectorCompression
+    for PavingSelector<T, U>
+{
     fn fill_holes_front(&mut self, mut predicate: impl FnMut(&Self) -> bool) {
         for idx in (0..self.range.len() - 1).rev() {
             // Backup the two intervals we attempt to merge
@@ -171,11 +173,17 @@ impl<T, U: UnpackFromBack> UnpackFromBack for PavingSelector<T, U> {
 // --
 
 /// Interface over a n-dim paving.
-pub(crate) trait Paving: Clone + Default {
+pub(crate) trait Paving: Clone + Debug + Default {
     type Selector: Debug;
     type Value: Clone + Default + Eq;
+    type Map<X: Clone + Debug + Default + Eq>: Paving;
 
     fn update(&mut self, selector: &Self::Selector, operation: impl FnMut(&mut Self::Value));
+
+    fn map<X: Clone + Debug + Default + Eq>(
+        self,
+        map: impl FnMut(Self::Value) -> X,
+    ) -> Self::Map<X>;
 
     fn check_predicate(
         &self,
@@ -183,14 +191,14 @@ pub(crate) trait Paving: Clone + Default {
         predicate: impl FnMut(&Self::Value) -> bool,
     ) -> bool;
 
-    fn is_val(&self, selector: &Self::Selector, val: &Self::Value) -> bool {
-        self.check_predicate(selector, move |part| part == val)
-    }
-
     fn pop_filter(
         &mut self,
         filter: impl Fn(&Self::Value) -> bool,
     ) -> Option<(Self::Value, Self::Selector)>;
+
+    fn is_val(&self, selector: &Self::Selector, val: &Self::Value) -> bool {
+        self.check_predicate(selector, move |part| part == val)
+    }
 
     fn set(&mut self, selector: &Self::Selector, val: &Self::Value) {
         self.update(selector, |inner| *inner = val.clone());
@@ -207,9 +215,10 @@ pub(crate) struct Cell<Val: Default + Eq> {
     inner: Val,
 }
 
-impl<Val: Clone + Default + Eq> Paving for Cell<Val> {
+impl<Val: Clone + Debug + Default + Eq> Paving for Cell<Val> {
     type Selector = EmptyPavingSelector;
     type Value = Val;
+    type Map<X: Clone + Debug + Default + Eq> = Cell<X>;
 
     fn update(&mut self, _selector: &Self::Selector, mut operation: impl FnMut(&mut Self::Value)) {
         operation(&mut self.inner)
@@ -232,6 +241,13 @@ impl<Val: Clone + Default + Eq> Paving for Cell<Val> {
         } else {
             None
         }
+    }
+
+    fn map<X: Clone + Debug + Default + Eq>(
+        self,
+        mut map: impl FnMut(Self::Value) -> X,
+    ) -> Self::Map<X> {
+        Cell { inner: map(self.inner) }
     }
 }
 
@@ -306,6 +322,7 @@ impl<T: Clone + Ord, U: Paving> Dim<T, U> {
 impl<T: Clone + Debug + Ord, U: Debug + Paving> Paving for Dim<T, U> {
     type Selector = PavingSelector<T, U::Selector>;
     type Value = U::Value;
+    type Map<X: Clone + Debug + Default + Eq> = Dim<T, U::Map<X>>;
 
     fn update(&mut self, selector: &Self::Selector, mut operation: impl FnMut(&mut Self::Value)) {
         let (ranges, selector_tail) = selector.unpack_front();
@@ -359,48 +376,7 @@ impl<T: Clone + Debug + Ord, U: Debug + Paving> Paving for Dim<T, U> {
                 // Column overlaps with the input range
                 let col_overlaps = *col_start < range.end && *col_end > range.start;
 
-                if col_overlaps && !col_val.check_predicate(&selector_tail, &mut predicate) {
-                    return false;
-                }
-            }
-        }
-
-        true
-    }
-
-    fn is_val(&self, selector: &Self::Selector, val: &Self::Value) -> bool {
-        let (ranges, selector_tail) = selector.unpack_front();
-
-        for range in ranges {
-            // Wrapping ranges are not supported : inverted bounds are
-            // considered an empty interval.
-            if range.start >= range.end {
-                continue;
-            }
-
-            // Check if part of the selector covers a part that is outside of
-            // the explicitly set values for this paving.
-            let partialy_outside_bounds = self.cols.is_empty()
-                || range.start
-                    < *(self.cuts.first()).expect("there is always on more cuts than columns")
-                || range.end
-                    > *(self.cuts.last()).expect("there is always on more cuts than columns");
-
-            // If part of the selector is outside of explicitly set values, the
-            // expected value must be the default.
-            if partialy_outside_bounds && *val != Self::Value::default() {
-                return false;
-            }
-
-            // Check value of overlapping columns
-            for ((col_start, col_end), col_val) in (self.cuts.iter())
-                .zip(self.cuts.iter().skip(1))
-                .zip(&self.cols)
-            {
-                // Column overlaps with the input range
-                let col_overlaps = *col_start < range.end && *col_end > range.start;
-
-                if col_overlaps && !col_val.is_val(selector_tail, val) {
+                if col_overlaps && !col_val.check_predicate(selector_tail, &mut predicate) {
                     return false;
                 }
             }
@@ -443,6 +419,16 @@ impl<T: Clone + Debug + Ord, U: Debug + Paving> Paving for Dim<T, U> {
         let selector = PavingSelector { range: selector_range, tail: selector_tail };
         self.set(&selector, &Self::Value::default());
         Some((target_value, selector))
+    }
+
+    fn map<X: Clone + Debug + Default + Eq>(
+        self,
+        mut map: impl FnMut(Self::Value) -> X,
+    ) -> Self::Map<X> {
+        Dim {
+            cuts: self.cuts,
+            cols: self.cols.into_iter().map(|col| col.map(&mut map)).collect(),
+        }
     }
 }
 

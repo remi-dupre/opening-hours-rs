@@ -12,14 +12,14 @@ use crate::extended_time::ExtendedTime;
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct TimeSelector {
-    pub time: Vec<TimeSpan>,
+    pub spans: Vec<TimeSpan>,
 }
 
 impl TimeSelector {
     /// Note that not all cases can be covered
     pub(crate) fn is_00_24(&self) -> bool {
-        self.time.len() == 1
-            && self.time.first()
+        self.spans.len() == 1
+            && self.spans.first()
                 == Some(&TimeSpan::fixed_range(
                     ExtendedTime::MIDNIGHT_00,
                     ExtendedTime::MIDNIGHT_24,
@@ -29,11 +29,11 @@ impl TimeSelector {
 
 impl TimeSelector {
     #[inline]
-    pub fn new(time: Vec<TimeSpan>) -> Self {
-        if time.is_empty() {
+    pub fn new(spans: Vec<TimeSpan>) -> Self {
+        if spans.is_empty() {
             Self::default()
         } else {
-            Self { time }
+            Self { spans }
         }
     }
 }
@@ -42,7 +42,7 @@ impl Default for TimeSelector {
     #[inline]
     fn default() -> Self {
         Self {
-            time: vec![TimeSpan::fixed_range(
+            spans: vec![TimeSpan::fixed_range(
                 ExtendedTime::MIDNIGHT_00,
                 ExtendedTime::MIDNIGHT_24,
             )],
@@ -52,7 +52,7 @@ impl Default for TimeSelector {
 
 impl Display for TimeSelector {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write_selector(f, &self.time)
+        write_selector(f, &self.spans)
     }
 }
 
@@ -73,6 +73,21 @@ impl TimeSpan {
             open_end: false,
             repeats: None,
         }
+    }
+}
+
+impl Ord for TimeSpan {
+    fn cmp(&self, other: &Self) -> Ordering {
+        (self.range.start.cmp(&other.range.start))
+            .then_with(|| self.range.end.cmp(&other.range.end))
+            .then_with(|| self.open_end.cmp(&other.open_end))
+            .then_with(|| self.repeats.cmp(&other.repeats))
+    }
+}
+
+impl PartialOrd for TimeSpan {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 

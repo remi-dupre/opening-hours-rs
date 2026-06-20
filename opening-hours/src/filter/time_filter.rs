@@ -58,7 +58,7 @@ impl TimeFilter for ts::TimeSelector {
     type Output<'a, L: 'a + Localize> = NaiveTimeSelectorIterator<'a, L>;
 
     fn is_immutable_full_day(&self) -> bool {
-        self.time.iter().all(|span| span.is_immutable_full_day())
+        self.spans.iter().all(|span| span.is_immutable_full_day())
     }
 
     fn as_naive<'a, L: 'a + Localize>(
@@ -66,7 +66,7 @@ impl TimeFilter for ts::TimeSelector {
         ctx: &'a Context<L>,
         date: NaiveDate,
     ) -> Self::Output<'a, L> {
-        NaiveTimeSelectorIterator { date, ctx, inner: self.time.iter() }
+        NaiveTimeSelectorIterator { date, ctx, inner: self.spans.iter() }
     }
 }
 

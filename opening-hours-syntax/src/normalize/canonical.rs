@@ -5,7 +5,7 @@ use core::ops::Range;
 
 use chrono::Weekday;
 
-use crate::normalize::paving::{Paving5D, Selector5D};
+use crate::normalize::paving::{Paving5D, Selector4D, Selector5D};
 use crate::rules::day::{Month, MonthdayRange, WeekDayRange, WeekNum, WeekRange, Year, YearRange};
 use crate::rules::time::{Time, TimeSpan};
 use crate::{ExtendedTime, RuleKind};
@@ -20,6 +20,9 @@ pub(crate) type Canonical = Paving5D<
     ExtendedTime,
     (RuleKind, Arc<str>),
 >;
+
+pub(crate) type CanonicalDaySelector =
+    Selector4D<Frame<OrderedWeekday>, Frame<WeekNum>, Frame<Month>, Frame<Year>>;
 
 pub(crate) type CanonicalSelector =
     Selector5D<Frame<OrderedWeekday>, Frame<WeekNum>, Frame<Month>, Frame<Year>, ExtendedTime>;

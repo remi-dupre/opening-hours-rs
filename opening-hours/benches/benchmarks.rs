@@ -1,6 +1,9 @@
-use std::hint::black_box;
+#![allow(clippy::unwrap_used)]
 
-use opening_hours::localization::{Coordinates, Country};
+use std::hint::black_box;
+use std::str::FromStr;
+
+use opening_hours::localization::Country;
 use opening_hours::{Context, OpeningHours};
 
 use chrono::NaiveDateTime;
@@ -27,13 +30,14 @@ const SAMPLES: &[[&str; 2]] = &[
     ],
 ];
 
-const PARIS_COORDS: Coordinates = Coordinates::new(48.8535, 2.34839).unwrap();
-
 fn bench_context(c: &mut Criterion) {
+    #[allow(unused)]
     let mut group = c.benchmark_group("context");
 
     #[cfg(feature = "auto-country")]
     group.bench_function("infer_from_coords", |b| {
+        use opening_hours::localization::Coordinates;
+        const PARIS_COORDS: Coordinates = Coordinates::new(48.8535, 2.34839).unwrap();
         b.iter(|| Context::from_coords(black_box(PARIS_COORDS)))
     });
 }
@@ -47,7 +51,7 @@ fn bench_sample(c: &mut Criterion) {
         .map(|[slug, expr]| {
             (
                 *slug,
-                OpeningHours::parse(expr)
+                OpeningHours::from_str(expr)
                     .unwrap()
                     .with_context(fr_context.clone()),
             )
@@ -59,7 +63,7 @@ fn bench_sample(c: &mut Criterion) {
 
         for [slug, expr] in SAMPLES {
             group.bench_function(*slug, |b| {
-                b.iter(|| OpeningHours::parse(black_box(expr)).unwrap())
+                b.iter(|| OpeningHours::from_str(black_box(expr)).unwrap())
             });
         }
     }

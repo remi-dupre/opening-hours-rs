@@ -1,17 +1,16 @@
 pub(crate) mod canonical;
+pub(crate) mod canonical_time;
 pub(crate) mod frame;
 pub(crate) mod paving;
 
-use std::collections::{HashMap, VecDeque};
-use std::sync::Arc;
+use std::collections::VecDeque;
 
-use crate::normalize::canonical::OrderedWeekday;
-use crate::normalize::frame::{Bounded, Frame};
-use crate::normalize::paving::{
-    EmptyPavingSelector, Paving, Paving3D, Paving4D, Paving5D, UnpackFromBack,
-};
+use crate::normalize::canonical::{CanonicalDaySelector, OrderedWeekday};
+use crate::normalize::canonical_time::{normalize_time_rules, TimeRules};
+use crate::normalize::frame::Frame;
+use crate::normalize::paving::{EmptyPavingSelector, Paving, Paving4D, UnpackFromBack};
 use crate::rules::day::{DaySelector, Month, WeekNum, Year};
-use crate::rules::time::{TimeSelector, TimeSpan};
+use crate::rules::time::TimeSelector;
 use crate::rules::{RuleOperator, RuleSequence};
 use crate::RuleKind;
 
@@ -22,12 +21,11 @@ use self::paving::SelectorCompression;
 // -- Normalization Logic
 // --
 
-/// Convert a rule sequence to a n-dim selector.
-pub(crate) fn ruleseq_to_selector(rs: &RuleSequence) -> Option<CanonicalSelector> {
+/// Convert day fields of a rule sequence to a n-dim selector.
+pub(crate) fn ruleseq_to_day_selector(rs: &RuleSequence) -> Option<CanonicalDaySelector> {
     let ds = &rs.day_selector;
 
     let selector = EmptyPavingSelector
-        .dim_front(MakeCanonical::try_from_iterator(&rs.time_selector.time)?)
         .dim_front(MakeCanonical::try_from_iterator(&ds.year)?)
         .dim_front(MakeCanonical::try_from_iterator(&ds.monthday)?)
         .dim_front(MakeCanonical::try_from_iterator(&ds.week)?)
@@ -36,13 +34,22 @@ pub(crate) fn ruleseq_to_selector(rs: &RuleSequence) -> Option<CanonicalSelector
     Some(selector)
 }
 
-pub(crate) type Canonical2 = Paving4D<
-    Frame<OrderedWeekday>,
-    Frame<WeekNum>,
-    Frame<Month>,
-    Frame<Year>,
-    Vec<(RuleKind, Arc<str>, TimeSpan)>,
->;
+/// Convert a rule sequence to a n-dim selector.
+pub(crate) fn ruleseq_to_selector(rs: &RuleSequence) -> Option<CanonicalSelector> {
+    let ds = &rs.day_selector;
+
+    let selector = EmptyPavingSelector
+        .dim_front(MakeCanonical::try_from_iterator(&rs.time_selector.spans)?)
+        .dim_front(MakeCanonical::try_from_iterator(&ds.year)?)
+        .dim_front(MakeCanonical::try_from_iterator(&ds.monthday)?)
+        .dim_front(MakeCanonical::try_from_iterator(&ds.week)?)
+        .dim_front(MakeCanonical::try_from_iterator(&ds.weekday)?);
+
+    Some(selector)
+}
+
+pub(crate) type Canonical2 =
+    Paving4D<Frame<OrderedWeekday>, Frame<WeekNum>, Frame<Month>, Frame<Year>, TimeRules>;
 
 pub(crate) fn partialytocanonical2(rules: &mut VecDeque<RuleSequence>) -> Canonical2 {
     let mut canonical = Canonical2::default();
@@ -54,22 +61,17 @@ pub(crate) fn partialytocanonical2(rules: &mut VecDeque<RuleSequence>) -> Canoni
             return canonical;
         }
 
-        let Some(selector) = ruleseq_to_selector(&rule) else {
+        let Some(selector) = ruleseq_to_day_selector(&rule) else {
             rules.push_front(rule);
             return canonical;
         };
 
-        let (selector, _) = selector.into_unpack_back();
+        let new_val = ((rule.kind, rule.comment), rule.time_selector);
 
-        let slots: Vec<_> = (rule.time_selector.time)
-            .into_iter()
-            .map(|span| (rule.kind, rule.comment.clone(), span))
-            .collect();
-
-        if rule.operator == RuleOperator::Normal {
-            canonical.set(&selector, &slots);
+        if rule.operator == RuleOperator::Normal && rule.kind != RuleKind::Closed {
+            canonical.set(&selector, &vec![new_val]);
         } else {
-            canonical.update(&selector, |content| content.extend_from_slice(&slots))
+            canonical.update(&selector, |content| content.push(new_val.clone()))
         }
     }
 
@@ -77,60 +79,78 @@ pub(crate) fn partialytocanonical2(rules: &mut VecDeque<RuleSequence>) -> Canoni
 }
 
 pub(crate) fn canonical_to_seq2(canonical: Canonical2) -> Vec<RuleSequence> {
-    // Fill output
+    let canonical_before = canonical.map(normalize_time_rules);
     let mut result = Vec::new();
+    let mut canonical_remaining = canonical_before.clone();
 
-    let mut pop = {
-        let mut canonical = canonical.clone();
+    // Insert rules in the following orders:
+    #[allow(clippy::type_complexity)]
+    let pop_priority_order: [Box<dyn Fn(&TimeRules) -> bool>; _] = [
+        // 1. only has "open" time ranges
+        Box::new(|s| !s.is_empty() && s.iter().all(|s| s.0 .0 == RuleKind::Open)),
+        // 2. starts with an "open" time range
+        Box::new(|s| s.first().map(|s| s.0 .0 == RuleKind::Open).unwrap_or(false)),
+        // 3. only has "unknown" time ranges
+        Box::new(|s| !s.is_empty() && s.iter().all(|s| s.0 .0 == RuleKind::Unknown)),
+        // 4. starts with an unknown time range
+        Box::new(|s| {
+            s.first()
+                .map(|s| s.0 .0 == RuleKind::Unknown)
+                .unwrap_or(false)
+        }),
+        // 5. starts with a close time range
+        Box::new(|s| !s.is_empty() && s.iter().all(|s| s.0 .0 == RuleKind::Closed)),
+        Box::new(|s| !s.is_empty()),
+    ];
 
-        move || {
-            // blabla
-            canonical
-                .pop_filter(|spans| {
-                    !spans.is_empty() && spans.iter().all(|s| s.0 == RuleKind::Open)
-                })
-                .or_else(|| {
-                    canonical.pop_filter(|spans| {
-                        !spans.is_empty() && spans.iter().all(|s| s.0 == RuleKind::Closed)
-                    })
-                })
-                .or_else(|| canonical.pop_filter(|spans| !spans.is_empty()))
-        }
-    };
+    for pop_priority in pop_priority_order {
+        while let Some((slots, mut selector)) = canonical_remaining.pop_filter(&pop_priority) {
+            selector.fill_holes(|candidate| {
+                // If the date domain is covered by any rule that is not closed, this means that a
+                // created range would be overriden anyway.
+                let will_be_overriden = canonical_remaining.check_predicate(candidate, |s| {
+                    s.iter().any(|((kind, _), _)| *kind != RuleKind::Closed)
+                });
 
-    while let Some((slots, mut selector)) = pop() {
-        // let (kind, comment) = state.clone();
-        selector.fill_holes(|candidate| {
-            canonical.check_predicate(&candidate, |canonical_slots| {
-                canonical_slots.starts_with(&slots)
-            })
-        });
-
-        // Unpack ranges
-        let (rgs_weekday, selector) = selector.into_unpack_front();
-        let (rgs_week, selector) = selector.into_unpack_front();
-        let (rgs_monthday, selector) = selector.into_unpack_front();
-        let (rgs_year, EmptyPavingSelector) = selector.into_unpack_front();
-
-        let day_selector = DaySelector {
-            year: MakeCanonical::into_selector(rgs_year, true),
-            monthday: MakeCanonical::into_selector(rgs_monthday, true),
-            week: MakeCanonical::into_selector(rgs_week, true),
-            weekday: MakeCanonical::into_selector(rgs_weekday, true),
-        };
-
-        for (kind, comment, time) in slots {
-            if kind == RuleKind::Closed && comment.is_empty() {
-                continue;
-            }
-
-            result.push(RuleSequence {
-                day_selector: day_selector.clone(),
-                time_selector: TimeSelector { time: vec![time] }, // TODO: merge
-                kind,
-                operator: RuleOperator::Normal,
-                comment,
+                // It is also okay to override a range that contains the exact time values.
+                let overrides_same_value = canonical_before.is_val(candidate, &slots);
+                will_be_overriden || overrides_same_value
             });
+
+            // Unpack ranges
+            let (rgs_weekday, selector) = selector.into_unpack_front();
+            let (rgs_week, selector) = selector.into_unpack_front();
+            let (rgs_monthday, selector) = selector.into_unpack_front();
+            let (rgs_year, EmptyPavingSelector) = selector.into_unpack_front();
+
+            let day_selector = DaySelector {
+                year: MakeCanonical::into_selector(rgs_year, true),
+                monthday: MakeCanonical::into_selector(rgs_monthday, true),
+                week: MakeCanonical::into_selector(rgs_week, true),
+                weekday: MakeCanonical::into_selector(rgs_weekday, true),
+            };
+
+            let mut first_time_component = true;
+
+            for ((kind, comment), time_selector) in slots {
+                let operator = {
+                    if first_time_component {
+                        RuleOperator::Normal
+                    } else {
+                        RuleOperator::Additional
+                    }
+                };
+
+                result.push(RuleSequence {
+                    day_selector: day_selector.clone(),
+                    time_selector,
+                    kind,
+                    operator,
+                    comment,
+                });
+
+                first_time_component = false;
+            }
         }
     }
 
@@ -198,7 +218,7 @@ pub(crate) fn canonical_to_seq(canonical: Canonical) -> impl Iterator<Item = Rul
         };
 
         let time_selector = TimeSelector {
-            time: MakeCanonical::into_selector(rgs_time, false),
+            spans: MakeCanonical::into_selector(rgs_time, false),
         };
 
         Some(RuleSequence {
