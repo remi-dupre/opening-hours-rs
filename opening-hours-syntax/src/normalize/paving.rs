@@ -95,24 +95,27 @@ impl<T: Clone + Debug, U: Clone + Debug + SelectorCompression> SelectorCompressi
 {
     fn fill_holes_front(&mut self, mut predicate: impl FnMut(&Self) -> bool) {
         for idx in (0..self.range.len() - 1).rev() {
-            // Backup the two intervals we attempt to merge
-            let rg_left = self.range.remove(idx);
-            let rg_right = self.range[idx].clone();
+            // Build a range for the hole between range[idx] and range[idx+1]
+            let hole_rg_start = self.range[idx].end.clone();
+            let hole_rg_stop = self.range[idx + 1].start.clone();
+            let hole_rg = hole_rg_start..hole_rg_stop;
 
-            // Apply compression in-place
-            self.range[idx].start = rg_left.start.clone();
+            // Temporarily swap self range while we check if it validates the predicate.
+            let backup_rg = std::mem::replace(&mut self.range, vec![hole_rg]);
+            let can_remove_hole = predicate(self);
+            self.range = backup_rg;
 
-            // If the predicate is true with current compression, keep in-place
-            // modifications. Otherwise restore previous value.
-            if !predicate(self) {
-                self.range[idx] = rg_right;
-                self.range.insert(idx, rg_left);
+            if can_remove_hole {
+                // Merge range[idx] and range[idx+1]
+                let rg_left = self.range.remove(idx);
+                self.range[idx].start = rg_left.start;
             }
         }
     }
 
     fn fill_holes_back(&mut self, mut predicate: impl FnMut(&Self) -> bool) {
         self.tail.fill_holes(|tail_attempt| {
+            // TODO: we can very likely do without clones
             let attempt = PavingSelector {
                 range: self.range.clone(),
                 tail: tail_attempt.clone(),

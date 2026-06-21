@@ -93,7 +93,7 @@ timespan = {
 timespan_plus = @{ "+" }
 
 time = {
-      hour_minutes
+      !"24:00" ~ hour_minutes
     | variable_time
 }
 

@@ -4,6 +4,7 @@ use core::ops::RangeInclusive;
 
 use crate::parser::Rule;
 use crate::rules::day::{WeekNum, Year};
+use crate::ExtendedTime;
 
 pub type Result<T> = core::result::Result<T, Error>;
 
@@ -23,6 +24,8 @@ pub enum Error {
     },
     /// Extended time has overflowed.
     InvalidExtendedTime { hour: u8, minutes: u8 },
+    /// A time range can't start from the next day
+    TimeRangeStartsTomorrow(ExtendedTime),
     /// A year range that starts after it ends.
     InvertedYearRange { start: Year, end: Year, step: u16 },
     /// A week range that starts after it ends.
@@ -62,6 +65,12 @@ impl fmt::Display for Error {
             Self::Unsupported(desc) => write!(f, "using an unsupported feature: {desc}"),
             Self::InvalidExtendedTime { hour, minutes: minute } => {
                 write!(f, "invalid extended time for {hour:02}:{minute:02}")
+            }
+            Self::TimeRangeStartsTomorrow(extended_time) => {
+                write!(
+                    f,
+                    "a time range can't start from the next day (got {extended_time})"
+                )
             }
             Self::Overflow { value, expected_bounds } => {
                 write!(
