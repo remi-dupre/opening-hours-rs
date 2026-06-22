@@ -14,7 +14,9 @@ use crate::error::{err_empty, Error, Result};
 use crate::extended_time::ExtendedTime;
 use crate::rules::day::{self as ds, WeekNum, Year};
 use crate::rules::time as ts;
-use crate::util::{is_capitalized, is_lowercase, PairsIterExtension, Sign};
+use crate::util::pairs::PairsIterExtension;
+use crate::util::sign::Sign;
+use crate::util::text::{is_capitalized, is_lowercase};
 use crate::{rules as rl, Warning};
 
 #[derive(pest_derive::Parser)]

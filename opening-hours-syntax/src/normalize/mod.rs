@@ -113,7 +113,6 @@ pub(crate) fn canonical_to_seq2(canonical: Canonical2) -> Vec<RuleSequence> {
                 });
 
                 // It is also okay to override a range that contains the exact time values.
-                println!("{candidate:#?}");
                 let overrides_same_value = canonical_before.is_val(candidate, &slots);
                 will_be_overriden || overrides_same_value
             });

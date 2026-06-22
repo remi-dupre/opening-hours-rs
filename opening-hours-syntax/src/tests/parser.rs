@@ -16,6 +16,7 @@ use crate::Parser;
 #[case("10:00-18:00/01:30")]
 #[case(r#"Mo-Fr open "ring the bell""#)]
 #[case("Jan Mo[1]-30")]
+#[case("2020 Jan week01 Mo 10:00-12:00 open")]
 // Comments
 #[case::comment(r#"open "comment""#)]
 #[case::comment(r#""comment""#)]

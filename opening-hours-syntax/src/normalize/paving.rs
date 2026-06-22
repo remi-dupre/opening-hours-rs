@@ -7,9 +7,12 @@
 //! for this problem in two dimensions and for boolean values :
 //! https://dl.acm.org/doi/10.1145/73833.73871
 
+use alloc::rc::Rc;
 use alloc::vec::Vec;
 use core::fmt::Debug;
 use core::ops::Range;
+
+use crate::util::rc::{RcCacheMut, RcCacheOwned};
 
 pub(crate) type Paving1D<T, Val> = Dim<T, Cell<Val>>;
 pub(crate) type Paving2D<T, U, Val> = Dim<T, Paving1D<U, Val>>;
@@ -177,9 +180,13 @@ impl<T, U: UnpackFromBack> UnpackFromBack for PavingSelector<T, U> {
 
 /// Interface over a n-dim paving.
 pub(crate) trait Paving: Clone + Debug + Default {
-    type Selector: Debug;
+    type Selector: Clone + Debug;
     type Value: Clone + Default + Eq;
     type Map<X: Clone + Debug + Default + Eq>: Paving;
+
+    /// A bit more performant than calling set(&selector, &Default::default()). It also returns true
+    /// the resulting paving is empty.
+    fn reset(&mut self, selector: &Self::Selector) -> bool;
 
     fn update(&mut self, selector: &Self::Selector, operation: impl FnMut(&mut Self::Value));
 
@@ -252,6 +259,11 @@ impl<Val: Clone + Debug + Default + Eq> Paving for Cell<Val> {
     ) -> Self::Map<X> {
         Cell { inner: map(self.inner) }
     }
+
+    fn reset(&mut self, _selector: &Self::Selector) -> bool {
+        self.inner = Val::default();
+        true
+    }
 }
 
 // --
@@ -265,13 +277,20 @@ impl<Val: Clone + Debug + Default + Eq> Paving for Cell<Val> {
 ///     |  col1  |  col2  |   ...   |
 #[derive(Clone)]
 pub(crate) struct Dim<T: Clone + Ord, U: Paving> {
-    cuts: Vec<T>, // ordered
-    cols: Vec<U>, // one less elements than cuts
+    cuts: Vec<T>,     // ordered
+    cols: Vec<Rc<U>>, // one less elements than cuts
+    /// Keep an instance of the default value which will be used ensure that new values pushed to
+    /// cols will always share the same pointer.
+    col_default: Rc<U>,
 }
 
 impl<T: Clone + Ord, U: Paving> Default for Dim<T, U> {
     fn default() -> Self {
-        Self { cuts: Vec::new(), cols: Vec::new() }
+        Self {
+            cuts: Vec::new(),
+            cols: Vec::new(),
+            col_default: Rc::default(),
+        }
     }
 }
 
@@ -308,13 +327,13 @@ impl<T: Clone + Ord, U: Paving> Dim<T, U> {
             // No interval created yet
         } else if self.cuts.len() == 2 {
             // First interval
-            self.cols.push(U::default())
+            self.cols.push(self.col_default.clone())
         } else if insert_pos == self.cuts.len() - 1 {
             // Added the cut at the end
-            self.cols.push(U::default())
+            self.cols.push(self.col_default.clone())
         } else if insert_pos == 0 {
             // Added the cut at the start
-            self.cols.insert(0, U::default())
+            self.cols.insert(0, self.col_default.clone())
         } else {
             let cut_fill = self.cols[insert_pos - 1].clone();
             self.cols.insert(insert_pos, cut_fill);
@@ -327,8 +346,10 @@ impl<T: Clone + Debug + Ord, U: Debug + Paving> Paving for Dim<T, U> {
     type Value = U::Value;
     type Map<X: Clone + Debug + Default + Eq> = Dim<T, U::Map<X>>;
 
-    fn update(&mut self, selector: &Self::Selector, mut operation: impl FnMut(&mut Self::Value)) {
+    fn reset(&mut self, selector: &Self::Selector) -> bool {
         let (ranges, selector_tail) = selector.unpack_front();
+        let mut rc_reset_col = RcCacheMut::new(|col: &mut U| col.reset(selector_tail));
+        let mut is_empty = true;
 
         for range in ranges {
             self.cut_at(range.start.clone());
@@ -336,7 +357,36 @@ impl<T: Clone + Debug + Ord, U: Debug + Paving> Paving for Dim<T, U> {
 
             for (col_start, col_val) in self.cuts.iter().zip(&mut self.cols) {
                 if *col_start >= range.start && *col_start < range.end {
-                    col_val.update(selector_tail, &mut operation);
+                    if *rc_reset_col.apply(col_val) {
+                        // If the column values is cleaned up into an empty value we can collapse
+                        // it into an emtpy value. This will early cleanup some memory as well as
+                        // collapse inner columns.
+                        *col_val = self.col_default.clone()
+                    } else {
+                        is_empty = false;
+                    }
+                } else {
+                    is_empty = is_empty && Rc::ptr_eq(col_val, &self.col_default);
+                }
+            }
+        }
+
+        is_empty
+    }
+
+    fn update(&mut self, selector: &Self::Selector, mut operation: impl FnMut(&mut Self::Value)) {
+        let (ranges, selector_tail) = selector.unpack_front();
+
+        let mut update_rc =
+            RcCacheMut::new(|val: &mut U| val.update(selector_tail, &mut operation));
+
+        for range in ranges {
+            self.cut_at(range.start.clone());
+            self.cut_at(range.end.clone());
+
+            for (col_start, col_val) in self.cuts.iter().zip(&mut self.cols) {
+                if *col_start >= range.start && *col_start < range.end {
+                    update_rc.apply(col_val);
                 }
             }
         }
@@ -392,11 +442,13 @@ impl<T: Clone + Debug + Ord, U: Debug + Paving> Paving for Dim<T, U> {
         &mut self,
         filter: impl Fn(&Self::Value) -> bool,
     ) -> Option<(Self::Value, Self::Selector)> {
+        let mut pop_from_col = RcCacheMut::new(|col: &mut U| col.pop_filter(&filter));
+
         let (mut start_idx, (target_value, selector_tail)) = self
             .cols
             .iter_mut()
             .enumerate()
-            .find_map(|(idx, col)| Some((idx, col.pop_filter(&filter)?)))?;
+            .find_map(|(idx, col)| Some((idx, pop_from_col.apply(col).clone()?)))?;
 
         let mut end_idx = start_idx + 1;
         let mut selector_range = Vec::new();
@@ -420,7 +472,8 @@ impl<T: Clone + Debug + Ord, U: Debug + Paving> Paving for Dim<T, U> {
         }
 
         let selector = PavingSelector { range: selector_range, tail: selector_tail };
-        self.set(&selector, &Self::Value::default());
+        self.reset(&selector);
+        // self.set(&selector, &Self::Value::default());
         Some((target_value, selector))
     }
 
@@ -428,9 +481,16 @@ impl<T: Clone + Debug + Ord, U: Debug + Paving> Paving for Dim<T, U> {
         self,
         mut map: impl FnMut(Self::Value) -> X,
     ) -> Self::Map<X> {
+        // Calling Rc::new from inside the cached function ensures that shared input pointers will
+        // be mapped to shared output pointers.
+        let mut rc_map = RcCacheOwned::new(|col: U| Rc::new(col.map(&mut map)));
+
         Dim {
             cuts: self.cuts,
-            cols: self.cols.into_iter().map(|col| col.map(&mut map)).collect(),
+            cols: (self.cols.into_iter())
+                .map(|col| rc_map.apply(col).clone())
+                .collect(),
+            col_default: Rc::default(),
         }
     }
 }
