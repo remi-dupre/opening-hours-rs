@@ -184,8 +184,8 @@ pub(crate) trait Paving: Clone + Debug + Default {
     type Value: Clone + Default + Eq;
     type Map<X: Clone + Debug + Default + Eq>: Paving;
 
-    /// A bit more performant than calling set(&selector, &Default::default()). It also returns true
-    /// the resulting paving is empty.
+    /// A bit more performant than calling set(&selector, &Default::default()) that will release
+    /// memory when all the columns are empty. It also returns true the resulting paving is empty.
     fn reset(&mut self, selector: &Self::Selector) -> bool;
 
     fn update(&mut self, selector: &Self::Selector, operation: impl FnMut(&mut Self::Value));

@@ -6,7 +6,9 @@ pub(crate) mod paving;
 use std::collections::VecDeque;
 
 use crate::normalize::canonical::{CanonicalDaySelector, OrderedWeekday};
-use crate::normalize::canonical_time::{normalize_time_rules, TimeRules};
+use crate::normalize::canonical_time::{
+    can_overlap_with_next_day, normalize_time_rules, TimeRules,
+};
 use crate::normalize::frame::Frame;
 use crate::normalize::paving::{EmptyPavingSelector, Paving, Paving4D, UnpackFromBack};
 use crate::rules::day::{DaySelector, Month, WeekNum, Year};
@@ -56,7 +58,8 @@ pub(crate) fn partialytocanonical2(rules: &mut VecDeque<RuleSequence>) -> Canoni
 
     #[allow(clippy::result_large_err)]
     while let Some(rule) = rules.pop_front() {
-        if rule.operator == RuleOperator::Fallback {
+        if rule.operator == RuleOperator::Fallback || can_overlap_with_next_day(&rule.time_selector)
+        {
             rules.push_front(rule);
             return canonical;
         }
@@ -99,24 +102,15 @@ pub(crate) fn canonical_to_seq2(canonical: Canonical2) -> Vec<RuleSequence> {
                 .unwrap_or(false)
         }),
         // 5. starts with a close time range
-        Box::new(|s| !s.is_empty() && s.iter().all(|s| s.0 .0 == RuleKind::Closed)),
-        Box::new(|s| !s.is_empty()),
+        Box::new(|s| {
+            !s.is_empty()
+                && s.iter()
+                    .any(|s| s.0 .0 != RuleKind::Unknown || !s.0 .1.is_empty())
+        }),
     ];
 
     for pop_priority in pop_priority_order {
-        while let Some((slots, mut selector)) = canonical_remaining.pop_filter(&pop_priority) {
-            selector.fill_holes(|candidate| {
-                // If the date domain is covered by any rule that is not closed, this means that a
-                // created range would be overriden anyway.
-                let will_be_overriden = canonical_remaining.check_predicate(candidate, |s| {
-                    s.iter().any(|((kind, _), _)| *kind != RuleKind::Closed)
-                });
-
-                // It is also okay to override a range that contains the exact time values.
-                let overrides_same_value = canonical_before.is_val(candidate, &slots);
-                will_be_overriden || overrides_same_value
-            });
-
+        while let Some((slots, selector)) = canonical_remaining.pop_filter(&pop_priority) {
             // Unpack ranges
             let (rgs_weekday, selector) = selector.into_unpack_front();
             let (rgs_week, selector) = selector.into_unpack_front();

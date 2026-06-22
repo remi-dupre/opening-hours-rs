@@ -8,7 +8,18 @@ use crate::{ExtendedTime, RuleKind};
 /// For a given day, the list of rules to apply from left to right.
 pub(crate) type TimeRules = Vec<((RuleKind, Arc<str>), TimeSelector)>;
 
-// TODO: doc
+/// TODO: doc
+pub(crate) fn can_overlap_with_next_day(selector: &TimeSelector) -> bool {
+    (selector.spans).iter().any(|span| {
+        let (Time::Fixed(start), Time::Fixed(end)) = (span.range.start, span.range.end) else {
+            return false;
+        };
+
+        start >= end || end > ExtendedTime::MIDNIGHT_24
+    })
+}
+
+/// TODO: doc
 pub(crate) fn normalize_time_rules(slot: TimeRules) -> TimeRules {
     let mut result = Vec::new();
     let mut canonical = TimeSelectorPaving::default();
@@ -67,7 +78,7 @@ fn time_span_to_daily_ranges(span: &TimeSpan) -> Option<Range<ExtendedTime>> {
 
     match (span.range.start, span.range.end) {
         (Time::Fixed(start), Time::Fixed(end))
-            if start <= end && end <= ExtendedTime::MIDNIGHT_24 =>
+            if start < end && end <= ExtendedTime::MIDNIGHT_24 =>
         {
             Some(start..end)
         }
