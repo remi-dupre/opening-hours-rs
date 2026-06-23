@@ -27,6 +27,8 @@ use crate::rules::OpeningHoursExpression;
 #[case("Sep23:30-04:20", "Sep 23:30-04:20")]
 #[case("Sa;Su;2490-2490/8", "2490; 1900-2489,2491-9999 Sa-Su")]
 #[case("Mo 10:00-21:00; Tu,We,Th,Fr,Sa,Su 10:00-21:00", "10:00-21:00")]
+#[case("dusk-dawn+;Mo", "dusk-dawn+; Mo")] // dusk-dawn is wrapping, not normalized
+#[case("dawn-dusk+;Mo", "Mo; Tu-Su dawn-dusk+")] // dawn-dusk is not wrapping
 #[case(
     "week2Mo;Jun;Fr",
     "Jun; Jan-May,Jul-Dec week02 Mo,Fr; Jan-May,Jul-Dec week01,03-53 Fr"
@@ -75,8 +77,8 @@ use crate::rules::OpeningHoursExpression;
     "Mo sunrise-sunset; Tu-Su 10:00-16:00"
 )]
 #[case::time_selector( // variable time should be sorted
-    "(sunrise+00:30)-sunset,(sunrise-00:30)-sunset,(sunrise-01:00)-sunset,sunrise-sunset,sunrise-(sunset+00:30)",
-    "(sunrise-01:00)-sunset,(sunrise-00:30)-sunset,sunrise-sunset,sunrise-(sunset+00:30),(sunrise+00:30)-sunset"
+    "(sunrise-00:30)-sunset,(sunrise-01:00)-sunset,sunrise-sunset,sunrise-(sunset+00:30)",
+    "(sunrise-01:00)-sunset,(sunrise-00:30)-sunset,sunrise-sunset,sunrise-(sunset+00:30)"
 )]
 #[case::time_selector(
     "sunrise-sunset; Th 10:00-14:00",

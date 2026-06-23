@@ -7,9 +7,7 @@ use std::collections::VecDeque;
 
 use crate::normalize::bounded::Frame;
 use crate::normalize::canonical_date::{CanonicalDaySelector, MakeCanonical};
-use crate::normalize::canonical_time::{
-    can_overlap_with_next_day, normalize_time_rules, TimeRules,
-};
+use crate::normalize::canonical_time::{no_overlap_with_next_day, normalize_time_rules, TimeRules};
 use crate::normalize::paving::{EmptyPavingSelector, Paving, Paving4D};
 use crate::rules::day::{DaySelector, Month, WeekNum, Year};
 use crate::rules::{RuleOperator, RuleSequence};
@@ -41,7 +39,7 @@ pub(crate) fn partialytocanonical2(rules: &mut VecDeque<RuleSequence>) -> Canoni
 
     #[allow(clippy::result_large_err)]
     while let Some(rule) = rules.pop_front() {
-        if rule.operator == RuleOperator::Fallback || can_overlap_with_next_day(&rule.time_selector)
+        if rule.operator == RuleOperator::Fallback || !no_overlap_with_next_day(&rule.time_selector)
         {
             rules.push_front(rule);
             return canonical;
