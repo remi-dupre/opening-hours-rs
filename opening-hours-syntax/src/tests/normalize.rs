@@ -29,11 +29,11 @@ use crate::rules::OpeningHoursExpression;
 #[case("Mo 10:00-21:00; Tu,We,Th,Fr,Sa,Su 10:00-21:00", "10:00-21:00")]
 #[case("dusk-dawn+;Mo", "dusk-dawn+; Mo")] // dusk-dawn is wrapping, not normalized
 #[case("dawn-dusk+;Mo", "Mo; Tu-Su dawn-dusk+")] // dawn-dusk is not wrapping
+#[case("Jun; 02:00-02:00", "Jun; 02:00-02:00")]
 #[case(
     "week2Mo;Jun;Fr",
     "Jun; Jan-May,Jul-Dec week02 Mo,Fr; Jan-May,Jul-Dec week01,03-53 Fr"
 )]
-#[case("Jun; 02:00-02:00", "Jun; 02:00-02:00")]
 #[case(
     "10:00-12:00 open; 14:00-16:00 closed \"on demand\"",
     "10:00-12:00, Mo-Su 14:00-16:00 closed \"on demand\""
@@ -55,12 +55,18 @@ use crate::rules::OpeningHoursExpression;
     "Jan-Mar,Nov-Dec Mo-Fr 10:00-16:00; Apr-Oct Mo-Fr 08:00-18:00"
 )]
 #[case(
-        "Mo-Su 00:00-01:00, 10:30-24:00; PH off; 2021 Apr 10 00:00-01:00; 2021 Apr 11-16 off; 2021 Apr 17 10:30-24:00",
-        "00:00-01:00,10:30-24:00; PH closed; 2021 Apr 10 00:00-01:00; 2021 Apr 11-2021 Apr 16 closed; 2021 Apr 17 10:30-24:00",
-    )]
+    "Mo-Su 00:00-01:00, 10:30-24:00; PH off; 2021 Apr 10 00:00-01:00; 2021 Apr 11-16 off; 2021 Apr 17 10:30-24:00",
+    "00:00-01:00,10:30-24:00; PH closed; 2021 Apr 10 00:00-01:00; 2021 Apr 11-2021 Apr 16 closed; 2021 Apr 17 10:30-24:00"
+)]
 #[case(
     "week04 Mo; Jul; Jun 5; Sep Fr; 04:00-04:20",
     "Jul; Jan-Jun,Aug-Dec week04 Mo; Jun 5; Sep Fr; 04:00-04:20"
+)]
+// Need to keep closed rules after a non-canonical rule
+#[case("dusk+, Mo closed", "Tu-Su dusk+; Mo dusk+, Mo closed")]
+#[case(
+    "dusk+, Mo 10:00-12:00 closed",
+    "Tu-Su dusk+; Mo dusk+, Mo 10:00-12:00 closed"
 )]
 // Focus on time selector normalisation
 #[case::time_selector("10:00-12:00 open, 14:00-18:00 open, 12:00-14:00 open", "10:00-18:00")]

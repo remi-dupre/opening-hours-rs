@@ -9,14 +9,14 @@ use opening_hours_syntax::extended_time::ExtendedTime;
 use opening_hours_syntax::rules::{OpeningHoursExpression, RuleKind, RuleOperator, RuleSequence};
 use opening_hours_syntax::{Error as ParserError, Parser, Warning};
 
+use crate::Context;
+use crate::DateTimeRange;
 use crate::filter::date_filter::DateFilter;
 use crate::filter::time_filter::{
-    time_selector_intervals_at, time_selector_intervals_at_next_day, TimeFilter,
+    TimeFilter, time_selector_intervals_at, time_selector_intervals_at_next_day,
 };
 use crate::localization::{Localize, NoLocation};
 use crate::schedule::Schedule;
-use crate::Context;
-use crate::DateTimeRange;
 
 /// The lower bound of dates handled by specification
 pub const DATE_START: NaiveDateTime = {
@@ -478,10 +478,10 @@ impl<L: Localize> TimeDomainIterator<L> {
             .unwrap_or(false)
         {
             // Early return if infinite approximation is enabled
-            if let Some(max_interval_size) = self.opening_hours.ctx.approx_bound_interval_size {
-                if self.curr_date - start_date > max_interval_size + chrono::TimeDelta::days(1) {
-                    return;
-                }
+            if let Some(max_interval_size) = self.opening_hours.ctx.approx_bound_interval_size
+                && self.curr_date - start_date > max_interval_size + chrono::TimeDelta::days(1)
+            {
+                return;
             }
 
             self.curr_schedule.next();
@@ -540,14 +540,14 @@ impl<L: Localize> Iterator for TimeDomainIterator<L> {
             );
 
             // Infinity approximation, if enabled
-            if let Some(max_interval_size) = self.opening_hours.ctx.approx_bound_interval_size {
-                if end - start > max_interval_size {
-                    return Some(DateTimeRange {
-                        range: start..DATE_END,
-                        kind: curr_tr.kind,
-                        comment: curr_tr.comment.clone(),
-                    });
-                }
+            if let Some(max_interval_size) = self.opening_hours.ctx.approx_bound_interval_size
+                && end - start > max_interval_size
+            {
+                return Some(DateTimeRange {
+                    range: start..DATE_END,
+                    kind: curr_tr.kind,
+                    comment: curr_tr.comment.clone(),
+                });
             }
 
             Some(DateTimeRange {

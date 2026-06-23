@@ -29,7 +29,7 @@ pub(crate) fn normalize_time_rules(slot: TimeRules) -> TimeRules {
     let mut result = Vec::new();
     let mut canonical = TimeSelectorPaving::default();
 
-    // Iter over each spans of the time selectors with intention to individualy push them to the
+    // Iter over each spans of the time selectors with intention to individually push them to the
     // canonical time selector.
     let mut spans = (slot.into_iter())
         .flat_map(|(state, selector)| {
@@ -42,8 +42,12 @@ pub(crate) fn normalize_time_rules(slot: TimeRules) -> TimeRules {
 
     while let Some((state, span)) = spans.next() {
         // If the span can be turned into a simple range, then we can just add it to the canonical
-        // structure.
-        if let Some(range) = time_span_to_daily_ranges(&span) {
+        // structure. There is also a special case for empty states: we cannot add them to a
+        // canonical component if there is already a non-canonical component added, they must be
+        // inserted as if it were not canonical because it would be elided by a paving.
+        if (result.is_empty() || state != Default::default())
+            && let Some(range) = time_span_to_daily_ranges(&span)
+        {
             canonical.set_time_range(range, state);
             continue;
         }
@@ -54,7 +58,9 @@ pub(crate) fn normalize_time_rules(slot: TimeRules) -> TimeRules {
         // However, _can_ continue iterating as long as the state doesn't change because the order
         // doesn't matter in this case.
         while let Some((_, extra_span)) = spans.next_if(|(extra_state, _)| *extra_state == state) {
-            if let Some(range) = time_span_to_daily_ranges(&extra_span) {
+            if (result.is_empty() || state != Default::default())
+                && let Some(range) = time_span_to_daily_ranges(&extra_span)
+            {
                 canonical.set_time_range(range, state.clone());
             } else {
                 non_canonical.spans.push(extra_span)

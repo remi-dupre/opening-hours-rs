@@ -8,7 +8,7 @@ repository = "https://github.com/remi-dupre/opening-hours-rs"
 documentation = "https://docs.rs/opening-hours-syntax"
 homepage = "https://github.com/remi-dupre/opening-hours-rs/tree/master/opening-hours-syntax"
 description = "A parser for opening_hours fields in OpenStreetMap."
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 chrono = { version = "0.4", default-features = false }

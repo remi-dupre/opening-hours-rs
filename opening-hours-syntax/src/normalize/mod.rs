@@ -14,9 +14,7 @@ use crate::rules::{RuleOperator, RuleSequence};
 use crate::util::weekday::OrderedWeekday;
 use crate::RuleKind;
 
-// --
-// -- Normalization Logic
-// --
+pub(crate) type Canonical = Paving4D<Frame<OrderedWeekday>, WeekNum, Frame<Month>, Year, TimeRules>;
 
 /// Convert day fields of a rule sequence to a n-dim selector.
 pub(crate) fn ruleseq_to_day_selector(rs: &RuleSequence) -> Option<CanonicalDaySelector> {
@@ -31,11 +29,8 @@ pub(crate) fn ruleseq_to_day_selector(rs: &RuleSequence) -> Option<CanonicalDayS
     Some(selector)
 }
 
-pub(crate) type Canonical2 =
-    Paving4D<Frame<OrderedWeekday>, WeekNum, Frame<Month>, Year, TimeRules>;
-
-pub(crate) fn partialytocanonical2(rules: &mut VecDeque<RuleSequence>) -> Canonical2 {
-    let mut canonical = Canonical2::default();
+pub(crate) fn partialytocanonical2(rules: &mut VecDeque<RuleSequence>) -> Canonical {
+    let mut canonical = Canonical::default();
 
     #[allow(clippy::result_large_err)]
     while let Some(rule) = rules.pop_front() {
@@ -62,7 +57,7 @@ pub(crate) fn partialytocanonical2(rules: &mut VecDeque<RuleSequence>) -> Canoni
     canonical
 }
 
-pub(crate) fn canonical_to_seq2(canonical: Canonical2) -> Vec<RuleSequence> {
+pub(crate) fn canonical_to_seq2(canonical: Canonical) -> Vec<RuleSequence> {
     let canonical_before = canonical.map(normalize_time_rules);
     let mut result = Vec::new();
     let mut canonical_remaining = canonical_before.clone();

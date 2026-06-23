@@ -156,10 +156,8 @@ impl PyOpeningHours {
                     .map_err(|err| UnknownCountryError::new_err(err.to_string()))?
                     .holidays(),
             );
-        } else if let Some(coords) = coords {
-            if auto_country {
-                ctx = ctx.with_holidays(Context::from_coords(coords).holidays);
-            }
+        } else if auto_country && let Some(coords) = coords {
+            ctx = ctx.with_holidays(Context::from_coords(coords).holidays);
         }
 
         let locale = match (timezone, coords, auto_timezone) {
