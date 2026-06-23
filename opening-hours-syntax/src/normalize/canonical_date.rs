@@ -1,71 +1,22 @@
-use alloc::sync::Arc;
 use alloc::vec::Vec;
-use core::cmp::Ordering;
 use core::ops::Range;
 
-use chrono::Weekday;
-
-use crate::normalize::paving::{Paving5D, Selector4D, Selector5D};
+use crate::normalize::bounded::{Bounded, Frame, UpperBounded};
+use crate::normalize::paving::Selector4D;
 use crate::rules::day::{Month, MonthdayRange, WeekDayRange, WeekNum, WeekRange, Year, YearRange};
 use crate::rules::time::{Time, TimeSpan};
-use crate::{ExtendedTime, RuleKind};
-
-use super::frame::{Bounded, Frame};
-
-pub(crate) type Canonical = Paving5D<
-    Frame<OrderedWeekday>,
-    Frame<WeekNum>,
-    Frame<Month>,
-    Frame<Year>,
-    ExtendedTime,
-    (RuleKind, Arc<str>),
->;
+use crate::util::weekday::OrderedWeekday;
+use crate::ExtendedTime;
 
 pub(crate) type CanonicalDaySelector =
-    Selector4D<Frame<OrderedWeekday>, Frame<WeekNum>, Frame<Month>, Frame<Year>>;
-
-pub(crate) type CanonicalSelector =
-    Selector5D<Frame<OrderedWeekday>, Frame<WeekNum>, Frame<Month>, Frame<Year>, ExtendedTime>;
-
-// --
-// -- OrderedWeekday
-// ---
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) struct OrderedWeekday(pub(crate) Weekday);
-
-impl Ord for OrderedWeekday {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.0
-            .number_from_monday()
-            .cmp(&other.0.number_from_monday())
-    }
-}
-
-impl PartialOrd for OrderedWeekday {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl From<OrderedWeekday> for Weekday {
-    fn from(val: OrderedWeekday) -> Self {
-        val.0
-    }
-}
-
-impl From<Weekday> for OrderedWeekday {
-    fn from(value: Weekday) -> Self {
-        Self(value)
-    }
-}
+    Selector4D<Frame<OrderedWeekday>, WeekNum, Frame<Month>, Year>;
 
 // --
 // -- MakeCanonical
 // --
 
 pub(crate) trait MakeCanonical: Sized + 'static {
-    type CanonicalType: Bounded;
+    type CanonicalType: UpperBounded;
     fn try_make_canonical(&self) -> Option<Range<Self::CanonicalType>>;
     fn into_type(canonical: Range<Self::CanonicalType>) -> Option<Self>;
 
@@ -76,7 +27,7 @@ pub(crate) trait MakeCanonical: Sized + 'static {
 
         for elem in iter {
             let range = Self::try_make_canonical(elem)?;
-            ranges.extend(Bounded::split_inverted_range(range));
+            ranges.extend(UpperBounded::split_inverted_range(range));
         }
 
         if ranges.is_empty() {
@@ -99,7 +50,7 @@ pub(crate) trait MakeCanonical: Sized + 'static {
 }
 
 impl MakeCanonical for YearRange {
-    type CanonicalType = Frame<Year>;
+    type CanonicalType = Year;
 
     fn try_make_canonical(&self) -> Option<Range<Self::CanonicalType>> {
         let (range, step) = self.into_parts();
@@ -108,11 +59,11 @@ impl MakeCanonical for YearRange {
             return None;
         }
 
-        Some(Frame::to_range_strict(range))
+        Some(*range.start()..range.end().succ()?)
     }
 
     fn into_type(canonical: Range<Self::CanonicalType>) -> Option<Self> {
-        YearRange::new(Frame::to_range_inclusive(canonical)?, 1)
+        YearRange::new(canonical.start..=canonical.end.pred()?, 1)
     }
 }
 
@@ -135,7 +86,7 @@ impl MakeCanonical for MonthdayRange {
 }
 
 impl MakeCanonical for WeekRange {
-    type CanonicalType = Frame<WeekNum>;
+    type CanonicalType = WeekNum;
 
     fn try_make_canonical(&self) -> Option<Range<Self::CanonicalType>> {
         let (range, step) = self.into_parts();
@@ -144,11 +95,11 @@ impl MakeCanonical for WeekRange {
             return None;
         }
 
-        Some(Frame::to_range_strict(range))
+        Some(*range.start()..range.end().succ()?)
     }
 
     fn into_type(canonical: Range<Self::CanonicalType>) -> Option<Self> {
-        WeekRange::new(Frame::to_range_inclusive(canonical)?, 1)
+        WeekRange::new(canonical.start..=canonical.end.pred()?, 1)
     }
 }
 

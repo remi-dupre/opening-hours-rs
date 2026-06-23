@@ -7,13 +7,7 @@ use alloc::sync::Arc;
 use alloc::vec::Vec;
 use core::fmt::Display;
 
-use crate::normalize::{
-    canonical_to_seq, canonical_to_seq2,
-    frame::Bounded,
-    partialytocanonical2,
-    paving::{Paving, Paving5D, UnpackFromBack},
-    ruleseq_to_selector,
-};
+use crate::normalize::{canonical_to_seq2, partialytocanonical2};
 
 // OpeningHoursExpression
 
@@ -64,40 +58,7 @@ impl OpeningHoursExpression {
         self.normalize_v2()
     }
 
-    pub fn normalize_v1(self) -> Self {
-        let mut rules_queue = self.rules.into_iter().peekable();
-        let mut paving = Paving5D::default();
-
-        #[allow(clippy::result_large_err)]
-        while let Some((rule, selector)) = rules_queue.next_if_map(|rule| {
-            // As long as this is not a fallback operator
-            if rule.operator == RuleOperator::Fallback {
-                return Err(rule);
-            }
-
-            // And as long as we can parse it
-            let Some(selector) = ruleseq_to_selector(&rule) else {
-                return Err(rule);
-            };
-
-            Ok((rule, selector))
-        }) {
-            // If the rule is not explicitly targeting a closed kind, then it overrides
-            // previous rules for the whole day.
-            if rule.operator == RuleOperator::Normal && rule.kind != RuleKind::Closed {
-                let mut full_day_selector = selector.clone();
-                full_day_selector.substitute_back([Bounded::bounds()]);
-                paving.set(&full_day_selector, &Default::default());
-            }
-
-            paving.set(&selector, &(rule.kind, rule.comment));
-        }
-
-        Self {
-            rules: canonical_to_seq(paving).chain(rules_queue).collect(),
-        }
-    }
-
+    /// TODO: doc
     pub fn normalize_v2(self) -> Self {
         let mut old_rules = self.rules.into();
         let canonical = partialytocanonical2(&mut old_rules);
