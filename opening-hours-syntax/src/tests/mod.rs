@@ -4,6 +4,7 @@ mod display;
 mod normalize;
 mod parser;
 mod paving;
+mod rule_time;
 
 /// A parsure that asserts that no warning are emited.
 #[rstest::fixture]

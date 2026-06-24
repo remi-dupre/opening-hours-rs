@@ -136,10 +136,28 @@ impl Display for Time {
 
 // VariableTime
 
+// TODO: add unit tests on order
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct VariableTime {
     pub event: TimeEvent,
     pub offset: i16,
+}
+
+impl VariableTime {
+    /// Implement a safe partial order for variable times. Some events such as
+    /// (dusk+02:00-dawn-02:00) may not be ordered the same way depending on the season.
+    pub fn stable_partial_ord(&self, other: &Self) -> Option<Ordering> {
+        match (self.event.cmp(&other.event), self.offset.cmp(&other.offset)) {
+            (Ordering::Equal, other_cmp) | (other_cmp, Ordering::Equal) => Some(other_cmp),
+            (event_cmp, offset_cmp) if event_cmp == offset_cmp => Some(event_cmp),
+            _ => None,
+        }
+    }
+
+    /// Checks is the event is guaranteed to happend before the other one.
+    pub fn is_before(&self, other: &Self) -> bool {
+        self.stable_partial_ord(&other) == Some(Ordering::Less)
+    }
 }
 
 impl Display for VariableTime {

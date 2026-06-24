@@ -28,6 +28,7 @@ use crate::rules::OpeningHoursExpression;
 #[case("Sa;Su;2490-2490/8", "2490; 1900-2489,2491-9999 Sa-Su")]
 #[case("Mo 10:00-21:00; Tu,We,Th,Fr,Sa,Su 10:00-21:00", "10:00-21:00")]
 #[case("dusk-dawn+;Mo", "dusk-dawn+; Mo")] // dusk-dawn is wrapping, not normalized
+#[case("dusk-dusk;Mo", "dusk-dusk; Mo")] // dusk-dusk is wrapping too
 #[case("dawn-dusk+;Mo", "Mo; Tu-Su dawn-dusk+")] // dawn-dusk is not wrapping
 #[case("Jun; 02:00-02:00", "Jun; 02:00-02:00")]
 #[case(
