@@ -137,6 +137,7 @@ use crate::{Context, OpeningHours};
 // Rule: Normal
 #[case::rule_normal("2020-06-01", "Jun ; 00:00-04:00 closed", "04:00 open 24:00")]
 #[case::rule_normal("2020-07-01", "Jun ; 00:00-04:00 closed", Schedule::new())]
+#[case::rule_normal("2181-08-01", "Tu closed; Jul sunset-15:19+", "00:00 open 15:19")]
 #[case::rule_normal(
     "2020-06-01",
     "Sa,Su 11:00-13:45 open; 10:00-18:00",

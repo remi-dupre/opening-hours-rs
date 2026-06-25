@@ -173,7 +173,9 @@ impl<L: Localize> OpeningHours<L> {
                     if curr_match {
                         curr_eval
                     } else {
-                        prev_eval.or(curr_eval)
+                        prev_eval
+                            .filter(|s: &Schedule| !s.is_always_closed_with_no_comments())
+                            .or(curr_eval)
                     },
                 ),
                 (RuleOperator::Additional, _) | (RuleOperator::Normal, RuleKind::Closed) => (
