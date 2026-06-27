@@ -1,5 +1,5 @@
 //! Run stub generation.
-//! See https://github.com/Jij-Inc/pyo3-stub-gen
+//! See <https://github.com/Jij-Inc/pyo3-stub-gen>
 
 use std::fs::File;
 use std::io::Read;

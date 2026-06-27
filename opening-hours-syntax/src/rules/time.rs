@@ -136,7 +136,6 @@ impl Display for Time {
 
 // VariableTime
 
-// TODO: add unit tests on order
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct VariableTime {
     pub event: TimeEvent,
@@ -156,7 +155,7 @@ impl VariableTime {
 
     /// Checks is the event is guaranteed to happend before the other one.
     pub fn is_before(&self, other: &Self) -> bool {
-        self.stable_partial_ord(&other) == Some(Ordering::Less)
+        self.stable_partial_ord(other) == Some(Ordering::Less)
     }
 }
 

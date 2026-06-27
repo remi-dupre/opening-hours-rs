@@ -436,8 +436,6 @@ impl PyOpeningHours {
     /// [spec-monthday-range]: https://wiki.openstreetmap.org/wiki/Key:opening_hours/specification#monthday_range
     /// [spec-weekday-range]: https://wiki.openstreetmap.org/wiki/Key:opening_hours/specification#weekday_range
     /// [wiki-idempotence]: https://en.wikipedia.org/wiki/Idempotence
-
-    #[doc = include_str!("../../opening-hours-syntax/doc/normalize.md")]
     fn normalize(&self) -> Self {
         PyOpeningHours {
             inner: self.inner.normalize(),

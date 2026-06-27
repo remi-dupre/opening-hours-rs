@@ -4,7 +4,7 @@ use sunrise::{DawnType, SolarDay, SolarEvent};
 
 /// A valid pair of geographic coordinates.
 ///
-/// See https://en.wikipedia.org/wiki/Geographic_coordinate_system
+/// See <https://en.wikipedia.org/wiki/Geographic_coordinate_system>
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
 pub struct Coordinates(sunrise::Coordinates);
 
