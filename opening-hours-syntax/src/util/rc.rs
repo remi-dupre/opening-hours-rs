@@ -21,7 +21,7 @@ impl<T: Clone, U: Clone, F: FnMut(&mut T) -> U> RcCacheMut<T, U, F> {
         if Rc::strong_count(val) == 1 {
             (self.cache.pop(&key))
                 .map(|(cached_val, result)| {
-                    *val = cached_val.clone();
+                    *val = cached_val;
                     result
                 })
                 .unwrap_or_else(|| (self.func)(Rc::make_mut(val)))
@@ -83,8 +83,9 @@ struct RcIndex<T, U> {
 impl<T, U> RcIndex<T, U> {
     /// Get the index of a value in current index.
     fn index(&self, key: &Weak<T>) -> Option<usize> {
-        (self.index.iter().rev())
+        (self.index.iter())
             .enumerate()
+            .rev()
             .find(|(_, (k, _))| k.ptr_eq(key))
             .map(|(idx, _)| idx)
     }
