@@ -12,7 +12,8 @@ use crate::normalize::paving::Paving;
 use crate::rules::day::DaySelector;
 use crate::rules::{RuleOperator, RuleSequence};
 
-pub(crate) fn partialytocanonical2(rules: &mut VecDeque<RuleSequence>) -> CanonicalDate {
+/// Consume as much rules as possible to be converted into a CanonicalDate.
+pub(crate) fn drain_ruleseq_into_canonical(rules: &mut VecDeque<RuleSequence>) -> CanonicalDate {
     let mut canonical = CanonicalDate::default();
 
     #[allow(clippy::result_large_err)]
@@ -40,7 +41,8 @@ pub(crate) fn partialytocanonical2(rules: &mut VecDeque<RuleSequence>) -> Canoni
     canonical
 }
 
-pub(crate) fn canonical_to_seq2(canonical: CanonicalDate) -> Vec<RuleSequence> {
+/// Transform a CanonicalDate into a RuleSequence.
+pub(crate) fn canonical_to_ruleseq(canonical: CanonicalDate) -> Vec<RuleSequence> {
     let mut result = Vec::new();
     let mut canonical_remaining = canonical.map(normalize_time_rules);
 

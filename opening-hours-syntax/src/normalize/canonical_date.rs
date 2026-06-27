@@ -102,7 +102,7 @@ impl MakeCanonical for YearRange {
             return None;
         }
 
-        Some(*range.start()..range.end().succ()?)
+        Some(UpperBounded::to_range_strict(range))
     }
 
     fn into_type(canonical: Range<Self::CanonicalType>) -> Option<Self> {
@@ -115,14 +115,19 @@ impl MakeCanonical for MonthdayRange {
 
     fn try_make_canonical(&self) -> Option<Range<Self::CanonicalType>> {
         match self {
-            Self::Month { range, year: None } => Some(Frame::to_range_strict(range.clone())),
+            Self::Month { range, year: None } => {
+                let (start, end) = range.clone().into_inner();
+                Some(UpperBounded::to_range_strict(start.into()..=end.into()))
+            }
             _ => None,
         }
     }
 
     fn into_type(canonical: Range<Self::CanonicalType>) -> Option<Self> {
+        let (start, end) = UpperBounded::to_range_inclusive(canonical)?.into_inner();
+
         Some(MonthdayRange::Month {
-            range: Frame::to_range_inclusive(canonical)?,
+            range: start.into_val()?..=end.into_val()?,
             year: None,
         })
     }
@@ -138,7 +143,7 @@ impl MakeCanonical for WeekRange {
             return None;
         }
 
-        Some(*range.start()..range.end().succ()?)
+        Some(UpperBounded::to_range_strict(range))
     }
 
     fn into_type(canonical: Range<Self::CanonicalType>) -> Option<Self> {
@@ -161,17 +166,21 @@ impl MakeCanonical for WeekDayRange {
                 nth_from_end: [true, true, true, true, true],
             } => {
                 let (start, end) = range.clone().into_inner();
-                Some(Frame::to_range_strict(start.into()..=end.into()))
+                Some(UpperBounded::to_range_strict(
+                    OrderedWeekday(start).into()..=OrderedWeekday(end).into(),
+                ))
             }
             _ => None,
         }
     }
 
     fn into_type(canonical: Range<Self::CanonicalType>) -> Option<Self> {
-        let (start, end) = Frame::to_range_inclusive(canonical)?.into_inner();
+        let (start, end) = UpperBounded::to_range_inclusive(canonical)?.into_inner();
+        let start = start.into_val()?.into();
+        let end = end.into_val()?.into();
 
         Some(WeekDayRange::Fixed {
-            range: start.into()..=end.into(),
+            range: start..=end,
             offset: 0,
             nth_from_start: [true; 5],
             nth_from_end: [true; 5],

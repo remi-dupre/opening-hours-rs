@@ -7,7 +7,7 @@ use alloc::sync::Arc;
 use alloc::vec::Vec;
 use core::fmt::Display;
 
-use crate::normalize::{canonical_to_seq2, partialytocanonical2};
+use crate::normalize::{canonical_to_ruleseq, drain_ruleseq_into_canonical};
 
 // OpeningHoursExpression
 
@@ -58,8 +58,8 @@ impl OpeningHoursExpression {
     #[doc = include_str!("../../doc/normalize.md")]
     pub fn normalize(self) -> Self {
         let mut old_rules = self.rules.into();
-        let canonical = partialytocanonical2(&mut old_rules);
-        let mut new_rules = canonical_to_seq2(canonical);
+        let canonical = drain_ruleseq_into_canonical(&mut old_rules);
+        let mut new_rules = canonical_to_ruleseq(canonical);
         new_rules.extend(old_rules);
         Self { rules: new_rules }
     }

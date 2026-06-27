@@ -106,3 +106,17 @@ fn normalize(#[case] example: OpeningHoursExpression, #[case] normalized_expecte
         "normalize is not idempotent",
     );
 }
+
+#[rstest]
+// There was an issue with 53 being the last possible value
+#[case("6246 week06; 4497 We; 6246 week07-53 We")]
+fn stays_normalized(#[case] example: &str) {
+    let oh: OpeningHoursExpression = example.parse().expect("could not part input expression");
+    let normalized = oh.normalize();
+
+    assert_eq!(
+        normalized.to_string(),
+        example,
+        "should already be normalized",
+    );
+}

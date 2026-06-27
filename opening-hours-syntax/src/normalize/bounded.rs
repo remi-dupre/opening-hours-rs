@@ -9,9 +9,9 @@ use core::ops::{Range, RangeInclusive};
 
 use chrono::Weekday;
 
+use crate::ExtendedTime;
 use crate::rules::day::{Month, WeekNum, Year};
 use crate::util::weekday::OrderedWeekday;
-use crate::ExtendedTime;
 
 // --
 // -- Bounded
@@ -151,10 +151,26 @@ pub(crate) trait UpperBounded: Bounded {
             core::iter::once(range).chain(None)
         }
     }
+
+    fn to_range_strict(range: RangeInclusive<Self>) -> Range<Self> {
+        let (start, end) = range.into_inner();
+        let strict_end = end.succ().unwrap_or(Self::BOUND_UPPER);
+        start..strict_end
+    }
+
+    fn to_range_inclusive(range: Range<Self>) -> Option<RangeInclusive<Self>> {
+        if range.end <= range.start {
+            None
+        } else if range.end == Self::BOUND_UPPER {
+            Some(range.start..=Self::BOUND_END)
+        } else {
+            Some(range.start..=range.end.pred()?)
+        }
+    }
 }
 
 impl UpperBounded for ExtendedTime {
-    const BOUND_UPPER: Self = ExtendedTime::MIDNIGHT_24;
+    const BOUND_UPPER: Self = ExtendedTime::MIDNIGHT_48;
 }
 
 impl UpperBounded for Year {
@@ -176,19 +192,17 @@ pub(crate) enum Frame<T: Bounded> {
     End,
 }
 
-impl<T: Bounded> Frame<T> {
-    pub(crate) fn to_range_strict(range: RangeInclusive<T>) -> Range<Frame<T>> {
-        let (start, end) = range.into_inner();
-        let strict_end = end.succ().map(Frame::Val).unwrap_or(Frame::End);
-        Self::Val(start)..strict_end
+impl<T: Bounded> From<T> for Frame<T> {
+    fn from(value: T) -> Self {
+        Self::Val(value)
     }
+}
 
-    pub(crate) fn to_range_inclusive(range: Range<Frame<T>>) -> Option<RangeInclusive<T>> {
-        match (range.start, range.end) {
-            (Frame::Val(x), Frame::Val(y)) => Some(x..=y.pred()?),
-            (Frame::Val(x), Frame::End) => Some(x..=T::BOUND_END),
-            (Frame::End, Frame::Val(y)) => Some(T::BOUND_END..=y.pred()?),
-            (Frame::End, Frame::End) => None,
+impl<T: Bounded> Frame<T> {
+    pub(crate) fn into_val(self) -> Option<T> {
+        match self {
+            Self::Val(x) => Some(x),
+            Self::End => None,
         }
     }
 }
