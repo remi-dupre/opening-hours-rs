@@ -7,7 +7,7 @@ use opening_hours::localization::Country;
 use opening_hours::{Context, OpeningHours};
 
 use chrono::NaiveDateTime;
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 
 const SAMPLES: &[[&str; 2]] = &[
     ["24_7", "24/7"],
@@ -30,8 +30,8 @@ const SAMPLES: &[[&str; 2]] = &[
     ],
     [
         "holes",
-        "24/7, 2000,2002,2004,2006,2008,2010 Jan,Mar,May,Jul,Sep,Nov week1,3,5,7,9,11,13 Mo,We,Fr,Su 08:00-10:00,12:00-14:00,16:00-18:00,20:00-22:00 unknown"
-    ]
+        "24/7, 2000,2002,2004,2006,2008,2010 Jan,Mar,May,Jul,Sep,Nov week1,3,5,7,9,11,13 Mo,We,Fr,Su 08:00-10:00,12:00-14:00,16:00-18:00,20:00-22:00 unknown",
+    ],
 ];
 
 fn bench_context(c: &mut Criterion) {

@@ -1,7 +1,7 @@
 use crate::schedule::Schedule;
 use opening_hours_syntax::{ExtendedTime, RuleKind};
-use pest::iterators::Pair;
 use pest::Parser;
+use pest::iterators::Pair;
 use pest_derive::Parser;
 use std::str::FromStr;
 

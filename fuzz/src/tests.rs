@@ -5,7 +5,7 @@ use std::path::Path;
 use arbitrary::{Arbitrary, Unstructured};
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 
-use crate::{run_fuzz_oh, CompareWith, Data, Operation};
+use crate::{CompareWith, Data, Operation, run_fuzz_oh};
 
 #[test]
 fn no_fuzz_before_1900() {

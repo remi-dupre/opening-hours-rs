@@ -3,8 +3,8 @@ use alloc::vec::Vec;
 
 use rstest::rstest;
 
-use crate::tests::parser_no_warn;
 use crate::Parser;
+use crate::tests::parser_no_warn;
 
 #[rstest]
 #[case("12:00+")]
