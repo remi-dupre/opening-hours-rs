@@ -8,7 +8,8 @@ use crate::{ExtendedTime, RuleKind};
 /// For a given day, the list of rules to apply from left to right.
 pub(crate) type TimeRules = Vec<((RuleKind, Arc<str>), TimeSelector)>;
 
-/// TODO: doc
+/// Check if the rule CAN'T overlap with next day. If this returns false there is there garantees
+/// that it actualy does.
 pub(crate) fn no_overlap_with_next_day(selector: &TimeSelector) -> bool {
     (selector.spans)
         .iter()
@@ -22,7 +23,8 @@ pub(crate) fn no_overlap_with_next_day(selector: &TimeSelector) -> bool {
         })
 }
 
-/// TODO: doc
+/// Normalize time rules by attempting compacting them in simple intervals. If some rules can't be
+/// converted, it will output them and try to compat the rules after that.
 pub(crate) fn normalize_time_rules(slot: TimeRules) -> TimeRules {
     let mut result = Vec::new();
     let mut canonical = TimeSelectorPaving::default();
@@ -79,7 +81,7 @@ pub(crate) fn normalize_time_rules(slot: TimeRules) -> TimeRules {
     result
 }
 
-// TODO: doc
+// Attempt to convert a span to a simple range that fits in 00:00-24:00.
 fn time_span_to_daily_ranges(span: &TimeSpan) -> Option<Range<ExtendedTime>> {
     if span.open_end || span.repeats.is_some() {
         return None;
@@ -96,17 +98,16 @@ fn time_span_to_daily_ranges(span: &TimeSpan) -> Option<Range<ExtendedTime>> {
 }
 
 /// A canonical time selector is an increasing sequence of time ranges.
-///
-/// TODO: test overlapping
 type TimeSelectorPaving = Paving1D<ExtendedTime, (RuleKind, Arc<str>)>;
 
 impl TimeSelectorPaving {
+    /// Shorthand to add a time range to self.
     fn set_time_range(&mut self, range: Range<ExtendedTime>, state: (RuleKind, Arc<str>)) {
         let selector = EmptyPavingSelector.dim_front(vec![range]);
         self.set(&selector, &state);
     }
 
-    /// TODO: doc
+    /// Convert self to a compact TimeRules.
     fn into_time_selector(mut self) -> TimeRules {
         let mut result = Vec::new();
 

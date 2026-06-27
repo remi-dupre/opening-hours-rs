@@ -1,21 +1,66 @@
 use alloc::vec::Vec;
 use core::ops::Range;
 
+use crate::ExtendedTime;
 use crate::normalize::bounded::{Bounded, Frame, UpperBounded};
-use crate::normalize::paving::Selector4D;
-use crate::rules::day::{Month, MonthdayRange, WeekDayRange, WeekNum, WeekRange, Year, YearRange};
+use crate::normalize::canonical_time::TimeRules;
+use crate::normalize::paving::{EmptyPavingSelector, Paving4D, Selector4D};
+use crate::rules::day::{
+    DaySelector, Month, MonthdayRange, WeekDayRange, WeekNum, WeekRange, Year, YearRange,
+};
 use crate::rules::time::{Time, TimeSpan};
 use crate::util::weekday::OrderedWeekday;
-use crate::ExtendedTime;
 
-pub(crate) type CanonicalDaySelector =
+/// A canonical day representation, built from simple selector intervals of year, month, weekday and
+/// days. It maps to a TimeRules that may or may not have been normalized yet.
+pub(crate) type CanonicalDate =
+    Paving4D<Frame<OrderedWeekday>, WeekNum, Frame<Month>, Year, TimeRules>;
+
+// --
+// -- CanonicalDateSelector
+// --
+
+/// The selector type that can operator on CanonicalDate.
+/// It can be converted back and forth from a DaySelector.
+pub(crate) type CanonicalDateSelector =
     Selector4D<Frame<OrderedWeekday>, WeekNum, Frame<Month>, Year>;
+
+impl TryFrom<&DaySelector> for CanonicalDateSelector {
+    type Error = ();
+
+    fn try_from(value: &DaySelector) -> Result<Self, Self::Error> {
+        let selector = EmptyPavingSelector
+            .dim_front(MakeCanonical::try_from_iterator(&value.year).ok_or(())?)
+            .dim_front(MakeCanonical::try_from_iterator(&value.monthday).ok_or(())?)
+            .dim_front(MakeCanonical::try_from_iterator(&value.week).ok_or(())?)
+            .dim_front(MakeCanonical::try_from_iterator(&value.weekday).ok_or(())?);
+
+        Ok(selector)
+    }
+}
+
+impl From<CanonicalDateSelector> for DaySelector {
+    fn from(val: CanonicalDateSelector) -> Self {
+        let (rgs_weekday, val) = val.into_unpack_front();
+        let (rgs_week, val) = val.into_unpack_front();
+        let (rgs_monthday, val) = val.into_unpack_front();
+        let (rgs_year, EmptyPavingSelector) = val.into_unpack_front();
+
+        DaySelector {
+            year: MakeCanonical::into_selector(rgs_year, true),
+            monthday: MakeCanonical::into_selector(rgs_monthday, true),
+            week: MakeCanonical::into_selector(rgs_week, true),
+            weekday: MakeCanonical::into_selector(rgs_weekday, true),
+        }
+    }
+}
 
 // --
 // -- MakeCanonical
 // --
 
-pub(crate) trait MakeCanonical: Sized + 'static {
+/// Small trait to help convert from and into a selector.
+trait MakeCanonical: Sized + 'static {
     type CanonicalType: UpperBounded;
     fn try_make_canonical(&self) -> Option<Range<Self::CanonicalType>>;
     fn into_type(canonical: Range<Self::CanonicalType>) -> Option<Self>;
