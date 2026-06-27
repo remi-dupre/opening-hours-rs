@@ -189,7 +189,7 @@ impl<L: Localize> OpeningHours<L> {
                     if prev_match
                         && !(prev_eval.as_ref())
                             .map(Schedule::is_always_closed_with_no_comments)
-                            .unwrap_or(false)
+                            .unwrap_or(true)
                     {
                         (prev_match, prev_eval)
                     } else {

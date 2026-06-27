@@ -44,6 +44,8 @@ use crate::{OpeningHours, RuleKind::*};
 #[case::easter("2025-01-01 12:00", "easter-Dec31", Closed)]
 // Rule: additional
 #[case::rule_addional("2023-12-23 12:00", "Su closed || open", Open)]
+// Rule: fallback
+#[case::rule_fallback("2020-01-01 12:00", "closed; Mar || We", Open)]
 fn state(
     #[case] date: ParsedDateTime,
     #[case] expr: OpeningHours,

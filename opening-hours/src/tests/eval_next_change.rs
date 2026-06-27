@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use rstest::rstest;
 
-use crate::tests::utils::parse::{dt, ParsedDateTime};
+use crate::tests::utils::parse::{ParsedDateTime, dt};
 use crate::{Context, OpeningHours};
 
 #[rstest]
