@@ -2,9 +2,9 @@ use alloc::boxed::Box;
 use core::fmt;
 use core::ops::RangeInclusive;
 
+use crate::ExtendedTime;
 use crate::parser::Rule;
 use crate::rules::day::{WeekNum, Year};
-use crate::ExtendedTime;
 
 pub type Result<T> = core::result::Result<T, Error>;
 
@@ -13,7 +13,7 @@ const REPORT_ISSUE_LINK: &str = "https://github.com/remi-dupre/opening-hours-rs/
 #[derive(Clone, Debug)]
 pub enum Error {
     /// Could not parse the expression. It is not conformant with the grammar defined in the wiki:
-    /// https://wiki.openstreetmap.org/wiki/Key:opening_hours/specification
+    /// <https://wiki.openstreetmap.org/wiki/Key:opening_hours/specification>
     Syntax(Box<pest::error::Error<Rule>>),
     /// Use of an unsupported feature.
     Unsupported(&'static str),
@@ -43,7 +43,7 @@ pub enum Error {
 impl Error {
     /// If this is true, this is an error that should not be raised as long as the implementation is
     /// sound. If this kind of error occurs, you can report it here :
-    /// https://github.com/remi-dupre/opening-hours-rs/issues
+    /// <https://github.com/remi-dupre/opening-hours-rs/issues>
     pub fn is_implementation_error(&self) -> bool {
         matches!(
             self,

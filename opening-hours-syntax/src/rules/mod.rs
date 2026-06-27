@@ -54,12 +54,9 @@ impl OpeningHoursExpression {
     /// let oh = opening_hours_syntax::parse("24/7 ; Su closed").unwrap();
     /// assert_eq!(oh.normalize().to_string(), "Mo-Sa");
     /// ```
+    ///
+    #[doc = include_str!("../../doc/normalize.md")]
     pub fn normalize(self) -> Self {
-        self.normalize_v2()
-    }
-
-    /// TODO: doc
-    pub fn normalize_v2(self) -> Self {
         let mut old_rules = self.rules.into();
         let canonical = partialytocanonical2(&mut old_rules);
         let mut new_rules = canonical_to_seq2(canonical);

@@ -5,7 +5,7 @@
 //! This last problem is hard, so the implementation here only focuses on being convenient and
 //! predictable. For example this research paper show that there is no known polytime approximation
 //! for this problem in two dimensions and for boolean values :
-//! https://dl.acm.org/doi/10.1145/73833.73871
+//! <https://dl.acm.org/doi/10.1145/73833.73871>
 
 use alloc::rc::Rc;
 use alloc::vec::Vec;

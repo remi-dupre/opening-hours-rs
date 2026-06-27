@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.1.0
+
+The normalization algorithm has been reworked:
+
+- Normalization now focuses on outputing _non-overlapping_ normal rules when possible.
+- Added [a documentation][doc-normalize] on normalization's behavior.
+
+[doc-normalize]: https://github.com/remi-dupre/opening-hours-rs/blob/master/opening-hours-syntax/doc/normalize.md
+
 ## 2.0.2
 
 ### General

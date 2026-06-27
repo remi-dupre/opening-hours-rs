@@ -1,14 +1,12 @@
 use alloc::vec::Vec;
 use core::ops::Range;
 
-use crate::ExtendedTime;
 use crate::normalize::bounded::{Bounded, Frame, UpperBounded};
 use crate::normalize::canonical_time::TimeRules;
 use crate::normalize::paving::{EmptyPavingSelector, Paving4D, Selector4D};
 use crate::rules::day::{
     DaySelector, Month, MonthdayRange, WeekDayRange, WeekNum, WeekRange, Year, YearRange,
 };
-use crate::rules::time::{Time, TimeSpan};
 use crate::util::weekday::OrderedWeekday;
 
 /// A canonical day representation, built from simple selector intervals of year, month, weekday and
@@ -177,39 +175,6 @@ impl MakeCanonical for WeekDayRange {
             offset: 0,
             nth_from_start: [true; 5],
             nth_from_end: [true; 5],
-        })
-    }
-}
-
-impl MakeCanonical for TimeSpan {
-    type CanonicalType = ExtendedTime;
-
-    fn try_make_canonical(&self) -> Option<Range<Self::CanonicalType>> {
-        match self {
-            TimeSpan { range, open_end: false, repeats: None } => {
-                let Time::Fixed(start) = range.start else {
-                    return None;
-                };
-
-                let Time::Fixed(end) = range.end else {
-                    return None;
-                };
-
-                if start >= end || end > ExtendedTime::BOUND_END {
-                    return None;
-                }
-
-                Some(start..end)
-            }
-            _ => None,
-        }
-    }
-
-    fn into_type(canonical: Range<Self::CanonicalType>) -> Option<Self> {
-        Some(TimeSpan {
-            range: Time::Fixed(canonical.start)..Time::Fixed(canonical.end),
-            open_end: false,
-            repeats: None,
         })
     }
 }

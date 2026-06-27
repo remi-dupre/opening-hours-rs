@@ -110,6 +110,8 @@ impl<L: Localize> OpeningHours<L> {
     /// let oh = OpeningHours::parse("24/7 ; Su closed").unwrap();
     /// assert_eq!(oh.normalize().to_string(), "Mo-Sa");
     /// ```
+    ///
+    #[doc = include_str!("../../opening-hours-syntax/doc/normalize.md")]
     pub fn normalize(&self) -> Self {
         Self {
             expr: Arc::new(self.expr.as_ref().clone().normalize()),

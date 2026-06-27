@@ -57,6 +57,7 @@ fn main() {
 - 📅 Embedded public holidays database for many countries (from [nager])
 - 🌍 Timezone support
 - 🔥 Fast and memory-safe implementation using Rust
+- 📏 [Normalization][docs-normalize] to unambiguous expressions
 
 ### Holidays
 
@@ -119,6 +120,7 @@ cargo run --bin stub_gen
 [demo-favicon]: https://raw.githubusercontent.com/remi-dupre/opening-hours-demo/refs/heads/main/static/favicon.ico "icon"
 [demo-website]: https://remi-dupre.github.io/opening-hours-demo/ "Demonstration website"
 [docs]: https://docs.rs/opening-hours "Documentation"
+[docs-normalize]: https://docs.rs/opening-hours/latest/opening_hours/struct.OpeningHours.html#method.normalize "Normalize Documentation"
 [grammar]: https://wiki.openstreetmap.org/wiki/Key:opening_hours/specification "OSM specification for opening hours"
 [nager]: https://date.nager.at/api/v3 "Worldwide holidays (REST API)"
 [opening-hours]: https://crates.io/crates/opening-hours "Package"
