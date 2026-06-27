@@ -185,7 +185,7 @@ for a specification.</p>
     
             <div class="docstring"><p>Validate that input string is a correct opening hours description.</p>
 
-<h6 id="examples">Examples</h6>
+<h2 id="examples">Examples</h2>
 
 <div class="pdoc-code codehilite">
 <pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n"><a href="#validate">opening_hours.validate</a></span><span class="p">(</span><span class="s2">&quot;24/7&quot;</span><span class="p">)</span>
@@ -261,36 +261,35 @@ for a specification.</p>
     
             <div class="docstring"><p>Parse input opening hours description.</p>
 
-<h6 id="parameters">Parameters</h6>
+<h2 id="parameters">Parameters</h2>
 
 <ul>
-<li><strong>- oh</strong> (Opening hours expression as defined in OSM (eg. "24/7"). See):
+<li>oh: Opening hours expression as defined in OSM (eg. "24/7"). See
 <a href="https://wiki.openstreetmap.org/wiki/Key:opening_hours/specification">https://wiki.openstreetmap.org/wiki/Key:opening_hours/specification</a></li>
-<li><strong>- timezone</strong> (Timezone where the physical place attached to these opening hours lives in. When):
+<li>timezone: Timezone where the physical place attached to these opening hours lives in. When
 specified, operations on this expression will return dates attached to this timezone and
 input times in other timezones will be converted.</li>
-<li><strong>- country</strong> (ISO code of the country this physical place lives in. This will be used to load a):
+<li>country: ISO code of the country this physical place lives in. This will be used to load a
 calendar of local public holidays.</li>
-<li><strong>- coords</strong> ((latitude, longitude) of this place. When this is specified together with a timezone):
+<li>coords: (latitude, longitude) of this place. When this is specified together with a timezone
 sun events will be accurate (sunrise, sunset, dusk, dawn). By default, this will be used to
 automatically detect the timezone and a country code.</li>
-<li><strong>- auto_country</strong> (If set to <code>True</code>, the country code will automatically be inferred from):
+<li>auto_country: If set to <code>True</code>, the country code will automatically be inferred from
 coordinates when they are specified.</li>
-<li><strong>- auto_timezone</strong> (If set to <code>True</code>, the timezone will automatically be inferred from coordinates):
+<li>auto_timezone: If set to <code>True</code>, the timezone will automatically be inferred from coordinates
 when they are specified.</li>
-<li><strong>- max_interval_days</strong> (If specified, any change that is longer than the number of specified days):
+<li>max_interval_days: If specified, any change that is longer than the number of specified days
 will be considered infinite. This may be useful if you need to evaluate a large amount of
 complicated expressions and performance is critical. Even setting a value of a full year (366)
 is worth it.</li>
 </ul>
 
-<h6 id="raises">Raises</h6>
+<h2 id="raises">Raises</h2>
 
-<ul>
-<li><strong>SyntaxError</strong>: Given string is not in valid opening hours format.</li>
-</ul>
+<p>SyntaxError
+    Given string is not in valid opening hours format.</p>
 
-<h6 id="examples">Examples</h6>
+<h2 id="examples">Examples</h2>
 
 <div class="pdoc-code codehilite">
 <pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">oh</span> <span class="o">=</span> <span class="n">OpeningHours</span><span class="p">(</span><span class="s2">&quot;24/7&quot;</span><span class="p">)</span>
@@ -322,13 +321,219 @@ is worth it.</li>
             <div class="docstring"><p>Convert the expression into a normalized form. It will not affect the meaning of the
 expression and might impact the performance of evaluations.</p>
 
-<h6 id="examples">Examples</h6>
+<h2 id="examples">Examples</h2>
 
 <div class="pdoc-code codehilite">
 <pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">OpeningHours</span><span class="p">(</span><span class="s2">&quot;24/7 ; Su closed&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">normalize</span><span class="p">()</span>
 <span class="go">OpeningHours(&quot;Mo-Sa&quot;)</span>
 </code></pre>
 </div>
+
+<h1 id="motivation">Motivation</h1>
+
+<p>Normalization attempts to transform an expression into a minimal sequence of
+_non-overlapping_, normal rules. The goal is _not_ to make the expression
+shorter but instead to make as readable as possible. For example, the
+additional operator <code>,</code> is less known and can be mistaken with any other kind
+of sequence (eg. in a day selector <code>Mo,Fr</code>).</p>
+
+<p>Normalization is <a href="https://en.wikipedia.org/wiki/Idempotence">_idempotent_</a>, which means that normalizing
+an already normalized expression won't change the result.</p>
+
+<h2 id="examples-2">Examples</h2>
+
+<table>
+<thead>
+<tr>
+  <th>input</th>
+  <th>normalized</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>Mo-Su 00:00-24:00</code></td>
+  <td><code>24/7</code></td>
+</tr>
+<tr>
+  <td><code>24/7 ; Su closed</code></td>
+  <td><code>Mo-Sa</code></td>
+</tr>
+<tr>
+  <td><code>Mo-Su 10:00-12:00, Mo-Fr 14:00-18:00</code></td>
+  <td><code>Mo-Fr 10:00-12:00,14:00-18:00; Sa-Su 10:00-12:00</code></td>
+</tr>
+<tr>
+  <td><code>10:00-18:00; Jul-Aug 10:00-22:00</code></td>
+  <td><code>Jan-Jun,Sep-Dec 10:00-18:00; Jul-Aug 10:00-22:00</code></td>
+</tr>
+<tr>
+  <td><code>Mo-Fr,Su 10:00-18:00; Jul-Aug Su 10:00-22:00</code></td>
+  <td><code>Mo-Fr 10:00-18:00; Jan-Jun,Sep-Dec Su 10:00-18:00; Jul-Aug Su 10:00-22:00</code></td>
+</tr>
+</tbody>
+</table>
+
+<h2 id="unsupported-syntax">Unsupported syntax</h2>
+
+<p>Not all syntax can be normalized, but this library will still do some best
+effort by normalizing the longest prefix possible and keeping all rules after
+the first unsupported one unchanged.</p>
+
+<p>Here is an exhausting list of the kind of syntax you can't expect to see
+normalized by current implementation:</p>
+
+<table>
+<thead>
+<tr>
+  <th>kind</th>
+  <th>behavior</th>
+  <th>example (1)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><a href="https://wiki.openstreetmap.org/wiki/Key:opening_hours/specification#fallback_rule_separator">fallback rule</a></td>
+  <td>stop normalization (2)</td>
+  <td><code>Mo-Fr || unknown</code></td>
+</tr>
+<tr>
+  <td>any range with steps</td>
+  <td>stop normalization (2)</td>
+  <td><code>2000-3000/5</code></td>
+</tr>
+<tr>
+  <td><a href="https://wiki.openstreetmap.org/wiki/Key:opening_hours/specification#monthday_range">monthday range</a> with fixed dates</td>
+  <td>stop normalization (2)</td>
+  <td><code>Mar31-Jun01</code></td>
+</tr>
+<tr>
+  <td><a href="https://wiki.openstreetmap.org/wiki/Key:opening_hours/specification#monthday_range">monthday range</a> with year</td>
+  <td>stop normalization (2)</td>
+  <td><code>2025Jun-Aug</code></td>
+</tr>
+<tr>
+  <td><a href="https://wiki.openstreetmap.org/wiki/Key:opening_hours/specification#weekday_range">weekday range</a> with index in month</td>
+  <td>stop normalization (2)</td>
+  <td><code>Mo[2]</code>, <code>Mo[2] +1 days</code></td>
+</tr>
+<tr>
+  <td><a href="https://wiki.openstreetmap.org/wiki/Key:opening_hours/specification#weekday_range">weekday range</a> with a holiday</td>
+  <td>stop normalization (2)</td>
+  <td><code>easter</code></td>
+</tr>
+<tr>
+  <td>time that overlaps with next day</td>
+  <td>stop normalization (2)</td>
+  <td><code>22:00-06:00</code>, <code>22:00-28:00</code></td>
+</tr>
+<tr>
+  <td>time with a solar event</td>
+  <td>no time simplification (3)</td>
+  <td><code>sunrise-18:00</code></td>
+</tr>
+<tr>
+  <td>time with an open end</td>
+  <td>no time simplification (3)</td>
+  <td><code>12:00-16:00+</code></td>
+</tr>
+<tr>
+  <td>time with repetition</td>
+  <td>no time simplification (3)</td>
+  <td><code>12:00-16:00/02:00</code></td>
+</tr>
+</tbody>
+</table>
+
+<p>Notes :</p>
+
+<ol>
+<li>All the examples above contain a single rule, so they would be left
+unchanged by the normalization.</li>
+<li>This rule and any following rule won't be treated.</li>
+<li>This won't halt normalization but the algorithm won't try to merge this time
+range with others.</li>
+</ol>
+
+<p>If a feature is not implemented I may have considered it to be too niche for
+the effort. Feel free to <a href="https://github.com/remi-dupre/opening-hours-rs/issues">open an issue</a> on Github or open a merge
+request if you disagree!</p>
+
+<h1 id="how-it-works">How it works</h1>
+
+<h2 id="build-a-canonical-time-table">Build a canonical time table</h2>
+
+<p>First, create a "canonical" time table over 4 dimensions (year, month, weeknum,
+daynum), each cell keeps track of time ranges recorded for a single combination
+of intervals over those 4 dimensions. Cells are always non-overlapping and can
+be split while processing the expression if necessary.</p>
+
+<p>For example, the resulting structure looks like this (simplified to 2
+dimensions for obvious reasons):</p>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code>    Mo    Sa  Su
+Jan ╆━━━━━┪───┢━━━┪     Expression:
+    ┃ (1) ┃   ┃(1)┃     Mo-Fr,Su 10:00-18:00; Jul-Aug Su 10:00-22:00
+Jul ┨╌╌╌╌╌┃───┣━━━┫
+    ┃ (1) ┃   ┃(2)┃     Time rules:
+Sep ┨╌╌╌╌╌┃───┣━━━┫     (1) 10:00-18:00
+    ┃ (1) ┃   ┃(1)┃     (2) 10:00-22:00
+    ┗━━━━━┛───┗━━━┛
+</code></pre>
+</div>
+
+<h2 id="extract-covering-rectangles-out-of-the-table">Extract covering rectangles out of the table</h2>
+
+<p>Second, the algorithm will extract maximal rectangle in the table with all
+inner cells equal to the same value.</p>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code>Step 1: extracted a rectangle
+- weekday: Mo-Fr
+- month: Jan-Dec
+- time: 10:00-18:00
+
+    Mo    Sa  Su
+Jan ╆━━━━━┪───┢━━━┓     Expression:
+    ┃▚▚▚▚▚┃   ┃(1)┃     Mo-Fr,Su 10:00-18:00; Jul-Aug Su 10:00-22:00
+Jul ┨▚▚▚▚▚┃───┣━━━┫
+    ┃▚▚▚▚▚┃   ┃(2)┃     Time rules:
+Sep ┨▚▚▚▚▚┃───┣━━━┫     (1) 10:00-18:00
+    ┃▚▚▚▚▚┃   ┃(1)┃     (2) 10:00-22:00
+    ┗━━━━━┛───┗━━━┛
+
+Step 2: extracted a rectangle
+- weekday: Su
+- month: Jan-Jun,Sep-Dec
+- time: 10:00-18:00
+
+    Mo        Su
+Jan ┼─────────┢━━━┓     Expression:
+    │         ┃▚▚▚┃     Mo-Fr,Su 10:00-18:00; Jul-Aug Su 10:00-22:00
+Jul ┤         ┣━━━┫
+    │         ┃(2)┃     Time rules:
+Sep ┤         ┣━━━┫     (1) 10:00-18:00
+    │         ┃▚▚▚┃     (2) 10:00-22:00
+    └─────────┗━━━┛
+
+Step 3: extracted a rectangle
+- weekday: Su
+- month: Jul-Aug
+- time: 10:00-22:00
+
+    Mo        Su
+    ├─────────┼───┐     Expression:
+    │         │   │     Mo-Fr,Su 10:00-18:00; Jul-Aug Su 10:00-22:00
+Jul ┤         ┏━━━┓
+    │         ┃▚▚▚┃     Time rules:
+Sep ┤         ┗━━━┛     (1) 10:00-18:00
+    │         │   │     (2) 10:00-22:00
+    └─────────┴───┘
+</code></pre>
+</div>
+
+<p>The result is then the concatenation : <code>Mo-Fr 10:00-18:00; Jan-Jun,Sep-Dec Su
+10:00-18:00; Jul-Aug Su 10:00-22:00</code>.</p>
 </div>
 
 
@@ -346,13 +551,13 @@ expression and might impact the performance of evaluations.</p>
             <div class="docstring"><p>Get current state of the time domain together with current comment. The state can be either
 "open", "closed" or "unknown".</p>
 
-<h6 id="parameters">Parameters</h6>
+<h2 id="parameters">Parameters</h2>
 
 <ul>
-<li><strong>- time</strong> (Base time for the evaluation, current time will be used if it is not specified.):</li>
+<li>time: Base time for the evaluation, current time will be used if it is not specified.</li>
 </ul>
 
-<h6 id="examples">Examples</h6>
+<h2 id="examples">Examples</h2>
 
 <div class="pdoc-code codehilite">
 <pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">OpeningHours</span><span class="p">(</span><span class="s2">&quot;24/7 off&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">state</span><span class="p">()</span>
@@ -375,13 +580,13 @@ expression and might impact the performance of evaluations.</p>
     
             <div class="docstring"><p>Check if current state is open.</p>
 
-<h6 id="parameters">Parameters</h6>
+<h2 id="parameters">Parameters</h2>
 
 <ul>
-<li><strong>- time</strong> (Base time for the evaluation, current time will be used if it is not specified.):</li>
+<li>time: Base time for the evaluation, current time will be used if it is not specified.</li>
 </ul>
 
-<h6 id="examples">Examples</h6>
+<h2 id="examples">Examples</h2>
 
 <div class="pdoc-code codehilite">
 <pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">OpeningHours</span><span class="p">(</span><span class="s2">&quot;24/7&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">is_open</span><span class="p">()</span>
@@ -404,13 +609,13 @@ expression and might impact the performance of evaluations.</p>
     
             <div class="docstring"><p>Check if current state is closed.</p>
 
-<h6 id="parameters">Parameters</h6>
+<h2 id="parameters">Parameters</h2>
 
 <ul>
-<li><strong>- time</strong> (Base time for the evaluation, current time will be used if it is not specified.):</li>
+<li>time: Base time for the evaluation, current time will be used if it is not specified.</li>
 </ul>
 
-<h6 id="examples">Examples</h6>
+<h2 id="examples">Examples</h2>
 
 <div class="pdoc-code codehilite">
 <pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">OpeningHours</span><span class="p">(</span><span class="s2">&quot;24/7 off&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">is_closed</span><span class="p">()</span>
@@ -433,13 +638,13 @@ expression and might impact the performance of evaluations.</p>
     
             <div class="docstring"><p>Check if current state is unknown.</p>
 
-<h6 id="parameters">Parameters</h6>
+<h2 id="parameters">Parameters</h2>
 
 <ul>
-<li><strong>- time</strong> (Base time for the evaluation, current time will be used if it is not specified.):</li>
+<li>time: Base time for the evaluation, current time will be used if it is not specified.</li>
 </ul>
 
-<h6 id="examples">Examples</h6>
+<h2 id="examples">Examples</h2>
 
 <div class="pdoc-code codehilite">
 <pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">OpeningHours</span><span class="p">(</span><span class="s2">&quot;24/7 unknown&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">is_unknown</span><span class="p">()</span>
@@ -463,13 +668,13 @@ expression and might impact the performance of evaluations.</p>
             <div class="docstring"><p>Get the date for next change of state.
 If the date exceed the limit date, returns None.</p>
 
-<h6 id="parameters">Parameters</h6>
+<h2 id="parameters">Parameters</h2>
 
 <ul>
-<li><strong>- time</strong> (Base time for the evaluation, current time will be used if it is not specified.):</li>
+<li>time: Base time for the evaluation, current time will be used if it is not specified.</li>
 </ul>
 
-<h6 id="examples">Examples</h6>
+<h2 id="examples">Examples</h2>
 
 <div class="pdoc-code codehilite">
 <pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">OpeningHours</span><span class="p">(</span><span class="s2">&quot;24/7&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">next_change</span><span class="p">()</span> <span class="c1"># None</span>
@@ -494,15 +699,15 @@ If the date exceed the limit date, returns None.</p>
             <div class="docstring"><p>Give an iterator that yields successive time intervals of consistent
 state.</p>
 
-<h6 id="parameters">Parameters</h6>
+<h2 id="parameters">Parameters</h2>
 
 <ul>
-<li><p><strong>- start</strong> (Initial time for the iterator, current time will be used if it is not specified.):</p></li>
-<li><p><strong>- end</strong> (Maximal time for the iterator, the iterator will continue until year 9999 if it no):
-max is specified.</p></li>
+<li>start: Initial time for the iterator, current time will be used if it is not specified.</li>
+<li>end: Maximal time for the iterator, the iterator will continue until year 9999 if it no
+max is specified.</li>
 </ul>
 
-<h6 id="examples">Examples</h6>
+<h2 id="examples">Examples</h2>
 
 <div class="pdoc-code codehilite">
 <pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">intervals</span> <span class="o">=</span> <span class="n">OpeningHours</span><span class="p">(</span><span class="s2">&quot;2099Mo-Su 12:30-17:00&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">intervals</span><span class="p">()</span>
