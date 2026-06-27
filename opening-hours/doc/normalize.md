@@ -1,0 +1,1 @@
+../../opening-hours-syntax/doc/normalize.md

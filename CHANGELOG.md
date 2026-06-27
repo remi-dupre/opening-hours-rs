@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.1.1
+
+- Fix Rust crate not deploying because of docs static path.
+
 ## 2.1.0
 
 The normalization algorithm has been reworked:
