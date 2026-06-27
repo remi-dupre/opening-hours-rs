@@ -6,7 +6,7 @@ use std::str::FromStr;
 use opening_hours_syntax::error::Error;
 use opening_hours_syntax::rules::RuleKind;
 
-use crate::{tests::utils::parse::dt, DateTimeRange, OpeningHours};
+use crate::{DateTimeRange, OpeningHours, tests::utils::parse::dt};
 
 /// https://github.com/remi-dupre/opening-hours-rs/issues/23
 #[test]

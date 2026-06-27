@@ -10,12 +10,14 @@ use chrono::Duration;
 
 use pest::iterators::Pair;
 
-use crate::error::{err_empty, Error, Result};
+use crate::error::{Error, Result, err_empty};
 use crate::extended_time::ExtendedTime;
 use crate::rules::day::{self as ds, WeekNum, Year};
 use crate::rules::time as ts;
-use crate::util::{is_capitalized, is_lowercase, PairsIterExtension, Sign};
-use crate::{rules as rl, Warning};
+use crate::util::pairs::PairsIterExtension;
+use crate::util::sign::Sign;
+use crate::util::text::{is_capitalized, is_lowercase};
+use crate::{Warning, rules as rl};
 
 #[derive(pest_derive::Parser)]
 #[grammar = "grammar.pest"]
@@ -107,7 +109,7 @@ impl<F: FnMut(Warning)> Parser<F> {
                     return Err(Error::GrammarUnexpectedToken {
                         rule: Rule::opening_hours,
                         unexpected,
-                    })
+                    });
                 }
             }?)
         }
@@ -268,7 +270,7 @@ impl<F: FnMut(Warning)> Parser<F> {
                     return Err(Error::GrammarUnexpectedToken {
                         rule: Rule::wide_range_selectors,
                         unexpected,
-                    })
+                    });
                 }
             }
         }
@@ -293,7 +295,7 @@ impl<F: FnMut(Warning)> Parser<F> {
                     return Err(Error::GrammarUnexpectedToken {
                         rule: Rule::wide_range_selectors,
                         unexpected,
-                    })
+                    });
                 }
             }
         }
@@ -336,7 +338,7 @@ impl<F: FnMut(Warning)> Parser<F> {
                     repeats = Some(self.build_hour_minutes_as_duration(pair_repetition)?)
                 }
                 unexpected => {
-                    return Err(Error::GrammarUnexpectedToken { rule: Rule::timespan, unexpected })
+                    return Err(Error::GrammarUnexpectedToken { rule: Rule::timespan, unexpected });
                 }
             }
         }
@@ -353,7 +355,7 @@ impl<F: FnMut(Warning)> Parser<F> {
             Rule::hour_minutes => ts::Time::Fixed(self.build_hour_minutes(root_pair)?),
             Rule::variable_time => ts::Time::Variable(self.build_variable_time(root_pair)?),
             unexpected => {
-                return Err(Error::GrammarUnexpectedToken { rule: Rule::time, unexpected })
+                return Err(Error::GrammarUnexpectedToken { rule: Rule::time, unexpected });
             }
         })
     }
@@ -456,7 +458,7 @@ impl<F: FnMut(Warning)> Parser<F> {
                     return Err(Error::GrammarUnexpectedToken {
                         rule: Rule::weekday_selector,
                         unexpected,
-                    })
+                    });
                 }
             }
         }
@@ -520,7 +522,7 @@ impl<F: FnMut(Warning)> Parser<F> {
             Rule::public_holiday => ds::HolidayKind::Public,
             Rule::school_holiday => ds::HolidayKind::School,
             unexpected => {
-                return Err(Error::GrammarUnexpectedToken { rule: Rule::holiday, unexpected })
+                return Err(Error::GrammarUnexpectedToken { rule: Rule::holiday, unexpected });
             }
         };
 
@@ -688,7 +690,7 @@ impl<F: FnMut(Warning)> Parser<F> {
                         return Err(Error::GrammarUnexpectedToken {
                             rule: Rule::monthday_range,
                             unexpected,
-                        })
+                        });
                     }
                 };
 
@@ -820,10 +822,10 @@ impl<F: FnMut(Warning)> Parser<F> {
                         if day > daynum {
                             month = month.next();
 
-                            if month == ds::Month::January {
-                                if let Some(x) = year.as_mut() {
-                                    **x += 1
-                                }
+                            if month == ds::Month::January
+                                && let Some(x) = year.as_mut()
+                            {
+                                **x += 1
                             }
                         }
 

@@ -17,7 +17,7 @@ pub mod warning;
 
 pub use error::{Error, Result};
 pub use extended_time::ExtendedTime;
-pub use parser::{parse, Parser};
+pub use parser::{Parser, parse};
 pub use rules::RuleKind;
 pub use warning::Warning;
 

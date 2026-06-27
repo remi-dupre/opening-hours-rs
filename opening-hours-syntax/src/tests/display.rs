@@ -2,10 +2,10 @@ use alloc::string::ToString;
 
 use rstest::rstest;
 
+use crate::Parser;
 use crate::parser::parse;
 use crate::rules::OpeningHoursExpression;
 use crate::tests::parser_no_warn;
-use crate::Parser;
 
 #[rstest]
 #[case("2020, 2021 10:00-16:00")]

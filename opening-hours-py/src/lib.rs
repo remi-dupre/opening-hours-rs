@@ -1,3 +1,113 @@
+//! # ![][demo-favicon] Python bindings for [OSM Opening Hours](https://github.com/remi-dupre/opening-hours-rs)
+//!
+//! [![PyPI](https://img.shields.io/pypi/v/opening-hours-py)][pypi]
+//! [![Doc](https://img.shields.io/badge/doc-pdoc-blue)][docs]
+//! [![PyPI - Downloads](https://img.shields.io/pypi/dm/opening-hours-py)][pypi]
+//! [![Coverage](https://img.shields.io/codecov/c/github/remi-dupre/opening-hours-rs)][codecov]
+//! [![][demo-button]][demo-website]
+//!
+//! ## Usage
+//!
+//! The pre-compiled package is published for Python 3.9 and above and new releases
+//! will adapt to [officially supported Python versions][python-versions].
+//!
+//! If you want to install this library with older version of Python, **you will
+//! need the Rust toolchain** (`rustc` and `cargo`).
+//!
+//! Install `opening-hours-py` from PyPI, for example using pip:
+//!
+//! ```bash
+//! pip install --user opening-hours-py
+//! ```
+//!
+//! Then, the main object that you will interact with will be `OpeningHours`:
+//!
+//! ```python
+//! from opening_hours import OpeningHours
+//!
+//! oh = OpeningHours("Mo-Fr 10:00-18:00; Sa-Su 10:00-12:00")
+//! print("Current status is", oh.state())
+//! print("This will change at", oh.next_change())
+//!
+//! # You can also attach a timezone to your expression. If you use timezone-aware
+//! # dates, they will be converted to local time before any computation is done.
+//! from zoneinfo import ZoneInfo
+//! oh = OpeningHours("Mo-Fr 10:00-18:00; Sa-Su 10:00-12:00", timezone=ZoneInfo("Europe/Paris"))
+//!
+//! # The timezone can also be infered with coordinates
+//! oh = OpeningHours("Mo-Fr 10:00-18:00; Sa-Su 10:00-12:00", coords=(48.8535, 2.34839))
+//!
+//! # You can normalize the expression
+//! assert str(OpeningHours("24/7 ; Su closed").normalize()) == "Mo-Sa"
+//! ```
+//!
+//! The API is very similar to Rust API but you can find a Python specific
+//! documentation [here](https://remi-dupre.github.io/opening-hours-rs/opening_hours.html).
+//!
+//! ## Features
+//!
+//! - 📝 Parsing for [OSM opening hours][grammar]
+//! - 🧮 Evaluation of state and next change
+//! - ⏳ Lazy infinite iterator
+//! - 🌅 Accurate sun events
+//! - 📅 Embedded public holidays database for many countries (from [nager])
+//! - 🌍 Timezone support
+//! - 🔥 Fast and memory-safe implementation using Rust
+//! - 📏 [Normalization][docs-normalize] to unambiguous expressions
+//!
+//! ## Limitations
+//!
+//! Expressions will always be considered closed **before 1900 and after 9999**.
+//! This comes from the specification not supporting date outside of this grammar
+//! and makes the implementation slightly more convenient.
+//!
+//! Feel free to open an issue if you have a use case for extreme dates!
+//!
+//! ## Development
+//!
+//! To build the library by yourself you will require a recent version of Rust,
+//! [`rustup`](https://www.rust-lang.org/tools/install) is usually the recommended
+//! tool to manage the installation.
+//!
+//! Then you can use poetry to install Python dependencies and run `maturin` (the
+//! building tool used to create the bindings) from a virtualenv.
+//!
+//! ```bash
+//! $ git clone https://github.com/remi-dupre/opening-hours-rs.git
+//! $ cd opening-hours-rs
+//!
+//! # Install Python dependancies
+//! $ poetry install --with dev
+//!
+//! # Enter the virtualenv
+//! $ poetry shell
+//!
+//! # Build developpement bindings, add `--release` for an optimized version
+//! $ maturin develop
+//!
+//! # Now the library is available as long as you don't leave the virtualenv
+//! $ python
+//! >>> from opening_hours import OpeningHours
+//! >>> oh = OpeningHours("24/7")
+//! >>> oh.state()
+//! "open"
+//! ```
+//!
+//! [codecov]: https://app.codecov.io/gh/remi-dupre/opening-hours-rs "Code coverage"
+//! [demo-button]: https://raw.githubusercontent.com/remi-dupre/opening-hours-demo/refs/heads/main/static/demo-button.svg
+//! [demo-favicon]: https://raw.githubusercontent.com/remi-dupre/opening-hours-demo/refs/heads/main/static/favicon.ico "icon"
+//! [demo-website]: https://remi-dupre.github.io/opening-hours-demo/ "Demonstration website"
+//! [docs]: https://remi-dupre.github.io/opening-hours-rs/opening_hours.html "Documentation"
+//! [docs-normalize]: https://remi-dupre.github.io/opening-hours-rs/opening_hours.html#OpeningHours.normalize "Normalization documentation"
+//! [grammar]: https://wiki.openstreetmap.org/wiki/Key:opening_hours/specification "OSM specification for opening hours"
+//! [nager]: https://date.nager.at/api/v3 "Worldwide holidays (REST API)"
+//! [pypi]: https://pypi.org/project/opening-hours-py/ "PyPI page"
+//! [python-versions]: https://devguide.python.org/versions/#supported- "Python release cycle"
+
+// NOTE: pyo3-stub-gen ignores inner macro in #[doc = include_str!("...")] so we need to copy
+// instead of including markdown files.
+// See https://github.com/Jij-Inc/pyo3-stub-gen/issues/485
+
 pub(crate) mod types;
 
 #[cfg(test)]
@@ -52,8 +162,8 @@ pyo3::create_exception!(
 
 /// Validate that input string is a correct opening hours description.
 ///
-/// Examples
-/// --------
+/// ## Examples
+///
 /// >>> opening_hours.validate("24/7")
 /// True
 /// >>> opening_hours.validate("24/24")
@@ -67,8 +177,8 @@ fn validate(oh: &str) -> bool {
 
 /// Parse input opening hours description.
 ///
-/// Parameters
-/// ----------
+/// ## Parameters
+///
 /// - oh: Opening hours expression as defined in OSM (eg. "24/7"). See
 ///   https://wiki.openstreetmap.org/wiki/Key:opening_hours/specification
 /// - timezone: Timezone where the physical place attached to these opening hours lives in. When
@@ -88,13 +198,13 @@ fn validate(oh: &str) -> bool {
 ///   complicated expressions and performance is critical. Even setting a value of a full year (366)
 ///   is worth it.
 ///
-/// Raises
-/// ------
+/// ## Raises
+///
 /// SyntaxError
 ///     Given string is not in valid opening hours format.
 ///
-/// Examples
-/// --------
+/// ## Examples
+///
 /// >>> oh = OpeningHours("24/7")
 /// >>> oh.is_open()
 /// True
@@ -156,10 +266,8 @@ impl PyOpeningHours {
                     .map_err(|err| UnknownCountryError::new_err(err.to_string()))?
                     .holidays(),
             );
-        } else if let Some(coords) = coords {
-            if auto_country {
-                ctx = ctx.with_holidays(Context::from_coords(coords).holidays);
-            }
+        } else if auto_country && let Some(coords) = coords {
+            ctx = ctx.with_holidays(Context::from_coords(coords).holidays);
         }
 
         let locale = match (timezone, coords, auto_timezone) {
@@ -188,10 +296,146 @@ impl PyOpeningHours {
     /// Convert the expression into a normalized form. It will not affect the meaning of the
     /// expression and might impact the performance of evaluations.
     ///
-    /// Examples
-    /// --------
+    /// ## Examples
+    ///
     /// >>> OpeningHours("24/7 ; Su closed").normalize()
     /// OpeningHours("Mo-Sa")
+    ///
+    /// # Motivation
+    ///
+    /// Normalization attempts to transform an expression into a minimal sequence of
+    /// _non-overlapping_, normal rules. The goal is _not_ to make the expression
+    /// shorter but instead to make as readable as possible. For example, the
+    /// additional operator `,` is less known and can be mistaken with any other kind
+    /// of sequence (eg. in a day selector `Mo,Fr`).
+    ///
+    /// Normalization is [_idempotent_][wiki-idempotence], which means that normalizing
+    /// an already normalized expression won't change the result.
+    ///
+    /// ## Examples
+    ///
+    /// | input                                          | normalized                                                                  |
+    /// | ---------------------------------------------- | --------------------------------------------------------------------------- |
+    /// | `Mo-Su 00:00-24:00`                            | `24/7`                                                                      |
+    /// | `24/7 ; Su closed`                             | `Mo-Sa`                                                                     |
+    /// | `Mo-Su 10:00-12:00, Mo-Fr 14:00-18:00`         | `Mo-Fr 10:00-12:00,14:00-18:00; Sa-Su 10:00-12:00`                          |
+    /// | `10:00-18:00; Jul-Aug 10:00-22:00`             | `Jan-Jun,Sep-Dec 10:00-18:00; Jul-Aug 10:00-22:00`                          |
+    /// | `Mo-Fr,Su 10:00-18:00; Jul-Aug Su 10:00-22:00` | `Mo-Fr 10:00-18:00; Jan-Jun,Sep-Dec Su 10:00-18:00; Jul-Aug Su 10:00-22:00` |
+    ///
+    /// ## Unsupported syntax
+    ///
+    /// Not all syntax can be normalized, but this library will still do some best
+    /// effort by normalizing the longest prefix possible and keeping all rules after
+    /// the first unsupported one unchanged.
+    ///
+    /// Here is an exhausting list of the kind of syntax you can't expect to see
+    /// normalized by current implementation:
+    ///
+    /// | kind                                                    | behavior                   | example (1)                  |
+    /// | ------------------------------------------------------- | -------------------------- | ---------------------------- |
+    /// | [fallback rule][spec-fallback]                          | stop normalization (2)     | `Mo-Fr \|\| unknown`         |
+    /// | any range with steps                                    | stop normalization (2)     | `2000-3000/5`                |
+    /// | [monthday range][spec-monthday-range] with fixed dates  | stop normalization (2)     | `Mar31-Jun01`                |
+    /// | [monthday range][spec-monthday-range] with year         | stop normalization (2)     | `2025Jun-Aug`                |
+    /// | [weekday range][spec-weekday-range] with index in month | stop normalization (2)     | `Mo[2]`, `Mo[2] +1 days`     |
+    /// | [weekday range][spec-weekday-range] with a holiday      | stop normalization (2)     | `easter`                     |
+    /// | time that overlaps with next day                        | stop normalization (2)     | `22:00-06:00`, `22:00-28:00` |
+    /// | time with a solar event                                 | no time simplification (3) | `sunrise-18:00`              |
+    /// | time with an open end                                   | no time simplification (3) | `12:00-16:00+`               |
+    /// | time with repetition                                    | no time simplification (3) | `12:00-16:00/02:00`          |
+    ///
+    /// Notes :
+    ///
+    /// 1. All the examples above contain a single rule, so they would be left
+    ///    unchanged by the normalization.
+    /// 2. This rule and any following rule won't be treated.
+    /// 3. This won't halt normalization but the algorithm won't try to merge this time
+    ///    range with others.
+    ///
+    /// If a feature is not implemented I may have considered it to be too niche for
+    /// the effort. Feel free to [open an issue][gh-issues] on Github or open a merge
+    /// request if you disagree!
+    ///
+    /// # How it works
+    ///
+    /// ## Build a canonical time table
+    ///
+    /// First, create a "canonical" time table over 4 dimensions (year, month, weeknum,
+    /// daynum), each cell keeps track of time ranges recorded for a single combination
+    /// of intervals over those 4 dimensions. Cells are always non-overlapping and can
+    /// be split while processing the expression if necessary.
+    ///
+    /// For example, the resulting structure looks like this (simplified to 2
+    /// dimensions for obvious reasons):
+    ///
+    /// ```text
+    ///     Mo    Sa  Su
+    /// Jan ╆━━━━━┪───┢━━━┪     Expression:
+    ///     ┃ (1) ┃   ┃(1)┃     Mo-Fr,Su 10:00-18:00; Jul-Aug Su 10:00-22:00
+    /// Jul ┨╌╌╌╌╌┃───┣━━━┫
+    ///     ┃ (1) ┃   ┃(2)┃     Time rules:
+    /// Sep ┨╌╌╌╌╌┃───┣━━━┫     (1) 10:00-18:00
+    ///     ┃ (1) ┃   ┃(1)┃     (2) 10:00-22:00
+    ///     ┗━━━━━┛───┗━━━┛
+    /// ```
+    ///
+    /// ## Extract covering rectangles out of the table
+    ///
+    /// Second, the algorithm will extract maximal rectangle in the table with all
+    /// inner cells equal to the same value.
+    ///
+    /// ```text
+    /// Step 1: extracted a rectangle
+    /// - weekday: Mo-Fr
+    /// - month: Jan-Dec
+    /// - time: 10:00-18:00
+    ///
+    ///     Mo    Sa  Su
+    /// Jan ╆━━━━━┪───┢━━━┓     Expression:
+    ///     ┃▚▚▚▚▚┃   ┃(1)┃     Mo-Fr,Su 10:00-18:00; Jul-Aug Su 10:00-22:00
+    /// Jul ┨▚▚▚▚▚┃───┣━━━┫
+    ///     ┃▚▚▚▚▚┃   ┃(2)┃     Time rules:
+    /// Sep ┨▚▚▚▚▚┃───┣━━━┫     (1) 10:00-18:00
+    ///     ┃▚▚▚▚▚┃   ┃(1)┃     (2) 10:00-22:00
+    ///     ┗━━━━━┛───┗━━━┛
+    ///
+    /// Step 2: extracted a rectangle
+    /// - weekday: Su
+    /// - month: Jan-Jun,Sep-Dec
+    /// - time: 10:00-18:00
+    ///
+    ///     Mo        Su
+    /// Jan ┼─────────┢━━━┓     Expression:
+    ///     │         ┃▚▚▚┃     Mo-Fr,Su 10:00-18:00; Jul-Aug Su 10:00-22:00
+    /// Jul ┤         ┣━━━┫
+    ///     │         ┃(2)┃     Time rules:
+    /// Sep ┤         ┣━━━┫     (1) 10:00-18:00
+    ///     │         ┃▚▚▚┃     (2) 10:00-22:00
+    ///     └─────────┗━━━┛
+    ///
+    /// Step 3: extracted a rectangle
+    /// - weekday: Su
+    /// - month: Jul-Aug
+    /// - time: 10:00-22:00
+    ///
+    ///     Mo        Su
+    ///     ├─────────┼───┐     Expression:
+    ///     │         │   │     Mo-Fr,Su 10:00-18:00; Jul-Aug Su 10:00-22:00
+    /// Jul ┤         ┏━━━┓
+    ///     │         ┃▚▚▚┃     Time rules:
+    /// Sep ┤         ┗━━━┛     (1) 10:00-18:00
+    ///     │         │   │     (2) 10:00-22:00
+    ///     └─────────┴───┘
+    /// ```
+    ///
+    /// The result is then the concatenation : `Mo-Fr 10:00-18:00; Jan-Jun,Sep-Dec Su
+    /// 10:00-18:00; Jul-Aug Su 10:00-22:00`.
+    ///
+    /// [gh-issues]: https://github.com/remi-dupre/opening-hours-rs/issues
+    /// [spec-fallback]: https://wiki.openstreetmap.org/wiki/Key:opening_hours/specification#fallback_rule_separator
+    /// [spec-monthday-range]: https://wiki.openstreetmap.org/wiki/Key:opening_hours/specification#monthday_range
+    /// [spec-weekday-range]: https://wiki.openstreetmap.org/wiki/Key:opening_hours/specification#weekday_range
+    /// [wiki-idempotence]: https://en.wikipedia.org/wiki/Idempotence
     fn normalize(&self) -> Self {
         PyOpeningHours {
             inner: self.inner.normalize(),
@@ -202,12 +446,12 @@ impl PyOpeningHours {
     /// Get current state of the time domain together with current comment. The state can be either
     /// "open", "closed" or "unknown".
     ///
-    /// Parameters
-    /// ----------
+    /// ## Parameters
+    ///
     /// - time: Base time for the evaluation, current time will be used if it is not specified.
     ///
-    /// Examples
-    /// --------
+    /// ## Examples
+    ///
     /// >>> OpeningHours("24/7 off").state()
     /// (State.CLOSED, '')
     #[pyo3(signature = (time=None))]
@@ -219,12 +463,12 @@ impl PyOpeningHours {
 
     /// Check if current state is open.
     ///
-    /// Parameters
-    /// ----------
+    /// ## Parameters
+    ///
     /// - time: Base time for the evaluation, current time will be used if it is not specified.
     ///
-    /// Examples
-    /// --------
+    /// ## Examples
+    ///
     /// >>> OpeningHours("24/7").is_open()
     /// True
     #[pyo3(signature = (time=None))]
@@ -235,12 +479,12 @@ impl PyOpeningHours {
 
     /// Check if current state is closed.
     ///
-    /// Parameters
-    /// ----------
+    /// ## Parameters
+    ///
     /// - time: Base time for the evaluation, current time will be used if it is not specified.
     ///
-    /// Examples
-    /// --------
+    /// ## Examples
+    ///
     /// >>> OpeningHours("24/7 off").is_closed()
     /// True
     #[pyo3(signature = (time=None))]
@@ -251,12 +495,12 @@ impl PyOpeningHours {
 
     /// Check if current state is unknown.
     ///
-    /// Parameters
-    /// ----------
+    /// ## Parameters
+    ///
     /// - time: Base time for the evaluation, current time will be used if it is not specified.
     ///
-    /// Examples
-    /// --------
+    /// ## Examples
+    ///
     /// >>> OpeningHours("24/7 unknown").is_unknown()
     /// True
     #[pyo3(signature = (time=None))]
@@ -268,12 +512,12 @@ impl PyOpeningHours {
     /// Get the date for next change of state.
     /// If the date exceed the limit date, returns None.
     ///
-    /// Parameters
-    /// ----------
+    /// ## Parameters
+    ///
     /// - time: Base time for the evaluation, current time will be used if it is not specified.
     ///
-    /// Examples
-    /// --------
+    /// ## Examples
+    ///
     /// >>> OpeningHours("24/7").next_change() # None
     /// >>> OpeningHours("2099Mo-Su 12:30-17:00").next_change()
     /// datetime.datetime(2099, 1, 1, 12, 30)
@@ -289,14 +533,14 @@ impl PyOpeningHours {
     /// Give an iterator that yields successive time intervals of consistent
     /// state.
     ///
-    /// Parameters
-    /// ----------
+    /// ## Parameters
+    ///
     /// - start: Initial time for the iterator, current time will be used if it is not specified.
     /// - end: Maximal time for the iterator, the iterator will continue until year 9999 if it no
     ///   max is specified.
     ///
-    /// Examples
-    /// --------
+    /// ## Examples
+    ///
     /// >>> intervals = OpeningHours("2099Mo-Su 12:30-17:00").intervals()
     /// >>> next(intervals)
     /// (..., datetime.datetime(2099, 1, 1, 12, 30), State.CLOSED, '')

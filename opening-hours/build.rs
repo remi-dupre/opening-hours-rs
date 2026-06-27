@@ -5,8 +5,8 @@ use std::io::{BufRead, BufReader, BufWriter};
 use std::path::{Path, PathBuf};
 
 use chrono::NaiveDate;
-use flate2::write::DeflateEncoder;
 use flate2::Compression;
+use flate2::write::DeflateEncoder;
 
 use compact_calendar::CompactCalendar;
 

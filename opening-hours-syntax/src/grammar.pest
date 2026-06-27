@@ -63,7 +63,7 @@ wide_range_selectors = {
       // `monthday_selector`. In such a case `monthday_selector` will be
       // favored.
       monthday_selector ~ week_selector? ~ separator_for_readability?
-    | year_selector? ~ monthday_selector? ~ week_selector? ~
+    | year_selector? ~ space? ~ monthday_selector? ~ space? ~ week_selector? ~
       separator_for_readability?
 }
 
@@ -93,7 +93,7 @@ timespan = {
 timespan_plus = @{ "+" }
 
 time = {
-      hour_minutes
+      !"24:00" ~ hour_minutes
     | variable_time
 }
 

@@ -3,19 +3,20 @@ use alloc::vec::Vec;
 
 use rstest::rstest;
 
-use crate::tests::parser_no_warn;
 use crate::Parser;
+use crate::tests::parser_no_warn;
 
 #[rstest]
 #[case("12:00+")]
 #[case("24/7")]
 #[case("dusk-dusk+")]
-#[case("Jun24:00+")]
+#[case("Jun23:30+")]
 #[case("10:00-18:00+")]
 #[case("10:00-18:00/30")]
 #[case("10:00-18:00/01:30")]
 #[case(r#"Mo-Fr open "ring the bell""#)]
 #[case("Jan Mo[1]-30")]
+#[case("2020 Jan week01 Mo 10:00-12:00 open")]
 // Comments
 #[case::comment(r#"open "comment""#)]
 #[case::comment(r#""comment""#)]
@@ -64,6 +65,8 @@ fn parse_valid(mut parser_no_warn: Parser, #[case] expr: &str) {
 #[case::extended_start("Syntax", "27:43-28:00")]
 #[case::extended_start("Syntax", "24:11-28:00")]
 #[case::extended_start("Syntax", "27:43-10:00")]
+#[case::extended_start("Syntax", "24:00+")]
+#[case::extended_start("Syntax", "24:00-10:00")]
 fn parse_invalid(
     mut parser_no_warn: Parser,
     #[case] expected_error_variant: &str,

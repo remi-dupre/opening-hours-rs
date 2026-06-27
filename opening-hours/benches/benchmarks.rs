@@ -1,10 +1,13 @@
-use std::hint::black_box;
+#![allow(clippy::unwrap_used)]
 
-use opening_hours::localization::{Coordinates, Country};
+use std::hint::black_box;
+use std::str::FromStr;
+
+use opening_hours::localization::Country;
 use opening_hours::{Context, OpeningHours};
 
 use chrono::NaiveDateTime;
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 
 const SAMPLES: &[[&str; 2]] = &[
     ["24_7", "24/7"],
@@ -25,15 +28,20 @@ const SAMPLES: &[[&str; 2]] = &[
         "huge",
         "Aug:Sa;week50unknown;Nov;2492week9:;:Mo;Fr;1912week48;:Mo;1918-7591week1:;:Mo;week8Sa;1918week3:;:Mo;1911-7191Mo;MayWe;Fr;week2;Feb;Oct;3683;Fr;1915week48;:Mo;1919-5182week1:;:Mo;week8Sa;1918week4:;:Mo;1911-7191;Mo;MayWe;Fr;week2;Feb;Oct;3836week3:;:Th;Su;3818closed; Fr;1917week17",
     ],
+    [
+        "holes",
+        "24/7, 2000,2002,2004,2006,2008,2010 Jan,Mar,May,Jul,Sep,Nov week1,3,5,7,9,11,13 Mo,We,Fr,Su 08:00-10:00,12:00-14:00,16:00-18:00,20:00-22:00 unknown",
+    ],
 ];
 
-const PARIS_COORDS: Coordinates = Coordinates::new(48.8535, 2.34839).unwrap();
-
 fn bench_context(c: &mut Criterion) {
+    #[allow(unused)]
     let mut group = c.benchmark_group("context");
 
     #[cfg(feature = "auto-country")]
     group.bench_function("infer_from_coords", |b| {
+        use opening_hours::localization::Coordinates;
+        const PARIS_COORDS: Coordinates = Coordinates::new(48.8535, 2.34839).unwrap();
         b.iter(|| Context::from_coords(black_box(PARIS_COORDS)))
     });
 }
@@ -47,7 +55,7 @@ fn bench_sample(c: &mut Criterion) {
         .map(|[slug, expr]| {
             (
                 *slug,
-                OpeningHours::parse(expr)
+                OpeningHours::from_str(expr)
                     .unwrap()
                     .with_context(fr_context.clone()),
             )
@@ -59,7 +67,7 @@ fn bench_sample(c: &mut Criterion) {
 
         for [slug, expr] in SAMPLES {
             group.bench_function(*slug, |b| {
-                b.iter(|| OpeningHours::parse(black_box(expr)).unwrap())
+                b.iter(|| OpeningHours::from_str(black_box(expr)).unwrap())
             });
         }
     }

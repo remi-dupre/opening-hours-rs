@@ -9,14 +9,14 @@ use opening_hours_syntax::extended_time::ExtendedTime;
 use opening_hours_syntax::rules::{OpeningHoursExpression, RuleKind, RuleOperator, RuleSequence};
 use opening_hours_syntax::{Error as ParserError, Parser, Warning};
 
+use crate::Context;
+use crate::DateTimeRange;
 use crate::filter::date_filter::DateFilter;
 use crate::filter::time_filter::{
-    time_selector_intervals_at, time_selector_intervals_at_next_day, TimeFilter,
+    TimeFilter, time_selector_intervals_at, time_selector_intervals_at_next_day,
 };
 use crate::localization::{Localize, NoLocation};
 use crate::schedule::Schedule;
-use crate::Context;
-use crate::DateTimeRange;
 
 /// The lower bound of dates handled by specification
 pub const DATE_START: NaiveDateTime = {
@@ -110,6 +110,8 @@ impl<L: Localize> OpeningHours<L> {
     /// let oh = OpeningHours::parse("24/7 ; Su closed").unwrap();
     /// assert_eq!(oh.normalize().to_string(), "Mo-Sa");
     /// ```
+    ///
+    #[doc = include_str!("../../opening-hours-syntax/doc/normalize.md")]
     pub fn normalize(&self) -> Self {
         Self {
             expr: Arc::new(self.expr.as_ref().clone().normalize()),
@@ -173,7 +175,9 @@ impl<L: Localize> OpeningHours<L> {
                     if curr_match {
                         curr_eval
                     } else {
-                        prev_eval.or(curr_eval)
+                        prev_eval
+                            .filter(|s: &Schedule| !s.is_always_closed_with_no_comments())
+                            .or(curr_eval)
                     },
                 ),
                 (RuleOperator::Additional, _) | (RuleOperator::Normal, RuleKind::Closed) => (
@@ -187,7 +191,7 @@ impl<L: Localize> OpeningHours<L> {
                     if prev_match
                         && !(prev_eval.as_ref())
                             .map(Schedule::is_always_closed_with_no_comments)
-                            .unwrap_or(false)
+                            .unwrap_or(true)
                     {
                         (prev_match, prev_eval)
                     } else {
@@ -478,10 +482,10 @@ impl<L: Localize> TimeDomainIterator<L> {
             .unwrap_or(false)
         {
             // Early return if infinite approximation is enabled
-            if let Some(max_interval_size) = self.opening_hours.ctx.approx_bound_interval_size {
-                if self.curr_date - start_date > max_interval_size + chrono::TimeDelta::days(1) {
-                    return;
-                }
+            if let Some(max_interval_size) = self.opening_hours.ctx.approx_bound_interval_size
+                && self.curr_date - start_date > max_interval_size + chrono::TimeDelta::days(1)
+            {
+                return;
             }
 
             self.curr_schedule.next();
@@ -540,14 +544,14 @@ impl<L: Localize> Iterator for TimeDomainIterator<L> {
             );
 
             // Infinity approximation, if enabled
-            if let Some(max_interval_size) = self.opening_hours.ctx.approx_bound_interval_size {
-                if end - start > max_interval_size {
-                    return Some(DateTimeRange {
-                        range: start..DATE_END,
-                        kind: curr_tr.kind,
-                        comment: curr_tr.comment.clone(),
-                    });
-                }
+            if let Some(max_interval_size) = self.opening_hours.ctx.approx_bound_interval_size
+                && end - start > max_interval_size
+            {
+                return Some(DateTimeRange {
+                    range: start..DATE_END,
+                    kind: curr_tr.kind,
+                    comment: curr_tr.comment.clone(),
+                });
             }
 
             Some(DateTimeRange {

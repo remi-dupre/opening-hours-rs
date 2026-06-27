@@ -1,6 +1,6 @@
 [package]
 name = "opening-hours-syntax"
-version = "2.0.2"
+version = "2.1.0"
 authors = ["Rémi Dupré <remi@dupre.io>"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
@@ -8,7 +8,7 @@ repository = "https://github.com/remi-dupre/opening-hours-rs"
 documentation = "https://docs.rs/opening-hours-syntax"
 homepage = "https://github.com/remi-dupre/opening-hours-rs/tree/master/opening-hours-syntax"
 description = "A parser for opening_hours fields in OpenStreetMap."
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 chrono = { version = "0.4", default-features = false }
@@ -23,5 +23,6 @@ default = ["std"]
 std = ["chrono/std", "pest/std", "pest_derive/std"]
 
 [lints.clippy]
+dbg_macro = "deny"
 todo = "deny"
 unwrap_used = "deny"

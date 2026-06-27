@@ -1,104 +1,102 @@
-pub(crate) mod canonical;
-pub(crate) mod frame;
+pub(crate) mod bounded;
+pub(crate) mod canonical_date;
+pub(crate) mod canonical_time;
 pub(crate) mod paving;
 
-use crate::normalize::paving::{EmptyPavingSelector, Paving, Paving4D, UnpackFromBack};
-use crate::rules::day::DaySelector;
-use crate::rules::time::TimeSelector;
-use crate::rules::{RuleOperator, RuleSequence};
+use alloc::boxed::Box;
+use alloc::collections::VecDeque;
+use alloc::vec::Vec;
+
 use crate::RuleKind;
+use crate::normalize::canonical_date::{CanonicalDate, CanonicalDateSelector};
+use crate::normalize::canonical_time::{TimeRules, no_overlap_with_next_day, normalize_time_rules};
+use crate::normalize::paving::Paving;
+use crate::rules::day::DaySelector;
+use crate::rules::{RuleOperator, RuleSequence};
 
-use self::canonical::{Canonical, CanonicalSelector, MakeCanonical};
-use self::paving::SelectorCompression;
+/// Consume as much rules as possible to be converted into a CanonicalDate.
+pub(crate) fn drain_ruleseq_into_canonical(rules: &mut VecDeque<RuleSequence>) -> CanonicalDate {
+    let mut canonical = CanonicalDate::default();
 
-// --
-// -- Normalization Logic
-// --
+    #[allow(clippy::result_large_err)]
+    while let Some(rule) = rules.pop_front() {
+        if rule.operator == RuleOperator::Fallback || !no_overlap_with_next_day(&rule.time_selector)
+        {
+            rules.push_front(rule);
+            return canonical;
+        }
 
-/// Convert a rule sequence to a n-dim selector.
-pub(crate) fn ruleseq_to_selector(rs: &RuleSequence) -> Option<CanonicalSelector> {
-    let ds = &rs.day_selector;
+        let Ok(selector) = CanonicalDateSelector::try_from(&rule.day_selector) else {
+            rules.push_front(rule);
+            return canonical;
+        };
 
-    let selector = EmptyPavingSelector
-        .dim_front(MakeCanonical::try_from_iterator(&rs.time_selector.time)?)
-        .dim_front(MakeCanonical::try_from_iterator(&ds.year)?)
-        .dim_front(MakeCanonical::try_from_iterator(&ds.monthday)?)
-        .dim_front(MakeCanonical::try_from_iterator(&ds.week)?)
-        .dim_front(MakeCanonical::try_from_iterator(&ds.weekday)?);
+        let new_val = ((rule.kind, rule.comment), rule.time_selector);
 
-    Some(selector)
+        if rule.operator == RuleOperator::Normal && rule.kind != RuleKind::Closed {
+            canonical.set(&selector, &vec![new_val]);
+        } else {
+            canonical.update(&selector, |content| content.push(new_val.clone()))
+        }
+    }
+
+    canonical
 }
 
-/// Convert a canonical paving back into a rules sequence.
-pub(crate) fn canonical_to_seq(canonical: Canonical) -> impl Iterator<Item = RuleSequence> {
-    // Keep track of the days that have already been outputed. This allows to
-    // use an additional rule only when necessary.
-    let mut days_covered = Paving4D::default();
+/// Transform a CanonicalDate into a RuleSequence.
+pub(crate) fn canonical_to_ruleseq(canonical: CanonicalDate) -> Vec<RuleSequence> {
+    let mut result = Vec::new();
+    let mut canonical_remaining = canonical.map(normalize_time_rules);
 
-    // Parts of this paving will be removed until it is empty
-    let mut canonical_remaining = canonical.clone();
+    // Insert rules in the following orders:
+    #[allow(clippy::type_complexity)]
+    let pop_priority_order: [Box<dyn Fn(&TimeRules) -> bool>; _] = [
+        // 1. only has "open" time ranges
+        Box::new(|s| !s.is_empty() && s.iter().all(|s| s.0.0 == RuleKind::Open)),
+        // 2. starts with an "open" time range
+        Box::new(|s| s.first().map(|s| s.0.0 == RuleKind::Open).unwrap_or(false)),
+        // 3. only has "unknown" time ranges
+        Box::new(|s| !s.is_empty() && s.iter().all(|s| s.0.0 == RuleKind::Unknown)),
+        // 4. starts with an unknown time range
+        Box::new(|s| {
+            s.first()
+                .map(|s| s.0.0 == RuleKind::Unknown)
+                .unwrap_or(false)
+        }),
+        // 5. starts with a close time range
+        Box::new(|s| {
+            !s.is_empty()
+                && s.iter()
+                    .any(|s| s.0.0 != RuleKind::Unknown || !s.0.1.is_empty())
+        }),
+    ];
 
-    core::iter::from_fn(move || {
-        // Extract open periods first, then unknowns
-        let ((kind, comment), mut selector) = [RuleKind::Open, RuleKind::Unknown, RuleKind::Closed]
-            .into_iter()
-            .find_map(|target_kind| {
-                canonical_remaining.pop_filter(|(kind, comment)| {
-                    *kind == target_kind && (target_kind != RuleKind::Closed || !comment.is_empty())
-                })
-            })?;
+    for pop_priority in pop_priority_order {
+        while let Some((slots, selector)) = canonical_remaining.pop_filter(&pop_priority) {
+            let day_selector: DaySelector = selector.into();
+            let mut first_time_component = true;
 
-        // Merge consecutive intervals as much as possible if the hole between
-        // two consecutive intervals was covered with the same value during a
-        // previous extraction.
-        selector.fill_holes({
-            let canonical = &canonical;
-            let val = (kind, comment.clone());
-            move |candidate| canonical.is_val(candidate, &val)
-        });
+            for ((kind, comment), time_selector) in slots {
+                let operator = {
+                    if first_time_component {
+                        RuleOperator::Normal
+                    } else {
+                        RuleOperator::Additional
+                    }
+                };
 
-        let (day_selector, rgs_time) = selector.into_unpack_back();
+                result.push(RuleSequence {
+                    day_selector: day_selector.clone(),
+                    time_selector,
+                    kind,
+                    operator,
+                    comment,
+                });
 
-        // If the current sequence doesn't cover any day with any time range
-        // already defined, we can use a normal rule operator which is more
-        // common. Otherwise, fallback to an additional rule operator, which
-        // has a more predictable semantic.
-        let operator = {
-            let no_day_overlap = days_covered.is_val(&day_selector, &false);
-
-            if no_day_overlap {
-                RuleOperator::Normal
-            } else {
-                RuleOperator::Additional
+                first_time_component = false;
             }
-        };
+        }
+    }
 
-        // Mark the days as (partialy) covered
-        days_covered.set(&day_selector, &true);
-
-        // Extract remaining dimensions
-        let (rgs_weekday, day_selector) = day_selector.into_unpack_front();
-        let (rgs_week, day_selector) = day_selector.into_unpack_front();
-        let (rgs_monthday, day_selector) = day_selector.into_unpack_front();
-        let (rgs_year, EmptyPavingSelector) = day_selector.into_unpack_front();
-
-        let day_selector = DaySelector {
-            year: MakeCanonical::into_selector(rgs_year, true),
-            monthday: MakeCanonical::into_selector(rgs_monthday, true),
-            week: MakeCanonical::into_selector(rgs_week, true),
-            weekday: MakeCanonical::into_selector(rgs_weekday, true),
-        };
-
-        let time_selector = TimeSelector {
-            time: MakeCanonical::into_selector(rgs_time, false),
-        };
-
-        Some(RuleSequence {
-            day_selector,
-            time_selector,
-            kind,
-            operator,
-            comment,
-        })
-    })
+    result
 }

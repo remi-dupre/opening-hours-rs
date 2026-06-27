@@ -4,7 +4,6 @@
 [![Doc](https://img.shields.io/badge/doc-pdoc-blue)][docs]
 [![PyPI - Downloads](https://img.shields.io/pypi/dm/opening-hours-py)][pypi]
 [![Coverage](https://img.shields.io/codecov/c/github/remi-dupre/opening-hours-rs)][codecov]
-
 [![][demo-button]][demo-website]
 
 ## Usage
@@ -54,6 +53,7 @@ documentation [here](https://remi-dupre.github.io/opening-hours-rs/opening_hours
 - 📅 Embedded public holidays database for many countries (from [nager])
 - 🌍 Timezone support
 - 🔥 Fast and memory-safe implementation using Rust
+- 📏 [Normalization][docs-normalize] to unambiguous expressions
 
 ## Limitations
 
@@ -97,7 +97,8 @@ $ python
 [demo-button]: https://raw.githubusercontent.com/remi-dupre/opening-hours-demo/refs/heads/main/static/demo-button.svg
 [demo-favicon]: https://raw.githubusercontent.com/remi-dupre/opening-hours-demo/refs/heads/main/static/favicon.ico "icon"
 [demo-website]: https://remi-dupre.github.io/opening-hours-demo/ "Demonstration website"
-[docs]: https://remi-dupre.github.io/opening-hours-rs/opening_hours.html "Generated documentation"
+[docs]: https://remi-dupre.github.io/opening-hours-rs/opening_hours.html "Documentation"
+[docs-normalize]: https://remi-dupre.github.io/opening-hours-rs/opening_hours.html#OpeningHours.normalize "Normalization documentation"
 [grammar]: https://wiki.openstreetmap.org/wiki/Key:opening_hours/specification "OSM specification for opening hours"
 [nager]: https://date.nager.at/api/v3 "Worldwide holidays (REST API)"
 [pypi]: https://pypi.org/project/opening-hours-py/ "PyPI page"
