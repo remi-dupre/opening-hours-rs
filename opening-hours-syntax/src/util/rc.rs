@@ -1,4 +1,5 @@
 use alloc::rc::{Rc, Weak};
+use alloc::vec::Vec;
 
 // --
 // -- struct: RcCacheMut

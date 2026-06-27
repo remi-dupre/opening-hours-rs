@@ -1,5 +1,7 @@
+use alloc::boxed::Box;
+use alloc::sync::Arc;
+use alloc::vec::Vec;
 use core::ops::Range;
-use std::sync::Arc;
 
 use crate::normalize::paving::{EmptyPavingSelector, Paving, Paving1D};
 use crate::rules::time::{Time, TimeSelector, TimeSpan};

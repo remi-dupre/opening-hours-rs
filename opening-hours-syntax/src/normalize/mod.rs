@@ -3,7 +3,9 @@ pub(crate) mod canonical_date;
 pub(crate) mod canonical_time;
 pub(crate) mod paving;
 
-use std::collections::VecDeque;
+use alloc::boxed::Box;
+use alloc::collections::VecDeque;
+use alloc::vec::Vec;
 
 use crate::RuleKind;
 use crate::normalize::canonical_date::{CanonicalDate, CanonicalDateSelector};
