@@ -9,7 +9,6 @@ use core::ops::{Range, RangeInclusive};
 
 use chrono::Weekday;
 
-use crate::ExtendedTime;
 use crate::rules::day::{Month, WeekNum, Year};
 use crate::util::weekday::OrderedWeekday;
 
@@ -110,23 +109,6 @@ impl Bounded for WeekNum {
     }
 }
 
-impl Bounded for ExtendedTime {
-    const BOUND_START: Self = Self::MIDNIGHT_00;
-    const BOUND_END: Self = Self::new(47, 59).unwrap();
-
-    fn succ(self) -> Option<Self> {
-        if self < Self::BOUND_END {
-            self.add_minutes(1)
-        } else {
-            None
-        }
-    }
-
-    fn pred(self) -> Option<Self> {
-        self.add_minutes(-1)
-    }
-}
-
 // --
 // -- UpperBounded
 // --
@@ -167,10 +149,6 @@ pub(crate) trait UpperBounded: Bounded {
             Some(range.start..=range.end.pred()?)
         }
     }
-}
-
-impl UpperBounded for ExtendedTime {
-    const BOUND_UPPER: Self = ExtendedTime::MIDNIGHT_48;
 }
 
 impl UpperBounded for Year {

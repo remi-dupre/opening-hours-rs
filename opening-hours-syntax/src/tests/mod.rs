@@ -5,6 +5,7 @@ mod normalize;
 mod parser;
 mod paving;
 mod rule_time;
+mod util_text;
 
 /// A parsure that asserts that no warning are emited.
 #[rstest::fixture]
