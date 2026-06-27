@@ -7,22 +7,19 @@ on:
 jobs:
   deploy-rust:
     runs-on: ubuntu-latest
-
-    strategy:
-      max-parallel: 1
-      matrix:
-        crate:
-          - compact-calendar
-          - opening-hours-syntax
-          - .
-
-    defaults:
-      run:
-        working-directory: ${{ matrix.crate }}
+    env:
+      PACKAGES: >-
+        -p compact-calendar
+        -p opening-hours
+        -p opening-hours-py
+        -p opening-hours-syntax
 
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+
+      - name: Dry run
+        run: cargo publish ${{ env.PACKAGES }} --dry-run
 
       - name: Login to crates.io
         run: cargo login $TOKEN
@@ -31,5 +28,5 @@ jobs:
           TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
 
       - name: Publish to crates.io
-        run: cargo publish
+        run: cargo publish ${{ env.PACKAGES }}
         if: github.ref == 'refs/heads/master'
