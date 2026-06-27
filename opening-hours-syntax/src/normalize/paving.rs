@@ -248,7 +248,7 @@ impl<T: Clone + Debug + Ord, U: Debug + Paving> Paving for Dim<T, U> {
 
             for (col_start, col_val) in self.cuts.iter().zip(&mut self.cols) {
                 if *col_start >= range.start && *col_start < range.end {
-                    if rc_reset_col.apply(col_val) {
+                    if *rc_reset_col.apply(col_val) {
                         // If the column values is cleaned up into an empty value we can collapse
                         // it into an emtpy value. This will early cleanup some memory as well as
                         // collapse inner columns.
@@ -339,7 +339,7 @@ impl<T: Clone + Debug + Ord, U: Debug + Paving> Paving for Dim<T, U> {
             .cols
             .iter_mut()
             .enumerate()
-            .find_map(|(idx, col)| Some((idx, pop_from_col.apply(col)?)))?;
+            .find_map(|(idx, col)| Some((idx, pop_from_col.apply(col).clone()?)))?;
 
         let mut end_idx = start_idx + 1;
         let mut selector_range = Vec::new();
@@ -379,7 +379,7 @@ impl<T: Clone + Debug + Ord, U: Debug + Paving> Paving for Dim<T, U> {
         Dim {
             cuts: self.cuts,
             cols: (self.cols.into_iter())
-                .map(|col| rc_map.apply(col))
+                .map(|col| rc_map.apply(col).clone())
                 .collect(),
             col_default: Rc::default(),
         }
