@@ -1,6 +1,6 @@
 [package]
 name = "opening-hours"
-version = "2.1.1"
+version = "2.2.0"
 authors = ["Rémi Dupré <remi@dupre.io>"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
@@ -16,7 +16,14 @@ build = "opening-hours/build.rs"
 all-features = true  # include all features in documentation for docs.rs
 
 [workspace]
-members = ["compact-calendar", "opening-hours-syntax", "opening-hours-py", "fuzz"]
+members = [
+    "compact-calendar",
+    "opening-hours-c",
+    "opening-hours-py",
+    "opening-hours-syntax", 
+    "fuzz",
+]
+
 
 [lib]
 path = "opening-hours/src/lib.rs"
@@ -28,10 +35,10 @@ auto-timezone = ["dep:chrono-tz", "dep:tzf-rs"]
 log = ["dep:log"]
 
 [dependencies]
+compact-calendar = { path = "compact-calendar", version = "2.2.0" }
+opening-hours-syntax = { path = "opening-hours-syntax", version = "2.2.0" }
 chrono = "0.4"
-compact-calendar = { path = "compact-calendar", version = "2.1.1" }
 flate2 = "1.0"
-opening-hours-syntax = { path = "opening-hours-syntax", version = "2.1.1" }
 sunrise = "3.0"
 
 # Feature: log (default)
@@ -45,8 +52,8 @@ chrono-tz = { version = "0.10", optional = true }
 tzf-rs = { version = "1.3", default-features = false, features = ["bundled"], optional = true }
 
 [build-dependencies]
+compact-calendar = { path = "compact-calendar", version = "2.2.0" }
 chrono = "0.4"
-compact-calendar = { path = "compact-calendar", version = "2.1.1" }
 country-boundaries = { version = "1.2", optional = true }
 flate2 = "1.0"
 

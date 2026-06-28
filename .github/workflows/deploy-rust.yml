@@ -8,18 +8,12 @@ jobs:
   deploy-rust:
     runs-on: ubuntu-latest
 
-    env:
-      PACKAGES: >-
-        -p compact-calendar
-        -p opening-hours-syntax
-        -p opening-hours
-
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
 
       - name: Dry run
-        run: cargo publish ${{ env.PACKAGES }} --dry-run
+        run: cargo publish --workspace --dry-run
 
       - name: Login to crates.io
         run: cargo login $TOKEN
@@ -28,5 +22,5 @@ jobs:
           TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
 
       - name: Publish to crates.io
-        run: cargo publish ${{ env.PACKAGES }}
+        run: cargo publish --workspace
         if: github.ref == 'refs/heads/master'
