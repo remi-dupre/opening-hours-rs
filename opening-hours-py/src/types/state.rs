@@ -1,3 +1,5 @@
+//! TODO: State should be renamed to RuleKind on next breaking change (3.0.0)
+
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyclass_enum;
 

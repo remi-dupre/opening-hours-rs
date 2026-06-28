@@ -7,12 +7,12 @@ on:
 jobs:
   deploy-rust:
     runs-on: ubuntu-latest
+
     env:
       PACKAGES: >-
         -p compact-calendar
-        -p opening-hours
-        -p opening-hours-py
         -p opening-hours-syntax
+        -p opening-hours
 
     steps:
       - uses: actions/checkout@v4

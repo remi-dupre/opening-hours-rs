@@ -41,7 +41,6 @@ The normalization algorithm has been reworked:
 
 ### Python
 
-- **(breaking)** `State` has been renamed to `RuleKind`.
 - Added `max_interval_days` parameter that allows to enable an evaluation
   optimisation at the cost of precision.
 
