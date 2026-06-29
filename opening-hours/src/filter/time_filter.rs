@@ -197,11 +197,7 @@ impl<'a, L: 'a + Localize> Iterator for NaiveTimeSelectorIterator<'a, L> {
     type Item = Range<ExtendedTime>;
 
     fn next(&mut self) -> Option<Self::Item> {
-<<<<<<< HEAD
-        while let Some(span) = self.inner.next() {
-=======
         for span in self.inner.by_ref() {
->>>>>>> b3c3750 (fix: time events at the poles behaved weirdly)
             if let Some(res) = span.as_naive(self.ctx, self.date) {
                 return Some(res);
             }
