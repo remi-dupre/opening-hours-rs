@@ -20,13 +20,15 @@ pub trait Localize: Clone + Send + Sync {
     fn datetime(&self, naive: NaiveDateTime) -> Self::DateTime;
 
     /// Get the localized time for a sun event at a given date.
-    fn event_time(&self, _date: NaiveDate, event: TimeEvent) -> NaiveTime {
-        match event {
+    fn event_time(&self, _date: NaiveDate, event: TimeEvent) -> Option<NaiveTime> {
+        let dt = match event {
             TimeEvent::Dawn => const { NaiveTime::from_hms_opt(6, 0, 0).unwrap() },
             TimeEvent::Sunrise => const { NaiveTime::from_hms_opt(7, 0, 0).unwrap() },
             TimeEvent::Sunset => const { NaiveTime::from_hms_opt(19, 0, 0).unwrap() },
             TimeEvent::Dusk => const { NaiveTime::from_hms_opt(20, 0, 0).unwrap() },
-        }
+        };
+
+        Some(dt)
     }
 }
 
@@ -154,17 +156,12 @@ where
         }
     }
 
-    fn event_time(&self, date: NaiveDate, event: TimeEvent) -> NaiveTime {
+    fn event_time(&self, date: NaiveDate, event: TimeEvent) -> Option<NaiveTime> {
         let Some(coords) = self.coords else {
             return NoLocation.event_time(date, event);
         };
 
-        let Some(dt) = coords.event_time(date, event) else {
-            // If the event never happens (eg. at the poles), fallback to
-            // naïve algorithm.
-            return NoLocation.event_time(date, event);
-        };
-
-        self.naive(dt.with_timezone(&self.tz)).time()
+        let dt = coords.event_time(date, event)?;
+        Some(self.naive(dt.with_timezone(&self.tz)).time())
     }
 }

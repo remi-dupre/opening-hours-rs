@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.1.2
+
+- Fix: variable time at the poles should behave correctly (for example
+  "sunrise-sunset" would be always closed in winter and always open in summer).
+
 ## 2.1.1
 
 - Fix Rust crate not deploying because of docs static path.

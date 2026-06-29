@@ -31,7 +31,7 @@ impl Localize for PyLocation {
         }
     }
 
-    fn event_time(&self, date: NaiveDate, event: TimeEvent) -> chrono::NaiveTime {
+    fn event_time(&self, date: NaiveDate, event: TimeEvent) -> Option<chrono::NaiveTime> {
         match self {
             PyLocation::Naive => NoLocation.event_time(date, event),
             PyLocation::Aware(loc) => loc.event_time(date, event),

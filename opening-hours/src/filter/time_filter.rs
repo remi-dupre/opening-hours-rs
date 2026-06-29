@@ -1,6 +1,6 @@
 use std::ops::Range;
 
-use chrono::NaiveDate;
+use chrono::{Datelike, NaiveDate};
 
 use opening_hours_syntax::extended_time::ExtendedTime;
 use opening_hours_syntax::rules::time as ts;
@@ -71,7 +71,7 @@ impl TimeFilter for ts::TimeSelector {
 }
 
 impl TimeFilter for ts::TimeSpan {
-    type Output<'a, L: 'a + Localize> = Range<ExtendedTime>;
+    type Output<'a, L: 'a + Localize> = Option<Range<ExtendedTime>>;
 
     fn is_immutable_full_day(&self) -> bool {
         *self == Self::fixed_range(ExtendedTime::MIDNIGHT_00, ExtendedTime::MIDNIGHT_24)
@@ -82,8 +82,54 @@ impl TimeFilter for ts::TimeSpan {
         ctx: &'a Context<L>,
         date: NaiveDate,
     ) -> Self::Output<'a, L> {
-        let start = self.range.start.as_naive(ctx, date);
-        let end = self.range.end.as_naive(ctx, date);
+        let start_opt = self.range.start.as_naive(ctx, date);
+        let end_opt = self.range.end.as_naive(ctx, date);
+
+        let date_md = (date.month(), date.day());
+        let is_summer = date_md >= (3, 20) && date_md < (9, 22);
+
+        let (start, end) = match (start_opt, end_opt) {
+            (Some(x), Some(y)) => (x, y),
+            (None, Some(end)) => {
+                let start = {
+                    let is_morning_event = matches!(
+                        self.range.start.as_time_event()?,
+                        ts::TimeEvent::Sunrise | ts::TimeEvent::Dawn
+                    );
+
+                    if is_morning_event == is_summer {
+                        ExtendedTime::MIDNIGHT_00
+                    } else {
+                        return None;
+                    }
+                };
+
+                (start, end)
+            }
+            (Some(start), None) => {
+                let end = {
+                    let is_morning_event = matches!(
+                        self.range.end.as_time_event()?,
+                        ts::TimeEvent::Sunrise | ts::TimeEvent::Dawn
+                    );
+
+                    if is_morning_event == is_summer {
+                        return None;
+                    } else {
+                        ExtendedTime::MIDNIGHT_24
+                    }
+                };
+
+                (start, end)
+            }
+            (None, None) => {
+                if (self.range.start <= self.range.end) == is_summer {
+                    (ExtendedTime::MIDNIGHT_00, ExtendedTime::MIDNIGHT_24)
+                } else {
+                    return None;
+                }
+            }
+        };
 
         // If end < start, it actually wraps to next day
         let end = {
@@ -96,12 +142,12 @@ impl TimeFilter for ts::TimeSpan {
         };
 
         assert!(start <= end);
-        start..end
+        Some(start..end)
     }
 }
 
 impl TimeFilter for ts::Time {
-    type Output<'a, L: 'a + Localize> = ExtendedTime;
+    type Output<'a, L: 'a + Localize> = Option<ExtendedTime>;
 
     fn as_naive<'a, L: 'a + Localize>(
         &'a self,
@@ -109,36 +155,35 @@ impl TimeFilter for ts::Time {
         date: NaiveDate,
     ) -> Self::Output<'a, L> {
         match self {
-            ts::Time::Fixed(naive) => *naive,
+            ts::Time::Fixed(naive) => Some(*naive),
             ts::Time::Variable(variable) => variable.as_naive(ctx, date),
         }
     }
 }
 
 impl TimeFilter for ts::VariableTime {
-    type Output<'a, L: 'a + Localize> = ExtendedTime;
+    type Output<'a, L: 'a + Localize> = Option<ExtendedTime>;
 
     fn as_naive<'a, L: 'a + Localize>(
         &'a self,
         ctx: &'a Context<L>,
         date: NaiveDate,
     ) -> Self::Output<'a, L> {
-        self.event
-            .as_naive(ctx, date)
-            .add_minutes(self.offset)
-            .unwrap_or(ExtendedTime::MIDNIGHT_00)
+        self.event.as_naive(ctx, date)?.add_minutes(self.offset)
     }
 }
 
 impl TimeFilter for ts::TimeEvent {
-    type Output<'a, L: 'a + Localize> = ExtendedTime;
+    type Output<'a, L: 'a + Localize> = Option<ExtendedTime>;
 
     fn as_naive<'a, L: 'a + Localize>(
         &'a self,
         ctx: &'a Context<L>,
         date: NaiveDate,
     ) -> Self::Output<'a, L> {
-        ctx.locale.event_time(date, *self).into()
+        // dbg!(date, self);
+        // dbg!()
+        ctx.locale.event_time(date, *self).map(Into::into)
     }
 }
 
@@ -150,10 +195,15 @@ pub(crate) struct NaiveTimeSelectorIterator<'a, L: 'a + Localize> {
 }
 
 impl<'a, L: 'a + Localize> Iterator for NaiveTimeSelectorIterator<'a, L> {
-    type Item = <ts::TimeSpan as TimeFilter>::Output<'a, L>;
+    type Item = Range<ExtendedTime>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let span = self.inner.next()?;
-        Some(span.as_naive(self.ctx, self.date))
+        while let Some(span) = self.inner.next() {
+            if let Some(res) = span.as_naive(self.ctx, self.date) {
+                return Some(res);
+            }
+        }
+
+        None
     }
 }

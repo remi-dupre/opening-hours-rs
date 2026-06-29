@@ -125,6 +125,17 @@ pub enum Time {
     Variable(VariableTime),
 }
 
+impl Time {
+    /// TODO: doc
+    pub fn as_time_event(&self) -> Option<TimeEvent> {
+        if let Self::Variable(VariableTime { event, .. }) = self {
+            Some(*event)
+        } else {
+            None
+        }
+    }
+}
+
 impl Display for Time {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {

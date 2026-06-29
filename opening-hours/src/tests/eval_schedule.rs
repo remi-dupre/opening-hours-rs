@@ -5,10 +5,8 @@ use opening_hours_syntax::extended_time::ExtendedTime;
 use opening_hours_syntax::rules::RuleKind::*;
 use rstest::rstest;
 
-use crate::localization::{
-    Country,
-    Country::{DE, FR, US},
-};
+use crate::localization::Country;
+use crate::localization::Country::{DE, FR, US};
 use crate::schedule::{Schedule, TimeRange};
 use crate::tests::utils::parse::xt;
 use crate::{Context, OpeningHours};
@@ -216,31 +214,60 @@ fn schedule_at(
 }
 
 #[cfg(feature = "auto-timezone")]
-#[rstest]
-#[case("2020-06-01", "sunrise-19:45", "05:51 open 19:45")]
-#[case("2020-06-01", "08:15-sunset", "08:15 open 21:46")]
-#[case("2020-06-01", "(dawn+00:30)-(dusk-00:30)", "05:40 open 21:57")]
-#[case(
-    "2020-06-01",
-    "(dawn-02:30)-(dusk+02:30)",
-    "00:00 open 00:56 | 02:40 open 24:00"
-)]
-fn schedule_at_with_timezone(
-    #[case] date: NaiveDate,
-    #[case] expr: OpeningHours,
-    #[case] expected_schedule: Schedule,
-) {
-    use crate::localization::{Coordinates, TzLocation};
+mod timezone {
+    use super::*;
+    use crate::localization::Coordinates;
 
-    let coords = Coordinates::new(48.87, 2.29).unwrap();
-    let ctx = Context::default().with_locale(TzLocation::from_coords(coords));
-    let expr = expr.with_context(ctx);
+    const PARIS: Coordinates = Coordinates::new(48.87, 2.29).unwrap();
+    const ANTARTICA: Coordinates = Coordinates::new(-80.00, 80.00).unwrap();
 
-    assert_eq!(
-        expr.schedule_at(date),
-        expected_schedule,
-        "schedule for {expr} at {date} {coords} differs from expected",
-    );
+    #[rstest]
+    #[case("2020-06-01", PARIS, "sunrise-19:45", "05:51 open 19:45")]
+    #[case("2020-06-01", PARIS, "08:15-sunset", "08:15 open 21:46")]
+    #[case("2020-06-01", PARIS, "(dawn+00:30)-(dusk-00:30)", "05:40 open 21:57")]
+    #[case(
+        "2020-06-01",
+        PARIS,
+        "(dawn-02:30)-(dusk+02:30)",
+        "00:00 open 00:56 | 02:40 open 24:00"
+    )]
+    // At the poles, time events can never happen during a day of winter or summer
+    #[case::pole("2020-04-01", ANTARTICA, "sunrise-20:00", "09:11 open 20:00")]
+    #[case::pole("2020-04-01", ANTARTICA, "10:00-sunset", "10:00 open 18:15")]
+    #[case::pole("2020-04-01", ANTARTICA, "sunset-dusk", "18:15 open 20:16")]
+    #[case::pole(
+        "2020-04-01",
+        ANTARTICA,
+        "dusk-sunset",
+        "00:00 open 18:25 | 20:16 open 24:00"
+    )]
+    // The sun is already set in winter
+    #[case::pole("2020-01-01", ANTARTICA, "sunrise-20:00", Schedule::new())]
+    #[case::pole("2020-01-01", ANTARTICA, "10:00-sunset", Schedule::new())]
+    #[case::pole("2020-01-01", ANTARTICA, "sunset-dusk", Schedule::new())]
+    #[case::pole("2020-01-01", ANTARTICA, "dusk-sunset", "00:00 open 24:00")]
+    // The sun never sets in summer
+    #[case::pole("2020-06-01", ANTARTICA, "sunrise-20:00", "00:00 open 20:00")]
+    #[case::pole("2020-06-01", ANTARTICA, "10:00-sunset", "10:00 open 24:00")]
+    #[case::pole("2020-06-01", ANTARTICA, "sunset-dusk", "00:00 open 24:00")]
+    #[case::pole("2020-06-01", ANTARTICA, "dusk-sunset", Schedule::new())]
+    fn schedule_at_with_timezone(
+        #[case] date: NaiveDate,
+        #[case] coords: Coordinates,
+        #[case] expr: OpeningHours,
+        #[case] expected_schedule: Schedule,
+    ) {
+        use crate::localization::TzLocation;
+
+        let ctx = Context::default().with_locale(TzLocation::from_coords(coords));
+        let expr = expr.with_context(ctx);
+
+        assert_eq!(
+            expr.schedule_at(date),
+            expected_schedule,
+            "schedule for {expr} at {date} {coords} differs from expected",
+        );
+    }
 }
 
 #[rstest]

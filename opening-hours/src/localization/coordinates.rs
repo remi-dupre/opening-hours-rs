@@ -48,6 +48,14 @@ impl Coordinates {
     }
 }
 
+impl TryFrom<(f64, f64)> for Coordinates {
+    type Error = ();
+
+    fn try_from((lat, lon): (f64, f64)) -> Result<Self, ()> {
+        Ok(Self(sunrise::Coordinates::new(lat, lon).ok_or(())?))
+    }
+}
+
 impl std::fmt::Display for Coordinates {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "({}, {})", self.lat(), self.lon())
