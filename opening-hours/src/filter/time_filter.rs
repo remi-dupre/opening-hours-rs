@@ -84,9 +84,8 @@ impl TimeFilter for ts::TimeSpan {
     ) -> Self::Output<'a, L> {
         let start_opt = self.range.start.as_naive(ctx, date);
         let end_opt = self.range.end.as_naive(ctx, date);
-
         let date_md = (date.month(), date.day());
-        let is_summer = date_md >= (3, 20) && date_md < (9, 22);
+        let is_summer = ((3, 20)..(9, 22)).contains(&date_md);
 
         let (start, end) = match (start_opt, end_opt) {
             (Some(x), Some(y)) => (x, y),
@@ -198,7 +197,11 @@ impl<'a, L: 'a + Localize> Iterator for NaiveTimeSelectorIterator<'a, L> {
     type Item = Range<ExtendedTime>;
 
     fn next(&mut self) -> Option<Self::Item> {
+<<<<<<< HEAD
         while let Some(span) = self.inner.next() {
+=======
+        for span in self.inner.by_ref() {
+>>>>>>> b3c3750 (fix: time events at the poles behaved weirdly)
             if let Some(res) = span.as_naive(self.ctx, self.date) {
                 return Some(res);
             }
