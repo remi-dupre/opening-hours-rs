@@ -14,6 +14,7 @@ use crate::tests::parser_no_warn;
 #[case("(sunrise-00:10)-(sunset+01:15)")]
 #[case("(sunrise-00:10)-sunset")]
 #[case("sunrise-(sunset+01:15)")]
+#[case("PH -1 days 17:00-02:00")]
 fn display_stable(mut parser_no_warn: Parser, #[case] example: &str) {
     assert_eq!(
         parser_no_warn
