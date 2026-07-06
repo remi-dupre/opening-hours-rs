@@ -418,7 +418,7 @@ impl Display for WeekDayRange {
                 write!(f, "{kind}")?;
 
                 if *offset != 0 {
-                    write!(f, " {offset}")?;
+                    write!(f, " {offset} days")?;
                 }
             }
         }

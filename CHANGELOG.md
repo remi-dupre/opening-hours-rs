@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.1.3
+
+- Fix: Display of opening hours that include a holiday offset like `PH -1 days 17:00-02:00`
+
 ## 2.1.2
 
 - Fix: variable time at the poles should behave correctly (for example
