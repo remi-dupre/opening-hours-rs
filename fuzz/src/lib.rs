@@ -72,27 +72,34 @@ impl Debug for Data {
 /// Run a fuzzing test and return `true` if the example should be kept in
 /// corpus.
 pub fn run_fuzz_oh(data: Data) -> bool {
+    eprintln!("[dbg] Input: {data:#?}");
+
     if data.oh.len() > MAX_OH_LENGTH {
+        eprintln!("[dbg] Skipping because of input size");
         return false;
     }
 
     let Some(date) = DateTime::from_timestamp(data.date_secs, 0) else {
+        eprintln!("[dbg] Skipping because of invalid input date");
         return false;
     };
 
     let date = date.naive_utc();
 
     if date.year() < 1900 || date.year() > 9999 {
+        eprintln!("[dbg] Skipping because of invalid date range");
         return false;
     }
 
     let Ok(oh_1) = OpeningHours::from_str(&data.oh) else {
+        eprintln!("[dbg] Skipping because of invalid input");
         return false;
     };
 
     match &data.operation {
         Operation::DoubleNormalize => {
             let normalized = oh_1.normalize();
+            eprintln!("[dbg] Normalized: {normalized:?}");
             assert_eq!(normalized, normalized.clone().normalize());
         }
         Operation::Compare(compare_with) => {
@@ -116,21 +123,55 @@ pub fn run_fuzz_oh(data: Data) -> bool {
                 }
             };
 
+            eprintln!("[dbg] Compare with {oh_2}");
+
             if let Some([lat, lon]) = data.coords_float() {
                 let ctx = Context::from_coords(Coordinates::new(lat, lon).unwrap())
                     .approx_bound_interval_size(MAX_INTERVAL_RANGE);
 
                 let date = ctx.locale.datetime(date);
                 let oh_1 = oh_1.with_context(ctx.clone());
-                let oh_2 = oh_2.with_context(ctx.clone());
-                assert_eq!(oh_1.state(date), oh_2.state(date));
-                assert_eq!(oh_1.next_change(date), oh_2.next_change(date));
+                let oh_2 = oh_2.with_context(ctx);
+
+                // States should be equal
+                let state_1 = oh_1.state(date);
+                let state_2 = oh_2.state(date);
+
+                assert_eq!(
+                    state_1, state_2,
+                    "States differ at {date}: {state_1:?} != {state_2:?}"
+                );
+
+                // Next change should be equal
+                let next_change_1 = oh_1.next_change(date);
+                let next_change_2 = oh_2.next_change(date);
+
+                assert_eq!(
+                    next_change_1, next_change_2,
+                    "Next change differs at {date}: {next_change_1:?} != {next_change_2:?}"
+                );
             } else {
                 let ctx = Context::default().approx_bound_interval_size(MAX_INTERVAL_RANGE);
                 let oh_1 = oh_1.with_context(ctx.clone());
-                let oh_2 = oh_2.with_context(ctx.clone());
-                assert_eq!(oh_1.state(date), oh_2.state(date));
-                assert_eq!(oh_1.next_change(date), oh_2.next_change(date));
+                let oh_2 = oh_2.with_context(ctx);
+
+                // States should be equal
+                let state_1 = oh_1.state(date);
+                let state_2 = oh_2.state(date);
+
+                assert_eq!(
+                    state_1, state_2,
+                    "States differ at {date}: {state_1:?} != {state_2:?}"
+                );
+
+                // Next change should be equal
+                let next_change_1 = oh_1.next_change(date);
+                let next_change_2 = oh_2.next_change(date);
+
+                assert_eq!(
+                    next_change_1, next_change_2,
+                    "Next change differs at {date}: {next_change_1:?} != {next_change_2:?}"
+                );
             }
         }
     }

@@ -27,9 +27,6 @@ use crate::rules::OpeningHoursExpression;
 #[case("Sep23:30-04:20", "Sep 23:30-04:20")]
 #[case("Sa;Su;2490-2490/8", "2490; 1900-2489,2491-9999 Sa-Su")]
 #[case("Mo 10:00-21:00; Tu,We,Th,Fr,Sa,Su 10:00-21:00", "10:00-21:00")]
-#[case("dusk-dawn+;Mo", "dusk-dawn+; Mo")] // dusk-dawn is wrapping, not normalized
-#[case("dusk-dusk;Mo", "dusk-dusk; Mo")] // dusk-dusk is wrapping too
-#[case("dawn-dusk+;Mo", "Mo; Tu-Su dawn-dusk+")] // dawn-dusk is not wrapping
 #[case("Jun; 02:00-02:00", "Jun; 02:00-02:00")]
 #[case(
     "week2Mo;Jun;Fr",
@@ -79,17 +76,10 @@ use crate::rules::OpeningHoursExpression;
     r#"Mo-Su 08:00-14:00 open, Mo-Su 10:00-18:00 unknown; Mo-Su 18:00-20:00 closed "may vary""#,
     r#"08:00-10:00, Mo-Su 10:00-18:00 unknown, Mo-Su 18:00-20:00 closed "may vary""#
 )]
+#[case::time_selector("10:00-16:00; Mo sunset-24:00", "Mo sunset-24:00; Tu-Su 10:00-16:00")]
 #[case::time_selector(
-    "10:00-16:00; Mo sunrise-sunset",
-    "Mo sunrise-sunset; Tu-Su 10:00-16:00"
-)]
-#[case::time_selector( // variable time should be sorted
-    "(sunrise-00:30)-sunset,(sunrise-01:00)-sunset,sunrise-sunset,sunrise-(sunset+00:30)",
-    "(sunrise-01:00)-sunset,(sunrise-00:30)-sunset,sunrise-sunset,sunrise-(sunset+00:30)"
-)]
-#[case::time_selector(
-    "sunrise-sunset; Th 10:00-14:00",
-    "Mo-We,Fr-Su sunrise-sunset; Th 10:00-14:00"
+    "sunrise-24:00; Th 10:00-14:00",
+    "Mo-We,Fr-Su sunrise-24:00; Th 10:00-14:00"
 )]
 fn normalize(#[case] example: OpeningHoursExpression, #[case] normalized_expected: &str) {
     let normalized = example.normalize();
@@ -110,6 +100,10 @@ fn normalize(#[case] example: OpeningHoursExpression, #[case] normalized_expecte
 #[rstest]
 // There was an issue with 53 being the last possible value
 #[case("6246 week06; 4497 We; 6246 week07-53 We")]
+// Time ranges ending in events cannot be normalized
+#[case("dusk-dawn+; Mo")]
+#[case("dusk-dusk; Mo")]
+#[case("dawn-dusk+; Mo")]
 fn stays_normalized(#[case] example: &str) {
     let oh: OpeningHoursExpression = example.parse().expect("could not part input expression");
     let normalized = oh.normalize();

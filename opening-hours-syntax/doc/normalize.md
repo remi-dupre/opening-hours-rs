@@ -37,16 +37,20 @@ normalized by current implementation:
 | [weekday range][spec-weekday-range] with index in month | stop normalization (2)     | `Mo[2]`, `Mo[2] +1 days`     |
 | [weekday range][spec-weekday-range] with a holiday      | stop normalization (2)     | `easter`                     |
 | time that overlaps with next day                        | stop normalization (2)     | `22:00-06:00`, `22:00-28:00` |
-| time with a solar event                                 | no time simplification (3) | `sunrise-18:00`              |
-| time with an open end                                   | no time simplification (3) | `12:00-16:00+`               |
-| time with repetition                                    | no time simplification (3) | `12:00-16:00/02:00`          |
+| time ending at a solar event                            | stop normalization (2) (3) | `18:00-sunset`               |
+| time starting at a solar event                          | no time simplification (4) | `sunrise-18:00`              |
+| time with an open end                                   | no time simplification (4) | `12:00-16:00+`               |
+| time with repetition                                    | no time simplification (4) | `12:00-16:00/02:00`          |
 
 Notes :
 
 1. All the examples above contain a single rule, so they would be left
    unchanged by the normalization.
 2. This rule and any following rule won't be treated.
-3. This won't halt normalization but the algorithm won't try to merge this time
+3. There cannot be a guarantee that a variable time doesn't happen at the next
+   day: you can always find a timezone or an extreme coordinate that doesn't
+   fit.
+4. This won't halt normalization but the algorithm won't try to merge this time
    range with others.
 
 If a feature is not implemented I may have considered it to be too niche for
