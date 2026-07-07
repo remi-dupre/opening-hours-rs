@@ -427,18 +427,23 @@ normalized by current implementation:</p>
   <td><code>22:00-06:00</code>, <code>22:00-28:00</code></td>
 </tr>
 <tr>
-  <td>time with a solar event</td>
-  <td>no time simplification (3)</td>
+  <td>time ending at a solar event</td>
+  <td>stop normalization (2) (3)</td>
+  <td><code>18:00-sunset</code></td>
+</tr>
+<tr>
+  <td>time starting at a solar event</td>
+  <td>no time simplification (4)</td>
   <td><code>sunrise-18:00</code></td>
 </tr>
 <tr>
   <td>time with an open end</td>
-  <td>no time simplification (3)</td>
+  <td>no time simplification (4)</td>
   <td><code>12:00-16:00+</code></td>
 </tr>
 <tr>
   <td>time with repetition</td>
-  <td>no time simplification (3)</td>
+  <td>no time simplification (4)</td>
   <td><code>12:00-16:00/02:00</code></td>
 </tr>
 </tbody>
@@ -450,6 +455,9 @@ normalized by current implementation:</p>
 <li>All the examples above contain a single rule, so they would be left
 unchanged by the normalization.</li>
 <li>This rule and any following rule won't be treated.</li>
+<li>There cannot be a guarantee that a variable time doesn't happen at the next
+day: you can always find a timezone or an extreme coordinate that doesn't
+fit.</li>
 <li>This won't halt normalization but the algorithm won't try to merge this time
 range with others.</li>
 </ol>
