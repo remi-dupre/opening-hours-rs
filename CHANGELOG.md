@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.1.4
+
+- Fix: time spans ending with a sun event shouldn't be normalized (there can be
+  a day overlap when working with extreme coordinates).
+
 ## 2.1.3
 
 - Fix: Display of opening hours that include a holiday offset like `PH -1 days 17:00-02:00`

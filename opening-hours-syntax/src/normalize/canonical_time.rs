@@ -19,9 +19,8 @@ pub(crate) fn no_overlap_with_next_day(selector: &TimeSelector) -> bool {
             (Time::Fixed(start), Time::Fixed(end)) => {
                 start < end && end <= ExtendedTime::MIDNIGHT_24
             }
-            (Time::Fixed(start), Time::Variable(_)) => start == ExtendedTime::MIDNIGHT_00,
             (Time::Variable(_), Time::Fixed(end)) => end == ExtendedTime::MIDNIGHT_24,
-            (Time::Variable(start), Time::Variable(end)) => start.is_before(&end),
+            _ => false,
         })
 }
 

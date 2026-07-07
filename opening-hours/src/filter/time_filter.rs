@@ -140,7 +140,7 @@ impl TimeFilter for ts::TimeSpan {
             }
         };
 
-        assert!(start <= end);
+        debug_assert!(start <= end);
         Some(start..end)
     }
 }
