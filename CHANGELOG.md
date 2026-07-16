@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.1.5
+
+- Fix: normalization idempotency
+
 ## 2.1.4
 
 - Fix: time spans ending with a sun event shouldn't be normalized (there can be
