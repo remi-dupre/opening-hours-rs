@@ -417,7 +417,9 @@ impl Display for WeekDayRange {
             Self::Holiday { kind, offset } => {
                 write!(f, "{kind}")?;
 
-                if *offset != 0 {
+                if *offset > 0 {
+                    write!(f, " +{offset} days")?;
+                } else if *offset < 0 {
                     write!(f, " {offset} days")?;
                 }
             }
