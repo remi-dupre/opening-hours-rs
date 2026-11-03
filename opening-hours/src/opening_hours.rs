@@ -143,7 +143,7 @@ impl<L: Localize> OpeningHours<L> {
         (self.expr.rules)
             .iter()
             .map(|rule| {
-                let constant_day = 
+                let constant_day =
                     // If time sector never change ...
                     rule.time_selector.is_immutable_full_day()
                     // ... or both today & yesterday don't apply  to this rule (always closed)

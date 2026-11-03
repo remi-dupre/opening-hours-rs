@@ -5,6 +5,7 @@
 - Fix: evaluation could panic when the expression started with a variable time
   that could overlap with next day (eg. "sunset+06:00-25:00", (Issue
   [#121](https://github.com/remi-dupre/opening-hours-rs/issues/121))).
+- Update dependencies
 
 ## 2.1.4
 
