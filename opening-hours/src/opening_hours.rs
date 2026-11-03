@@ -1,5 +1,5 @@
 use std::fmt::Display;
-use std::iter::Peekable;
+use std::iter::{self, Peekable};
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -143,9 +143,15 @@ impl<L: Localize> OpeningHours<L> {
         (self.expr.rules)
             .iter()
             .map(|rule| {
-                if rule.time_selector.is_immutable_full_day()
-                    || !rule.day_selector.filter(date, &self.ctx)
-                {
+                let constant_day = 
+                    // If time sector never change ...
+                    rule.time_selector.is_immutable_full_day()
+                    // ... or both today & yesterday don't apply  to this rule (always closed)
+                    || !(iter::once(date).chain(date.pred_opt()))
+                        .any(|d| rule.day_selector.filter(d, &self.ctx));
+
+                // Then we may skip days
+                if constant_day {
                     rule.day_selector.next_change_hint(date, &self.ctx)
                 } else {
                     date.succ_opt()

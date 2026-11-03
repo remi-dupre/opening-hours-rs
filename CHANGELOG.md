@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.1.5
+
+- Fix: evaluation could panic when the expression started with a variable time
+  that could overlap with next day (eg. "sunset+06:00-25:00", (Issue
+  [#121](https://github.com/remi-dupre/opening-hours-rs/issues/121))).
+
 ## 2.1.4
 
 - Fix: time spans ending with a sun event shouldn't be normalized (there can be
