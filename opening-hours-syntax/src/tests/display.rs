@@ -14,7 +14,6 @@ use crate::tests::parser_no_warn;
 #[case("(sunrise-00:10)-(sunset+01:15)")]
 #[case("(sunrise-00:10)-sunset")]
 #[case("sunrise-(sunset+01:15)")]
-#[case("PH -1 days 17:00-02:00")]
 fn display_stable(mut parser_no_warn: Parser, #[case] example: &str) {
     assert_eq!(
         parser_no_warn
@@ -34,6 +33,7 @@ fn display_stable(mut parser_no_warn: Parser, #[case] example: &str) {
 // Hide hours when it is null
 #[case("12:00-14:00/01:30", "12:00-14:00/01:30")]
 #[case("12:00-14:00/00:30", "12:00-14:00/30")]
+#[case("PH +1 day 17:00-02:00", "PH +1 days 17:00-02:00")]
 fn display_modified(#[case] example: OpeningHoursExpression, #[case] displayed_expected: &str) {
     assert_eq!(
         example.to_string(),
