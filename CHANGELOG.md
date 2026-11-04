@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.1.5
+
+- Fix: evaluation could panic when the expression started with a variable time
+  that could overlap with next day (eg. "sunset+06:00-25:00", (Issue
+  [#121](https://github.com/remi-dupre/opening-hours-rs/issues/121))).
+- Fix: Display of opening hours that include a positive holiday offset like
+  `PH +1 days 17:00-02:00`.
+- Fix: normalization idempotency
+- Update dependencies
+
 ## 2.1.4
 
 - Fix: time spans ending with a sun event shouldn't be normalized (there can be

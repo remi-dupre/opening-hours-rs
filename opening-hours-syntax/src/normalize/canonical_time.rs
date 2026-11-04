@@ -42,11 +42,11 @@ pub(crate) fn normalize_time_rules(slot: TimeRules) -> TimeRules {
         .peekable();
 
     while let Some((state, span)) = spans.next() {
-        // If the span can be turned into a simple range, then we can just add it to the canonical
-        // structure. There is also a special case for empty states: we cannot add them to a
-        // canonical component if there is already a non-canonical component added, they must be
-        // inserted as if it were not canonical because it would be elided by a paving.
-        if (result.is_empty() || state != Default::default())
+        // If the span can be turned into a simple range AND no non-canonical output has been
+        // emitted yet, add it to the canonical structure. Once we have committed a non-canonical
+        // rule to result, we stop trying to canonical-ize: the order of rules can matter and we
+        // want a second normalize call to behave identically to the first.
+        if result.is_empty()
             && let Some(range) = time_span_to_daily_ranges(&span)
         {
             canonical.set_time_range(range, state);
@@ -57,9 +57,9 @@ pub(crate) fn normalize_time_rules(slot: TimeRules) -> TimeRules {
         let mut non_canonical = TimeSelector { spans: vec![span] };
 
         // However, _can_ continue iterating as long as the state doesn't change because the order
-        // doesn't matter in this case.
+        // doesn't matter in this case: all rule operators are additive.
         while let Some((_, extra_span)) = spans.next_if(|(extra_state, _)| *extra_state == state) {
-            if (result.is_empty() || state != Default::default())
+            if result.is_empty()
                 && let Some(range) = time_span_to_daily_ranges(&extra_span)
             {
                 canonical.set_time_range(range, state.clone());

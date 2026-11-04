@@ -62,6 +62,11 @@ use crate::{Context, OpeningHours};
 #[case::comment("2024-03-15 12:00", r#"24/7 "aaa" ; Mar "bbb""#, "2024-04-01 00:00")]
 #[case::comment("2024-01-01 02:00", r#"01:00-03:00 closed "aaa""#, "2024-01-01 03:00")]
 #[case::comment("2024-01-01 12:00", r#"01:00-03:00 closed "aaa""#, "2024-01-02 01:00")]
+// Wrapping range with a variable time
+#[case::rule_vwrap("2027-06-21 00:30", "(sunset+06:00)-25:00", "2027-06-21 01:00")] // with no tz, sunset+06 is 01:00
+#[case::rule_vwrap("2027-06-21 12:00", "(sunset+06:00)-25:00", "2027-06-22 00:00")]
+#[case::rule_vwrap("2027-03-01 12:00", "Mar 01 (sunset+06:00)-25:00", "2027-03-02 01:00")]
+#[case::rule_vwrap("2027-03-02 12:00", "Mar 01 (sunset+06:00)-25:00", "2027-03-03 00:00")]
 fn next_change(
     #[case] date: ParsedDateTime,
     #[case] expr: OpeningHours,

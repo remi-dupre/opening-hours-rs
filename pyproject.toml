@@ -8,8 +8,8 @@ repository = "https://github.com/remi-dupre/opening-hours-rs"
 changelog = "https://github.com/remi-dupre/opening-hours-rs/blob/master/CHANGELOG.md"
 readme = "opening-hours-py/README.md"
 authors = [{name = "Rémi Dupré", email = "remi+openinghours@dupre.io"}]
-requires-python = "~=3.10"
-version = "2.1.4"
+requires-python = ">=3.10.0,<4"
+version = "2.1.5"
 dynamic = ["license", "license-files"]
 
 [dependency-groups]
@@ -33,7 +33,7 @@ build-backend = "maturin"
 package-mode = false
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = ">=3.10.0,<4"
 
 [tool.poetry.group.dev]
 optional = true

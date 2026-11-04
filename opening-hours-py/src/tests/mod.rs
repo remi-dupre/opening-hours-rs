@@ -49,7 +49,7 @@ pub(crate) fn run_python(source: &str) {
     static INIT_PYTHON_GIL: Once = Once::new();
 
     // Capture stdout into a buffer
-    #[pyclass(skip_from_py_object)]
+    #[pyclass]
     #[derive(Clone)]
     struct CaptureStdout(Arc<Mutex<String>>);
 

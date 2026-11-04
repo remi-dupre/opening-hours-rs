@@ -136,7 +136,9 @@ impl TimeFilter for ts::TimeSpan {
                 end
             } else {
                 end.add_hours(24)
-                    .expect("overflow during TimeSpan resolution")
+                    // If the end bounds overlap the day after the next day, this part can be
+                    // ignored alltogether.
+                    .unwrap_or(ExtendedTime::MIDNIGHT_48)
             }
         };
 

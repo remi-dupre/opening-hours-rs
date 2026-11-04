@@ -114,3 +114,18 @@ fn stays_normalized(#[case] example: &str) {
         "should already be normalized",
     );
 }
+
+#[rstest]
+// After emitting a non-canonical rule, subsequent canonical-eligible spans of non-default state
+// (open & unknown) were still added to the canonical paving. This allowed state transitions  to
+// overwrite earlier canonical entries and produce non-idempotent output.
+#[case("1918+, 01:00+, 1:00+,1:00+, unknown;8768, 11:00+, 1:00+,1:00+, 7191")]
+fn normalize_is_idempotent(#[case] oh: OpeningHoursExpression) {
+    let normalized = oh.normalize();
+
+    assert_eq!(
+        normalized.to_string(),
+        normalized.normalize().to_string(),
+        "normalize is not idempotent",
+    );
+}

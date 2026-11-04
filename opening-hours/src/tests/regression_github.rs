@@ -143,3 +143,11 @@ fn gh97_normalize_double_overlap() {
         assert_eq!(oh.schedule_at(date), normalized.schedule_at(date));
     }
 }
+
+/// https://github.com/remi-dupre/opening-hours-rs/issues/121
+#[test]
+fn gh121_sunset_inverted() {
+    let oh = OpeningHours::from_str("(sunset+06:00)-25:00").unwrap();
+    let date = dt("2027-06-21 12:00");
+    assert_eq!(oh.state(date), (RuleKind::Open, Default::default()));
+}

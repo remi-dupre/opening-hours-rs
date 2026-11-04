@@ -46,6 +46,17 @@ use crate::{OpeningHours, RuleKind::*};
 #[case::rule_addional("2023-12-23 12:00", "Su closed || open", Open)]
 // Rule: fallback
 #[case::rule_fallback("2020-01-01 12:00", "closed; Mar || We", Open)]
+// Wrapping range with a variable time
+#[case::rule_vwrap("2027-06-21 00:30", "(sunset+06:00)-25:00", Closed)] // with no tz, sunset+06 is 01:00
+#[case::rule_vwrap("2027-06-21 12:00", "(sunset+06:00)-25:00", Open)]
+#[case::rule_vwrap("2027-06-21 23:59", "(sunset+06:00)-25:00", Open)]
+#[case::rule_vwrap("2027-03-01 12:00", "Mar 01 (sunset+06:00)-25:00", Closed)]
+#[case::rule_vwrap("2027-03-02 00:30", "Mar 01 (sunset+06:00)-25:00", Closed)]
+#[case::rule_vwrap("2027-03-02 01:00", "Mar 01 (sunset+06:00)-25:00", Open)]
+#[case::rule_vwrap("2027-03-02 12:00", "Mar 01 (sunset+06:00)-25:00", Open)]
+#[case::rule_vwrap("2027-03-02 23:00", "Mar 01 (sunset+06:00)-25:00", Open)]
+#[case::rule_vwrap("2027-03-03 00:30", "Mar 01 (sunset+06:00)-25:00", Closed)]
+#[case::rule_vwrap("2027-03-03 12:00", "Mar 01 (sunset+06:00)-25:00", Closed)]
 fn state(
     #[case] date: ParsedDateTime,
     #[case] expr: OpeningHours,
