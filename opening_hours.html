@@ -188,9 +188,9 @@ for a specification.</p>
 <h2 id="examples">Examples</h2>
 
 <div class="pdoc-code codehilite">
-<pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n"><a href="#validate">opening_hours.validate</a></span><span class="p">(</span><span class="s2">&quot;24/7&quot;</span><span class="p">)</span>
+<pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n"><a href="#validate">opening_hours.validate</a></span><span class="p">(</span><span class="s2">"24/7"</span><span class="p">)</span>
 <span class="go">True</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n"><a href="#validate">opening_hours.validate</a></span><span class="p">(</span><span class="s2">&quot;24/24&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n"><a href="#validate">opening_hours.validate</a></span><span class="p">(</span><span class="s2">"24/24"</span><span class="p">)</span>
 <span class="go">False</span>
 </code></pre>
 </div>
@@ -292,17 +292,17 @@ is worth it.</li>
 <h2 id="examples">Examples</h2>
 
 <div class="pdoc-code codehilite">
-<pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">oh</span> <span class="o">=</span> <span class="n">OpeningHours</span><span class="p">(</span><span class="s2">&quot;24/7&quot;</span><span class="p">)</span>
+<pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">oh</span> <span class="o">=</span> <span class="n">OpeningHours</span><span class="p">(</span><span class="s2">"24/7"</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">oh</span><span class="o">.</span><span class="n">is_open</span><span class="p">()</span>
 <span class="go">True</span>
 </code></pre>
 </div>
 
 <div class="pdoc-code codehilite">
-<pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">dt</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">fromisoformat</span><span class="p">(</span><span class="s2">&quot;2024-07-14 15:00&quot;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">oh</span> <span class="o">=</span> <span class="n">OpeningHours</span><span class="p">(</span><span class="s2">&quot;sunrise-sunset ; PH off&quot;</span><span class="p">,</span> <span class="n">country</span><span class="o">=</span><span class="s2">&quot;FR&quot;</span><span class="p">,</span> <span class="n">coords</span><span class="o">=</span><span class="p">(</span><span class="mf">48.8535</span><span class="p">,</span> <span class="mf">2.34839</span><span class="p">))</span>
+<pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">dt</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">fromisoformat</span><span class="p">(</span><span class="s2">"2024-07-14 15:00"</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">oh</span> <span class="o">=</span> <span class="n">OpeningHours</span><span class="p">(</span><span class="s2">"sunrise-sunset ; PH off"</span><span class="p">,</span> <span class="n">country</span><span class="o">=</span><span class="s2">"FR"</span><span class="p">,</span> <span class="n">coords</span><span class="o">=</span><span class="p">(</span><span class="mf">48.8535</span><span class="p">,</span> <span class="mf">2.34839</span><span class="p">))</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="k">assert</span> <span class="n">oh</span><span class="o">.</span><span class="n">is_closed</span><span class="p">(</span><span class="n">dt</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">assert</span> <span class="n">oh</span><span class="o">.</span><span class="n">next_change</span><span class="p">(</span><span class="n">dt</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">tzinfo</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">==</span> <span class="n">datetime</span><span class="o">.</span><span class="n">fromisoformat</span><span class="p">(</span><span class="s2">&quot;2024-07-15 06:03&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">assert</span> <span class="n">oh</span><span class="o">.</span><span class="n">next_change</span><span class="p">(</span><span class="n">dt</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">tzinfo</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">==</span> <span class="n">datetime</span><span class="o">.</span><span class="n">fromisoformat</span><span class="p">(</span><span class="s2">"2024-07-15 06:03"</span><span class="p">)</span>
 </code></pre>
 </div>
 </div>
@@ -324,8 +324,8 @@ expression and might impact the performance of evaluations.</p>
 <h2 id="examples">Examples</h2>
 
 <div class="pdoc-code codehilite">
-<pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">OpeningHours</span><span class="p">(</span><span class="s2">&quot;24/7 ; Su closed&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">normalize</span><span class="p">()</span>
-<span class="go">OpeningHours(&quot;Mo-Sa&quot;)</span>
+<pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">OpeningHours</span><span class="p">(</span><span class="s2">"24/7 ; Su closed"</span><span class="p">)</span><span class="o">.</span><span class="n">normalize</span><span class="p">()</span>
+<span class="go">OpeningHours("Mo-Sa")</span>
 </code></pre>
 </div>
 
@@ -568,8 +568,8 @@ Sep ┤         ┗━━━┛     (1) 10:00-18:00
 <h2 id="examples">Examples</h2>
 
 <div class="pdoc-code codehilite">
-<pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">OpeningHours</span><span class="p">(</span><span class="s2">&quot;24/7 off&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">state</span><span class="p">()</span>
-<span class="go">(<a href="#State.CLOSED">State.CLOSED</a>, &#39;&#39;)</span>
+<pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">OpeningHours</span><span class="p">(</span><span class="s2">"24/7 off"</span><span class="p">)</span><span class="o">.</span><span class="n">state</span><span class="p">()</span>
+<span class="go">(<a href="#State.CLOSED">State.CLOSED</a>, '')</span>
 </code></pre>
 </div>
 </div>
@@ -597,7 +597,7 @@ Sep ┤         ┗━━━┛     (1) 10:00-18:00
 <h2 id="examples">Examples</h2>
 
 <div class="pdoc-code codehilite">
-<pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">OpeningHours</span><span class="p">(</span><span class="s2">&quot;24/7&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">is_open</span><span class="p">()</span>
+<pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">OpeningHours</span><span class="p">(</span><span class="s2">"24/7"</span><span class="p">)</span><span class="o">.</span><span class="n">is_open</span><span class="p">()</span>
 <span class="go">True</span>
 </code></pre>
 </div>
@@ -626,7 +626,7 @@ Sep ┤         ┗━━━┛     (1) 10:00-18:00
 <h2 id="examples">Examples</h2>
 
 <div class="pdoc-code codehilite">
-<pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">OpeningHours</span><span class="p">(</span><span class="s2">&quot;24/7 off&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">is_closed</span><span class="p">()</span>
+<pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">OpeningHours</span><span class="p">(</span><span class="s2">"24/7 off"</span><span class="p">)</span><span class="o">.</span><span class="n">is_closed</span><span class="p">()</span>
 <span class="go">True</span>
 </code></pre>
 </div>
@@ -655,7 +655,7 @@ Sep ┤         ┗━━━┛     (1) 10:00-18:00
 <h2 id="examples">Examples</h2>
 
 <div class="pdoc-code codehilite">
-<pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">OpeningHours</span><span class="p">(</span><span class="s2">&quot;24/7 unknown&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">is_unknown</span><span class="p">()</span>
+<pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">OpeningHours</span><span class="p">(</span><span class="s2">"24/7 unknown"</span><span class="p">)</span><span class="o">.</span><span class="n">is_unknown</span><span class="p">()</span>
 <span class="go">True</span>
 </code></pre>
 </div>
@@ -685,8 +685,8 @@ If the date exceed the limit date, returns None.</p>
 <h2 id="examples">Examples</h2>
 
 <div class="pdoc-code codehilite">
-<pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">OpeningHours</span><span class="p">(</span><span class="s2">&quot;24/7&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">next_change</span><span class="p">()</span> <span class="c1"># None</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">OpeningHours</span><span class="p">(</span><span class="s2">&quot;2099Mo-Su 12:30-17:00&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">next_change</span><span class="p">()</span>
+<pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">OpeningHours</span><span class="p">(</span><span class="s2">"24/7"</span><span class="p">)</span><span class="o">.</span><span class="n">next_change</span><span class="p">()</span> <span class="c1"># None</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">OpeningHours</span><span class="p">(</span><span class="s2">"2099Mo-Su 12:30-17:00"</span><span class="p">)</span><span class="o">.</span><span class="n">next_change</span><span class="p">()</span>
 <span class="go">datetime.datetime(2099, 1, 1, 12, 30)</span>
 </code></pre>
 </div>
@@ -718,11 +718,11 @@ max is specified.</li>
 <h2 id="examples">Examples</h2>
 
 <div class="pdoc-code codehilite">
-<pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">intervals</span> <span class="o">=</span> <span class="n">OpeningHours</span><span class="p">(</span><span class="s2">&quot;2099Mo-Su 12:30-17:00&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">intervals</span><span class="p">()</span>
+<pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">intervals</span> <span class="o">=</span> <span class="n">OpeningHours</span><span class="p">(</span><span class="s2">"2099Mo-Su 12:30-17:00"</span><span class="p">)</span><span class="o">.</span><span class="n">intervals</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">next</span><span class="p">(</span><span class="n">intervals</span><span class="p">)</span>
-<span class="go">(..., datetime.datetime(2099, 1, 1, 12, 30), <a href="#State.CLOSED">State.CLOSED</a>, &#39;&#39;)</span>
+<span class="go">(..., datetime.datetime(2099, 1, 1, 12, 30), <a href="#State.CLOSED">State.CLOSED</a>, '')</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">next</span><span class="p">(</span><span class="n">intervals</span><span class="p">)</span>
-<span class="go">(datetime.datetime(2099, 1, 1, 12, 30), datetime.datetime(2099, 1, 1, 17, 0), <a href="#State.OPEN">State.OPEN</a>, &#39;&#39;)</span>
+<span class="go">(datetime.datetime(2099, 1, 1, 12, 30), datetime.datetime(2099, 1, 1, 17, 0), <a href="#State.OPEN">State.OPEN</a>, '')</span>
 </code></pre>
 </div>
 </div>
