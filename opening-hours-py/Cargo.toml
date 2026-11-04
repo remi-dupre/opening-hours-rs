@@ -18,7 +18,7 @@ crate-type = ["cdylib", "rlib"]
 chrono-tz = { version = "0.10", default-features = false }
 chrono = { version = "0.4", default-features = false }
 pyo3-log = "0.13"
-pyo3-stub-gen = "0.23"
+pyo3-stub-gen = { version = "0.23", default-features = false, features = ["infer_signature"] }
 
 [dependencies.opening-hours-rs]
 package = "opening-hours"
@@ -32,6 +32,7 @@ version = "2.1.5"
 
 [dependencies.pyo3]
 version = "0.30"
+default-features = false
 features = [
     "chrono", "chrono-tz", "generate-import-lib",
     # This ensures that the package is only built with Python >=3.10, which is

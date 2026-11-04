@@ -1,5 +1,4 @@
 use opening_hours_syntax::RuleKind;
-use pest::pratt_parser::Op;
 use rstest::rstest;
 
 use crate::tests::utils::parse::ParsedDateTime;
