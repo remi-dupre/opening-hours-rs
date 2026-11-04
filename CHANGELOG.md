@@ -7,6 +7,7 @@
   [#121](https://github.com/remi-dupre/opening-hours-rs/issues/121))).
 - Fix: Display of opening hours that include a positive holiday offset like
   `PH +1 days 17:00-02:00`.
+- Fix: normalization idempotency
 - Update dependencies
 
 ## 2.1.4
