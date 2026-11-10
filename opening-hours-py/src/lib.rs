@@ -130,8 +130,8 @@ use crate::types::location::PyLocation;
 use crate::types::state::State;
 use crate::types::timezone::TimeZoneWrapper;
 
-pyo3::create_exception!(
-    opening_hours,
+pyo3_stub_gen::create_exception!(
+    opening_hours_py,
     ParserError,
     PyException,
     concat!(
@@ -142,8 +142,8 @@ pyo3::create_exception!(
     )
 );
 
-pyo3::create_exception!(
-    opening_hours,
+pyo3_stub_gen::create_exception!(
+    opening_hours_py,
     UnknownCountryError,
     PyException,
     concat!(
@@ -153,8 +153,8 @@ pyo3::create_exception!(
     )
 );
 
-pyo3::create_exception!(
-    opening_hours,
+pyo3_stub_gen::create_exception!(
+    opening_hours_py,
     InvalidCoordinatesError,
     PyException,
     concat!("Input coordinates are not valid.")
