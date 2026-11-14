@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.1.6
+
+### Python
+
+- Fix exceptions not documented in stubs.
+
 ## 2.1.5
 
 - Fix: evaluation could panic when the expression started with a variable time
@@ -38,8 +44,6 @@ The normalization algorithm has been reworked:
 [doc-normalize]: https://github.com/remi-dupre/opening-hours-rs/blob/master/opening-hours-syntax/doc/normalize.md
 
 ## 2.0.2
-
-### General
 
 - Update dependencies (noticeably PyO3 CVE)
 
@@ -146,7 +150,8 @@ The normalization algorithm has been reworked:
 
 ### Rust
 
-- Use `docsrs` cfg to enable `doc_cfg` feature instead of checking for rustc nightly channel
+- Use `docsrs` cfg to enable `doc_cfg` feature instead of checking for rustc
+  nightly channel.
 - Update dependencies
 
 ### Python

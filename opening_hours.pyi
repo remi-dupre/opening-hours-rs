@@ -8,10 +8,20 @@ import typing
 import zoneinfo
 
 __all__ = [
+    "InvalidCoordinatesError",
     "OpeningHours",
+    "ParserError",
     "State",
+    "UnknownCountryError",
     "validate",
 ]
+
+class InvalidCoordinatesError(builtins.Exception):
+    r"""
+    Input coordinates are not valid.
+    """
+
+    ...
 
 @typing.final
 class OpeningHours:
@@ -323,6 +333,25 @@ class OpeningHours:
         """
     def __str__(self) -> builtins.str: ...
     def __repr__(self) -> builtins.str: ...
+
+class ParserError(builtins.Exception):
+    r"""
+    The opening hours expression has an invalid syntax.
+
+    See https://wiki.openstreetmap.org/wiki/Key:opening_hours/specification
+    for a specification.
+    """
+
+    ...
+
+class UnknownCountryError(builtins.Exception):
+    r"""
+    The provided country code is not known.
+
+    See https://en.wikipedia.org/wiki/List_of_ISO_3166_country_codes.
+    """
+
+    ...
 
 @typing.final
 class State(enum.Enum):
