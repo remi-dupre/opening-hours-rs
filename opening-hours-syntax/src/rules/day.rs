@@ -128,12 +128,14 @@ pub struct YearRange {
 
 impl YearRange {
     /// Create a new `YearRange`. Return `None` if the bounds are in the wrong order.
-    pub fn new(range: RangeInclusive<Year>, mut step: u16) -> Option<Self> {
+    pub fn new(mut range: RangeInclusive<Year>, mut step: u16) -> Option<Self> {
         if range.start() > range.end() {
             return None;
         }
 
+        // A step longer than the range only selects its first year.
         if range.start().abs_diff(**range.end()) < step.into() {
+            range = *range.start()..=*range.start();
             step = 1;
         }
 
@@ -482,12 +484,14 @@ pub struct WeekRange {
 
 impl WeekRange {
     /// Create a new `WeekRange`. Return `None` if the bounds are in the wrong order.
-    pub fn new(range: RangeInclusive<WeekNum>, mut step: u8) -> Option<Self> {
+    pub fn new(mut range: RangeInclusive<WeekNum>, mut step: u8) -> Option<Self> {
         if range.start() > range.end() {
             return None;
         }
 
+        // A step longer than the range only selects its first week.
         if range.start().abs_diff(**range.end()) < step {
+            range = *range.start()..=*range.start();
             step = 1;
         }
 

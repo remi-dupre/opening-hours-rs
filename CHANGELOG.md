@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.1.7
+
+- Fix: a week or year range with a step longer than the range (eg. `week19-21/3`
+  or `2010-2012/5`) was open on every week or year of the range instead of only
+  the first one.
+
 ## 2.1.6
 
 ### Python
