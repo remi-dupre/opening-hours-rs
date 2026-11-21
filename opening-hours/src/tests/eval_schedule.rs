@@ -85,6 +85,9 @@ use crate::{Context, OpeningHours};
 #[case::week("2020-01-15", r#"week01-53/2:10:00-12:00"#, "10:00 open 12:00")]
 #[case::week("2020-01-22", r#"week01-53/2:10:00-12:00"#, Schedule::new())]
 #[case::week("2020-01-29", r#"week01-53/2:10:00-12:00"#, "10:00 open 12:00")]
+#[case::week("2020-05-04", r#"week19-21/3:10:00-12:00"#, "10:00 open 12:00")]
+#[case::week("2020-05-11", r#"week19-21/3:10:00-12:00"#, Schedule::new())]
+#[case::week("2020-05-18", r#"week19-21/3:10:00-12:00"#, Schedule::new())]
 // Month Selector (range)
 #[case::month("2020-05-31", r#"2020Jun01 open"#, Schedule::new())]
 #[case::month("2020-06-01", r#"2020Jun01:10:00-12:10"#, "10:00 open 12:10")]
@@ -127,6 +130,9 @@ use crate::{Context, OpeningHours};
 #[case::year("2019-01-01", "2010-2100/3:10:00-12:00", "10:00 open 12:00")]
 #[case::year("2017-01-01", "2010-2100/3:10:00-12:00", Schedule::new())]
 #[case::year("2018-01-01", "2010-2100/3:10:00-12:00", Schedule::new())]
+#[case::year("2010-01-01", "2010-2012/5:10:00-12:00", "10:00 open 12:00")]
+#[case::year("2011-01-01", "2010-2012/5:10:00-12:00", Schedule::new())]
+#[case::year("2012-01-01", "2010-2012/5:10:00-12:00", Schedule::new())]
 // Time Events
 #[case::events("2020-06-01", "(dawn-02:30)-(dusk+02:30)", "03:30 open 22:30")]
 #[case::events("2020-06-01", "(dawn+00:30)-(dusk-00:30)", "06:30 open 19:30")]
